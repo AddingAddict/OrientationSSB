@@ -22,12 +22,10 @@ function kernmat(kernfun::Function,l::Float64,n::Int64)
     xs = flatten(pts' .* ones(n))
     ys = flatten(ones(n)' .* pts)
     
-    dxs = xs .- xs'
-    dxs[dxs .>  l/2] .= dxs[dxs .>  l/2] .- l
-    dxs[dxs .< -l/2] .= dxs[dxs .< -l/2] .+ l
-    dys = ys .- ys'
-    dys[dys .>  l/2] .= dys[dys .>  l/2] .- l
-    dys[dys .< -l/2] .= dys[dys .< -l/2] .+ l
+    dxs = abs.(xs .- xs')
+    dxs[dxs .>  l/2] .= l .- dxs[dxs .>  l/2]
+    dys = abs.(ys .- ys')
+    dys[dys .>  l/2] .= l .- dys[dys .>  l/2]
     dls = sqrt.(dxs.^2 + dys.^2)
     
     km .= kernfun.(dls)
