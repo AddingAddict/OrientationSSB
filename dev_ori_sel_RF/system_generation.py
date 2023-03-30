@@ -4,8 +4,8 @@ functions for generating one-layer or two-layer network with inputs
 import numpy as np
 from scipy import linalg
 
-from bettina.modeling.ori_dev_model import connectivity, inputs
-from bettina.modeling.ori_dev_model import data_dir
+from dev_ori_sel_RF import connectivity, inputs
+from dev_ori_sel_RF import data_dir
 
 
 

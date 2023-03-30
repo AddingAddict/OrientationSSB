@@ -2,8 +2,7 @@ import numpy as np
 from scipy import linalg
 import os
 
-from bettina.modeling.ori_dev_model import connectivity, inputs
-from bettina.modeling.ori_dev_model import data_dir
+from dev_ori_sel_RF import connectivity, inputs, data_dir
 
 class Network:
 	

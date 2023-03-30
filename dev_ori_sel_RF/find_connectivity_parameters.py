@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import linalg
 
-from bettina.modeling.ori_dev_model import integrator_tf, connectivity,\
+from dev_ori_sel_RF import integrator_tf, connectivity,\
 dynamics, inputs
-from bettina.modeling.ori_dev_model import misc
+from dev_ori_sel_RF.tools import misc
 from bettina.modeling.ori_dev_model import Nlgn, Nret, N4, W4to4_params,\
 Wret_to_lgn_params, Wlgn_to4_params, Inp_params, image_dir, data_dir,\
 config_dict

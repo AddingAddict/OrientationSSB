@@ -7,7 +7,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import logging
 
-from bettina.modeling.ori_dev_model import integrator_tf, connectivity,\
+from dev_ori_sel_RF import integrator_tf, connectivity,\
 dynamics, inputs
 from bettina.modeling.ori_dev_model import Ninp, N23, WIto23_params,\
 inp_params, image_dir, data_dir

@@ -11,9 +11,9 @@ import tensorflow as tf
 import logging
 from scipy import linalg
 
-from bettina.modeling.ori_dev_model import integrator_tf, connectivity,\
+from dev_ori_sel_RF import integrator_tf, connectivity,\
 dynamics,data_dir,network
-from bettina.modeling.ori_dev_model.tools import misc
+from dev_ori_sel_RF.tools import misc
 
 
 

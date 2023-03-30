@@ -4,10 +4,10 @@ import numpy as np
 from collections import defaultdict
 
 
-from bettina.modeling.ori_dev_model import image_dir,inputs,network_tools,dynamics,\
-normalisation_constraints,plasticity_dynamics
-from bettina.modeling.ori_dev_model.tools import calc_tools,\
-get_spatial_wavelength,gen_lowd_activity_patterns
+from dev_ori_sel_RF import inputs,network_tools,dynamics,\
+normalisation_constraints#,plasticity_dynamics
+from dev_ori_sel_RF.tools import calc_tools,\
+get_spatial_wavelength#,gen_lowd_activity_patterns
 
 
 def tf_check_type(t, y0): 

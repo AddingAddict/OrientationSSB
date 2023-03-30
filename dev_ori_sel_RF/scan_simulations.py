@@ -10,8 +10,8 @@ from scipy import linalg
 # import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 	
-from bettina.modeling.ori_dev_model import data_dir,image_dir,inputs,connectivity
-from bettina.modeling.ori_dev_model.tools import misc
+from dev_ori_sel_RF import data_dir,image_dir,inputs,connectivity
+from dev_ori_sel_RF.tools import misc
 
 
 

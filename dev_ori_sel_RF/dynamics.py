@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from bettina.modeling.ori_dev_model import inputs#, image_dir
+from dev_ori_sel_RF import inputs, image_dir
 
 
 

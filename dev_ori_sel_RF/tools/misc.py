@@ -8,7 +8,7 @@ import linecache
 from copy import copy
 import yaml
 
-from bettina.modeling.ori_dev_model import data_dir, normalisation_constraints as nc
+from dev_ori_sel_RF import data_dir,normalisation_constraints as nc
 
 
 def ensure_path(path):

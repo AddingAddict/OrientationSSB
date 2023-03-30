@@ -1,7 +1,7 @@
 #import tensorflow as tf
 import numpy as np
-from bettina.modeling.ori_dev_model import connectivity
-from bettina.modeling.ori_dev_model.tools import gen_gaussian_random_field as ggrf
+from dev_ori_sel_RF import connectivity
+from dev_ori_sel_RF.tools import gen_gaussian_random_field as ggrf
 
 def distance(delta):
 	''' assume periodic boundary conditions'''

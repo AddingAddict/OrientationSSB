@@ -6,8 +6,8 @@ import time
 import sys
 from itertools import product
 
-from bettina.modeling.ori_dev_model import data_dir
-from bettina.modeling.ori_dev_model.tools import misc
+from dev_ori_sel_RF import data_dir
+from dev_ori_sel_RF.tools import misc
 
 
 
