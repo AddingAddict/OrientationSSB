@@ -5,10 +5,10 @@ N4: 20
 N23: 1
 Nvert: 1
 
-runtime:   2000
+runtime:   4000
 dt:   0.05
 tau:   1.
-num_lgn_paths:   2
+num_lgn_paths:   4
 
 gamma_lgn:   4.0
 gamma_4:   1.0
@@ -73,7 +73,7 @@ Wlgn_to4_params:
     s_noise:   0.01
     Wlim:   12
     load_from_prev_run:   None
-    connectivity_type:   "E"
+    connectivity_type:   "EI"
 
     ## arbor params
     r_A_on:   0.15
