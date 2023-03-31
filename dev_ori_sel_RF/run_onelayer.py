@@ -13,7 +13,7 @@ from scipy import linalg
 
 from dev_ori_sel_RF import integrator_tf,\
 dynamics, data_dir, network
-from tools import misc
+from dev_ori_sel_RF.tools import misc
 
 
 
