@@ -75,6 +75,14 @@ def constrain_update_xalpha(dW,W_old,mask,A,c_orth,s_orth,dt):
     dW_constraint = tf.reshape(dW_constraint, tf.shape(dW))
     return dW_constraint*dt+W_old
 
+def constrain_update_x_multnorm(dW,W_old,mask,A,dt):
+    # sum over x
+    norm = tf.reduce_sum(W_old,axis=1)
+    norm = tf.where(tf.equal(norm, 0), tf.ones(tf.shape(norm),dtype=tf.float32), norm )
+    eps = 1.*tf.reduce_sum(dW,axis=1)/norm
+    dW_constraint = (dW - eps[:,None,:] * W_old) * mask
+    return dW_constraint*dt+W_old
+
 def constrain_update_divisive(dW,W_old,A,dt):
     W_new = W_old + dW * A
     # print("W_new,W_old",np.nanmax(W_new),np.nanmax(W_old),np.nanmax(dW*A))
@@ -261,6 +269,10 @@ class Plasticity:
             self.constrain_update =\
              lambda dW,W_old,mask,A,c_orth,s_orth,dt: constrain_update_xalpha(dW*A,W_old,mask,\
                                                                             A,c_orth,s_orth,dt)
+
+        elif self.constraint_mode=="x_multnorm":
+            self.constrain_update =\
+             lambda dW,W_old,mask,A,c_orth,s_orth,dt: constrain_update_x_multnorm(dW*A,W_old,mask,A,dt)
 
         elif self.constraint_mode=="None":
             self.constrain_update = lambda dW,W_old,mask,A,c_orth,s_orth,dt: dW*dt+W_old
