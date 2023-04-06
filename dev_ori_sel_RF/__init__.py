@@ -18,6 +18,9 @@ elif current_user=="ubuntu":
 	base_dir = "/home/ubuntu/ori_dev_model"
 elif current_user=="tuannguyen":
 	base_dir = os.path.join(home_dir, "OrientationSSB/dev_ori_sel_RF/")
+elif current_user=="thn2112":
+	home_dir = "/burg/theory/users/thn2112/"
+	base_dir = os.path.join(home_dir, "OrientationSSB/dev_ori_sel_RF/")
 data_dir = os.path.join(base_dir,'data/')
 image_dir = os.path.join(base_dir,'image/')
 movie_dir = os.path.join(base_dir,'movie/')

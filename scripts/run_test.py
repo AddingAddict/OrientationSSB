@@ -24,11 +24,12 @@ Nret = config_dict["Nret"]
 Nlgnpop = 2
 N4pop = config_dict["num_lgn_paths"] // Nlgnpop
 
-Version = misc.get_version(data_dir + "layer4/",version=None,readonly=False)
-print("Running with version =",Version)
+for i in range(20):
+    Version = misc.get_version(data_dir + "layer4/",version=None,readonly=False)
+    print("Running with version =",Version)
 
-config_dict["Wlgn_to4_params"].update({
-    "W_mode": "load_from_external",
-    "load_from_prev_run" : Version-1})
+    config_dict["Wlgn_to4_params"].update({
+        "W_mode": "load_from_external",
+        "load_from_prev_run" : Version-1})
 
-run_onelayer.parameter_sweep_layer4(Version,config_dict,not_saving_temp=False)
+    run_onelayer.parameter_sweep_layer4(Version,config_dict,not_saving_temp=False)

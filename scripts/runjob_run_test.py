@@ -6,7 +6,6 @@ import time
 from sys import platform
 import uuid
 import random
-import data_analysis as da
 
 from importlib import reload
 

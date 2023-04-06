@@ -49,6 +49,8 @@ def load_external_params(filename):
 		file_path = os.path.join(current_dir,"code/bettina/modeling/ori_dev_model/data",filename+".yaml")
 	elif os.environ["USER"]=="tuannguyen":
 		file_path = os.path.join(current_dir,data_dir,filename+".yaml")
+	elif os.environ["USER"]=="thn2112":
+		file_path = os.path.join("/burg/theory/users/thn2112/",data_dir,filename+".yaml")
 	else:
 		raise Exception("User not found. Can't load parameter file.")
 

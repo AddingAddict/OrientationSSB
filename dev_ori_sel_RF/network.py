@@ -340,6 +340,9 @@ class Network:
 					elif os.environ["USER"]=="tuannguyen":
 						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
 						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+					elif os.environ["USER"]=="thn2112":
+						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
+						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 					else:
 						yfile = np.load(data_dir + "layer4/habanero/y_files/y_v{v}.npz".format(\
 										v=Version))
