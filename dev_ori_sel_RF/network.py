@@ -176,6 +176,7 @@ class Network:
 		Version = self.Version
 		Wret_to_lgn = self.Wret_to_lgn
 
+		print("mode in generate_inputs",self.config_dict["Inp_params"]["input_type"])
 		if self.config_dict["Inp_params"]["input_type"]=="moving_grating_online":
 			Wret_to_lgn = np.diagflat(np.ones(self.Nlgn**2,dtype=float))
 

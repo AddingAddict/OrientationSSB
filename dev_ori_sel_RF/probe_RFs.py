@@ -24,9 +24,9 @@ if __name__=="__main__":
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_pdf import PdfPages
 
-	from bettina.modeling.ori_dev_model import image_dir,data_dir,config_dict,dynamics_np,\
+	from dev_ori_sel_RF import image_dir,data_dir,config_dict,dynamics_np,\
 	system_generation,network
-	from bettina.modeling.ori_dev_model.tools import analysis_tools,misc,update_params_dict
+	from dev_ori_sel_RF.tools import analysis_tools,misc,update_params_dict
 
 	## set up system
 	RF_mode = "load_from_external"#"load_from_external"#"gabor"#"initialize"
@@ -34,7 +34,7 @@ if __name__=="__main__":
 	connectivity_type = "EI"
 	N = 25
 	Version = 13
-	load_location = "habanero"
+	load_location = "local"
 
 	T_pd = 1000
 	gamma_ff = 0.01#config_dict["gamma_lgn"]
@@ -66,14 +66,18 @@ if __name__=="__main__":
 				 "/media/bettina/Seagate Portable Drive/physics/columbia/projects/" +\
 				 "ori_dev_model/data/two_layer/aws/v{v}/".format(v=Version)
 		else:
-			load_path = data_dir + "two_layer/v{v}/".format(v=Version)
+			if system_mode=="two_layer":
+				load_path = data_dir + "two_layer/v{v}/".format(v=Version)
+			else:
+				load_path = data_dir + "layer4/v{v}/".format(v=Version)
 		config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
 		update_params_dict.update_params(config_dict)
 		if "plastic" not in config_dict["W4to23_params"].keys():
 			config_dict["W4to23_params"]["plastic"] = False
 			config_dict["W4to23_params"]["arbor_profile"] = "gaussian"
 			config_dict["W4to23_params"]["s_noise"] = 0.2
-		config_dict["Wlgn_to4_params"].update({"load_from_prev_run" : Version,\
+		config_dict["Wlgn_to4_params"].update({"W_mode": RF_mode,
+											   "load_from_prev_run" : Version,\
 											   "connectivity_type" : connectivity_type})
 		pdf_path = image_dir + "grating_responses/v{}_{}/".format(Version,load_location)
 		Nret,Nlgn,N4,N23,Nvert = config_dict["Nret"],config_dict["Nlgn"],config_dict["N4"],\
@@ -125,7 +129,7 @@ if __name__=="__main__":
 				## parameters for moving gratings
 				"num_freq" : 1,
 				"spat_frequencies" : np.array([80,]),#40,60,90
-				"orientations" : np.linspace(0,np.pi,4,endpoint=False),
+				"orientations" : np.linspace(0,np.pi,8,endpoint=False),
 				"Nsur" : 10,
 	}
 	lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\

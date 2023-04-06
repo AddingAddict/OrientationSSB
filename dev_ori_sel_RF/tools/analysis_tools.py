@@ -5,7 +5,7 @@ from scipy import optimize
 import scipy.spatial.distance as sd
 import scipy.cluster.hierarchy as ch
 
-from bettina.modeling.ori_dev_model import connectivity,dynamics_np
+from dev_ori_sel_RF import connectivity,dynamics_np
 
 
 def distance_in_space_pbc(x1,x2=None,border_value=1):

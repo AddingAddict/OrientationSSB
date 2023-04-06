@@ -220,9 +220,9 @@ class Inputs:
 			theta = inp_params["orientation"]
 			gridx = np.linspace(0,1,self.size[1],endpoint=False)
 			gridy = np.linspace(0,1,self.size[0],endpoint=False)
-			x,y = np.meshgrid(gridx,gridy)
-			x = np.cos(theta) * x - np.sin(theta) * y
-			y = np.sin(theta) * x + np.cos(theta) * y
+			x0,y0 = np.meshgrid(gridx,gridy)
+			x = np.cos(theta) * x0 - np.sin(theta) * y0
+			y = np.sin(theta) * x0 + np.cos(theta) * y0
 			kx = 2*np.pi/self.size[1] * n
 			ky = 2*np.pi/self.size[0] * n
 			# Lambda = 2*np.pi/np.sqrt(kx**2+ky**2) #* np.sqrt(2)
@@ -357,9 +357,11 @@ class Inputs_lgn(Inputs):
 				# lgn = np.clip(lgn,0,np.nanmax(lgn))				
 			else:
 				# normalise lgn input to between 0 and 1
-				if np.nanmax(lgn)>0:
-					lgn /= np.nanmax(lgn)
-				lgn = np.clip(lgn,0,1)
+				# if np.nanmax(lgn)>0:
+				# 	lgn /= np.nanmax(lgn)
+				# lgn = np.clip(lgn,0,1)
+				lgn /= np.sqrt(2*np.nanmean(lgn**2))
+				lgn = np.clip(lgn,0,1.5)
 		else:
 			pass
 			# T_exp = inp_params["expanse_time"]
