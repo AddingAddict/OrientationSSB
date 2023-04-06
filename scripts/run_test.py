@@ -16,15 +16,9 @@ from dev_ori_sel_RF import integrator_tf,dynamics,network,run_onelayer
 from dev_ori_sel_RF import data_dir
 from dev_ori_sel_RF.tools import misc,update_params_dict
 
-config_dict = misc.load_external_params("params_test")
-
-N4 = config_dict["N4"]
-Nlgn = config_dict["Nlgn"]
-Nret = config_dict["Nret"]
-Nlgnpop = 2
-N4pop = config_dict["num_lgn_paths"] // Nlgnpop
-
 for i in range(20):
+    config_dict = misc.load_external_params("params_test")
+
     Version = misc.get_version(data_dir + "layer4/",version=None,readonly=False)
     print("Running with version =",Version)
 
