@@ -87,7 +87,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/run_test.py"
-    c1 = "{:s} --v {:d} --n {:d}".format(inpath,initver,nrep)
+    c1 = "{:s} -v {:d} -n {:d}".format(inpath,initver,nrep)
     
     jobname="{:s}".format('ori_dev_run_test')
     
