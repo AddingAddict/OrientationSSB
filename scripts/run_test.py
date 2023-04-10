@@ -40,3 +40,5 @@ for i in range(nrep):
         "load_from_prev_run" : Version-1})
 
     run_onelayer.parameter_sweep_layer4(Version,config_dict,not_saving_temp=False)
+
+    Version += 1
