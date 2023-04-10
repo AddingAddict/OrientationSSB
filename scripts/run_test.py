@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--initver', '-v', help='version',type=int, default=-1)
 parser.add_argument('--nrep', '-n', help='version',type=int, default=20)
 args = vars(parser.parse_args())
-Version = args['initver']
-nrep = args['nrep']
+Version = int(args['initver'])
+nrep = int(args['nrep'])
 
 for i in range(nrep):
     config_dict = misc.load_external_params("params_test")

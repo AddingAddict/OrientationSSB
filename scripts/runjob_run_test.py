@@ -31,8 +31,8 @@ def runjobs():
     args = vars(args2)
     
     cluster = str(args["cluster_"])
-    initver = str(args["initver"])
-    nrep = str(args["nrep"])
+    initver = int(args["initver"])
+    nrep = int(args["nrep"])
 
     
     if (args2.test):
