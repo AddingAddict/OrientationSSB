@@ -252,7 +252,7 @@ class Tf_integrator_new:
 		clip_mode = self.params_dict["config_dict"]["Wlgn_to4_params"]["clip_weights"]
 		weight_strength = 1.
 		init_weights = None
-		if mult_norm in ("x","alpha"):
+		if mult_norm in ("x","alpha","xalpha"):
 			init_weights = self.params_dict["init_weights"][:2,:]
 		
 		p_dict["p_lgn_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\

@@ -238,10 +238,14 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 				rA = rA_on
 				if layer=="layer4":
 					c_orth,s_orth = nc.generate_simIO_normalisation(Nlgn,N4,arbor_on,Nvert)
+					if not(os.path.exists(data_dir + "layer4/P_orth/")):
+					    os.mkdir(data_dir + "layer4/P_orth/")
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(N4,\
 							Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))
 				elif layer=="layer23":
+					if not(os.path.exists(data_dir + "two_layer/P_orth/")):
+					    os.mkdir(data_dir + "two_layer/P_orth/")
 					c_orth,s_orth = dynamics.generate_simIO_normalisation_oneUnittype(N4,\
 										N23,arbor_on,Nvert=1)
 					np.save(data_dir + "two_layer/P_orth/N23{}_N4{}{}{}.npy".format(N23,\
@@ -251,6 +255,8 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 				if layer=="layer4":
 					c_orth,s_orth = nc.generate_simIO_normalisation_onoff(Nlgn,N4,\
 																		arbor_on,arbor_off,Nvert)
+					if not(os.path.exists(data_dir + "layer4/P_orth/")):
+					    os.mkdir(data_dir + "layer4/P_orth/")
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 							N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))

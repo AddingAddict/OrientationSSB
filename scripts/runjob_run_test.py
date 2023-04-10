@@ -22,13 +22,17 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Test commands option
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test", required=True, type=int, default=0)
+    parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
+    parser.add_argument('--initver', '-v', help='version',type=int, default=-1)
+    parser.add_argument('--nrep', '-n', help='version',type=int, default=20)
     
     args2 = parser.parse_args()
     args = vars(args2)
     
     cluster = str(args["cluster_"])
+    initver = str(args["initver"])
+    nrep = str(args["nrep"])
 
     
     if (args2.test):
@@ -83,7 +87,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/run_test.py"
-    c1 = "{:s}".format(inpath)
+    c1 = "{:s} --v {:d} --n {:d}".format(inpath,initver,nrep)
     
     jobname="{:s}".format('ori_dev_run_test')
     
