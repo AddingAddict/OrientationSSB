@@ -167,12 +167,12 @@ Wlgn_to4_params
 	beta_P	0.005
 	clip_weights	True
 	connectivity_type	EI
-	constraint_mode	xalpha_approx
+	constraint_mode	xalpha
 	heterogeneity_type	None
 	learning_rate	0.5
 	load_from_prev_run	161
 	mean_eccentricity	0.0
-	mult_norm	x
+	mult_norm	xalpha
 	noise	0.0
 	plasticity_rule	activity_based
 	r_A_off	0.15
