@@ -389,6 +389,8 @@ class Network:
 		arbor_params = {}
 		if self.config_dict["Wlgn_to4_params"].get("ret_scatter",False):
 			arbor_params = {"ret_scatter" : self.config_dict["Wlgn_to4_params"]["ret_scatter"]}
+		if self.config_dict["Wlgn_to4_params"].get("r_lim",False):
+			arbor_params = {"r_lim" : self.config_dict["Wlgn_to4_params"]["r_lim"]}
 		arbor_on = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_on"],\
 						profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_on"],\
 						arbor_params=arbor_params)

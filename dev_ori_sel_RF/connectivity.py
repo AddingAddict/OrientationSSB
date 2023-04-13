@@ -108,6 +108,8 @@ class Connectivity:
 		arbor_params = {}
 		if conn_params.get("ret_scatter",False):
 			arbor_params = {"ret_scatter" : conn_params["ret_scatter"]}
+		if conn_params.get("r_lim",False):
+			arbor_params = {"r_lim" : conn_params["r_lim"]}
 
 		if "r_A" in kwargs:
 			if isinstance(kwargs["r_A"],float):
@@ -565,6 +567,8 @@ class Connectivity:
 		yto = np.repeat(yto,self.Nvert[1]).reshape(self.to_size[0],self.to_size[1]*self.Nvert[1])
 		xdelta = distance(xto[:,:,None,None]-xfrom[None,None,:,:])
 		ydelta = distance(yto[:,:,None,None]-yfrom[None,None,:,:])
+
+		lim = arbor_params.get("r_lim",1.0)
 	
 
 		## Heterogeneously varying anisotropic Connectivity
@@ -608,11 +612,11 @@ class Connectivity:
 					  np.prod(self.from_size)*self.Nvert[0])
 
 		if profile=="heaviside":
-			arbor = (np.around(d,2)<=radius).astype(float)
+			arbor = (np.around(d,2)<=lim*radius).astype(float)
 
 		elif profile=="gaussian":
 			arbor = gaussian(d,0,radius)
-			arbor[np.around(d,2)>radius] = 0.0
+			arbor[np.around(d,2)>lim*radius] = 0.0
 		
 		elif profile=="overlap":
 			d_unique = np.unique(d[np.around(d,2)<=radius])
@@ -636,7 +640,7 @@ class Connectivity:
 		elif profile=="linear_falloff":
 			arbor = linear_arbor_falloff(np.around(d,2),radius=radius,\
 										 inner_radius=radius*0.5)
-			arbor[np.around(d,2)>radius] = 0.0
+			arbor[np.around(d,2)>lim*radius] = 0.0
 
 		else:
 			print("Specified arbor profile ({}) not found. Use one of the following: \

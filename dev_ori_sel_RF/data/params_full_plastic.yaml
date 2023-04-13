@@ -131,7 +131,7 @@ W4to4_params:
     arbor_profile_E:   "gaussian"
     arbor_profile_I:   "gaussian"
 
-    Wrec_mode:   "initialize2pop"
+    Wrec_mode:   "initializegauss2pop"
     sigma_factor:   1.0
     max_ew:   0.95
     ## params for clustered/sparse Connectivity
