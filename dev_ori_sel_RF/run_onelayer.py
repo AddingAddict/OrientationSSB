@@ -187,10 +187,17 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 	
 	#################################################################################
 	############################# SAVE PARAMS AND DATA ##############################
-	if not os.path.exists(data_dir + "layer4/v{v}".format(v=Version)):
-		os.makedirs(data_dir + "layer4/v{v}".format(v=Version))
+	if config_dict.get("config_name",False):
+		if not os.path.exists(data_dir + "layer4/{s}".format(s=config_dict["config_name"])):
+			os.makedirs(data_dir + "layer4/{s}".format(s=config_dict["config_name"]))
+		if not os.path.exists(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version)):
+			os.makedirs(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version))
+		filename = "layer4/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+	else:
+		if not os.path.exists(data_dir + "layer4/v{v}".format(v=Version)):
+			os.makedirs(data_dir + "layer4/v{v}".format(v=Version))
+		filename = "layer4/v{v}/yt_v{v}.npz".format(v=Version)
 	print("Version",Version,s);sys.stdout.flush()
-	filename = "layer4/v{v}/yt_v{v}.npz".format(v=Version)
 	if config_dict["Inp_params"]["simulate_activity"]:
 		if not kwargs["not_saving_temp"]:
 			data_dict_time = {
@@ -212,11 +219,17 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 		misc.save_data(Version, filename, data_dict_time)
 
 	## save ff connections and activity of last timestep separately
-	filename = "layer4/v{v}/y_v{v}.npz".format(v=Version)
+	if config_dict.get("config_name",False):
+		filename = "layer4/{s}/v{v}/y_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+	else:
+		filename = "layer4/v{v}/y_v{v}.npz".format(v=Version)
 	misc.save_data(Version, filename, data_dict)
 
 	## save parameter settings
-	filename = "layer4/v{v}/config_v{v}".format(v=Version)
+	if config_dict.get("config_name",False):
+		filename = "layer4/{s}/v{v}/config_v{v}".format(s=config_dict["config_name"],v=Version)
+	else:
+		filename = "layer4/v{v}/config_v{v}".format(v=Version)
 	config_dict.update({
 				"maxew"		: np.array([max_ew])\
 		})

@@ -302,6 +302,14 @@ class Tf_integrator_new:
 						plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ei)
 			p_dict["p_rec4_ii"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
 						plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ii)
+			try:
+				if self.params_dict["config_dict"]["W4to4_params"]["e_plasticity"]:
+					p_dict["p_rec4_ee"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+								plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ee)
+					p_dict["p_rec4_ie"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+								plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ie)
+			except:
+				pass
 
 		if self.params_dict["config_dict"]["W23_params"]["plasticity_rule"]!="None":
 			c_orth = None
@@ -533,6 +541,15 @@ class Tf_integrator_new:
 														self.params_dict["arbor23to23_full"],\
 														H,self.running_l4_avg,self.l4_target,\
 														self.params_dict)
+
+				# for i in range(20):
+				# 	norm = tf.reduce_sum(Wlgn_to_4,axis=(0,2))
+				# 	norm = tf.where(tf.equal(norm, 0), tf.ones_like(norm), norm)
+				# 	Wlgn_to_4 /= norm[None,:,None]
+				# 	norm = tf.reduce_sum(Wlgn_to_4,axis=1)
+				# 	norm = tf.where(tf.equal(norm, 0), tf.ones_like(norm), norm)
+				# 	Wlgn_to_4 /= norm[:,None,:]
+				# 	Wlgn_to_4 = tf.clip_by_value(Wlgn_to_4,0,Wlim*arbor2)
 
 				# check fraction of synaptic ff weights are frozen
 				frozen = np.sum(tf.boolean_mask(Wlgn_to_4,arbor2)<=0) + \

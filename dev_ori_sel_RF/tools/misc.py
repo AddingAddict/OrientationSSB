@@ -37,7 +37,7 @@ def get_version(save_path,version=None,readonly=True):
 		os.makedirs(save_path + "v{}".format(version))
 	return version
 
-def load_external_params(filename):
+def load_external_params(filename,verbose=True):
 	""" load file with parameter settings
 	input:
 	filename: name of file
@@ -56,7 +56,7 @@ def load_external_params(filename):
 
 	with open(file_path,"r") as file:
 		params_dict = yaml.safe_load(file)
-	print("MISC params_dict",filename,params_dict)
+	if verbose: print("MISC params_dict",filename,params_dict)
 	return params_dict
 
 def save_data(Version,filename,data_dict):
@@ -167,6 +167,8 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 	load_orth_vectors = False
 	if (mode=="xalpha" and layer=="layer4"):
 		load_orth_vectors = True
+	elif (mode=="xalpha" and layer=="rec4"): # we will treat arbor_on = arbor_e and arbor_off = arbor_i
+		load_orth_vectors = True
 	elif (mode=="xalpha" and layer=="layer23" and\
 		 system_dict["W4to23_params"]["plasticity_rule"] is not None):
 		load_orth_vectors = True
@@ -178,22 +180,37 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 		Nlgn = system_dict["Nlgn"]
 		Nvert = system_dict["Nvert"]
 		
-		arbor_profile_on = arbor_dict["arbor_profile_on"]
-		arbor_profile_off = arbor_dict["arbor_profile_off"]
+		if layer=="rec4":
+			arbor_profile_on = arbor_dict["arbor_profile_E"]
+			arbor_profile_off = arbor_dict["arbor_profile_I"]
+		else:
+			arbor_profile_on = arbor_dict["arbor_profile_on"]
+			arbor_profile_off = arbor_dict["arbor_profile_off"]
 		if arbor_profile_on==arbor_profile_off:
 			name_profile = "_{}".format(arbor_profile_on)
 		else:
 			name_profile = "_{}-{}".format(arbor_profile_on,arbor_profile_off)
 
-		rA_on = arbor_dict["r_A_on"]
-		rA_off = arbor_dict["r_A_off"]
+		if layer=="rec4":
+			rA_on = arbor_dict["rA_E"]
+			rA_off = arbor_dict["rA_I"]
+		else:
+			rA_on = arbor_dict["r_A_on"]
+			rA_off = arbor_dict["r_A_off"]
 		if rA_on==rA_off:
 			name_rA = "_rA{}".format(np.around(rA_on,2))
 		else:
-			name_rA = "_rAon{}_rAoff{}".format(np.around(rA_on,2),np.around(rA_off,2))
+			if layer=="rec4":
+				name_rA = "_rAE{}_rAI{}".format(np.around(rA_on,2),np.around(rA_off,2))
+			else:
+				name_rA = "_rAon{}_rAoff{}".format(np.around(rA_on,2),np.around(rA_off,2))
 
-		ampl_on = arbor_dict["ampl_on"]
-		ampl_off = arbor_dict["ampl_off"]
+		if layer=="rec4":
+			ampl_on = arbor_dict["ampl_E"]
+			ampl_off = arbor_dict["ampl_I"]
+		else:
+			ampl_on = arbor_dict["ampl_on"]
+			ampl_off = arbor_dict["ampl_off"]
 		if (ampl_on!=ampl_off or ampl_on!=1):
 			name_ampl = "_amplon{}_amploff{}".format(ampl_on,ampl_off)
 		else:
@@ -209,6 +226,11 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 									 "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 									 N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),
 									 name))
+				if layer=="rec4":
+					constraint_vec = np.load(data_dir +\
+									 "layer4/P_orth/N4{}_rec{}{}.npy".format(\
+									 N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),
+									 name))
 				elif layer=="layer23":
 					constraint_vec = np.load(data_dir +\
 									 "two_layer/P_orth/N23{}_N4{}{}{}.npy".format(\
@@ -219,6 +241,11 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 					constraint_vec = np.load(data_dir +\
 									 "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 									 N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),
+									 name))
+				if layer=="rec4":
+					constraint_vec = np.load(data_dir +\
+									 "layer4/P_orth/N4{}_rec{}{}.npy".format(\
+									 N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),
 									 name))
 				elif layer=="layer23":
 					constraint_vec = np.load(data_dir +\
@@ -243,6 +270,13 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(N4,\
 							Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))
+				if layer=="rec4":
+					c_orth,s_orth = nc.generate_simIO_normalisation(N4,N4,arbor_on,Nvert)
+					if not(os.path.exists(data_dir + "layer4/P_orth/")):
+					    os.mkdir(data_dir + "layer4/P_orth/")
+					np.save(data_dir + "layer4/P_orth/N4{}_rec{}{}.npy".format(N4,\
+							"" if Nvert==1 else "_Nvert{}".format(Nvert),\
+							name),np.concatenate([c_orth,s_orth]))
 				elif layer=="layer23":
 					if not(os.path.exists(data_dir + "two_layer/P_orth/")):
 					    os.mkdir(data_dir + "two_layer/P_orth/")
@@ -259,6 +293,14 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 					    os.mkdir(data_dir + "layer4/P_orth/")
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 							N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
+							name),np.concatenate([c_orth,s_orth]))
+				if layer=="rec4":
+					c_orth,s_orth = nc.generate_simIO_normalisation_onoff(N4,N4,\
+																		arbor_on,arbor_off,Nvert)
+					if not(os.path.exists(data_dir + "layer4/P_orth/")):
+					    os.mkdir(data_dir + "layer4/P_orth/")
+					np.save(data_dir + "layer4/P_orth/N4{}_rec{}{}.npy".format(\
+							N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))
 				elif layer=="layer23":
 					print("layer 23 c_orth,s_orth not implemented for different arbors")

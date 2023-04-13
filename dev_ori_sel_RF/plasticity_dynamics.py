@@ -355,6 +355,22 @@ def unconstrained_plasticity_wrapper(p_dict, l4, l23, lgn, Wlgn_to_4, W4to4, W4t
              p_dict["p_4to23_i"].beta_P,None)
         dW_dict["dW_4to23_i"] = tf.reshape(dW, [-1])
 
+    if p_dict["p_rec4_ee"] is not None:
+        l4_e = l4[:tf.size(l4)//2]
+        l4_i = l4[tf.size(l4)//2:]
+        W4to4_ee = W4to4[:tf.size(l4)//2,:tf.size(l4)//2]
+        dW = p_dict["p_rec4_ee"].unconstrained_update(t,l4_e,l4_e,None,W4to4_ee,\
+             p_dict["p_rec4_ee"].beta_P,None)
+        print("dW p_rec4_ee",np.nanmax(dW),np.nanmin(dW))
+        dW_dict["dW_rec4_ee"] = tf.reshape(dW, [-1])
+
+    if p_dict["p_rec4_ie"] is not None:
+        l4_i = l4[tf.size(l4)//2:]
+        W4to4_ie = W4to4[tf.size(l4)//2:,:tf.size(l4)//2]
+        dW = p_dict["p_rec4_ie"].unconstrained_update(t,l4_e,l4_i,None,W4to4_ie,\
+             p_dict["p_rec4_ie"].beta_P,None)
+        dW_dict["dW_rec4_ie"] = tf.reshape(dW, [-1])
+
     if p_dict["p_rec4_ei"] is not None:
         l4_e = l4[:tf.size(l4)//2]
         l4_i = l4[tf.size(l4)//2:]
@@ -442,6 +458,32 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
                 p_dict["p_4to23_i"].c_orth,p_dict["p_4to23_i"].s_orth,dt)
         W4to23 = tf.concat([tf.concat([W4to23[:N,:N],W_new],0),W4to23[:,N:]],1)
         params_dict["W4to23"] = W4to23
+
+    if p_dict["p_rec4_ee"] is not None:
+        N = W4to4.shape[0]//2
+        W4to4_ee = W4to4[:N,:N]
+        if arbor4to4 is None:
+            A = 1
+        else:
+            A = arbor4to4[:N,:N]
+        dW = tf.reshape(dW_dict["dW_rec4_ee"],W4to4_ee.shape)
+        W_new = p_dict["p_rec4_ee"].constrain_update(dW,W4to4_ee,None,A,\
+                p_dict["p_rec4_ee"].c_orth,p_dict["p_rec4_ee"].s_orth,dt)
+        W4to4 = tf.concat([tf.concat([W_new,W4to4[N:,:N]],0),W4to4[:,N:]],1)
+        params_dict["W4to4"] = W4to4
+
+    if p_dict["p_rec4_ie"] is not None:
+        N = W4to4.shape[0]//2
+        W4to4_ie = W4to4[N:,:N]
+        if arbor4to4 is None:
+            A = 1
+        else:
+            A = arbor4to4[N:,:N]
+        dW = tf.reshape(dW_dict["dW_rec4_ie"],W4to4_ie.shape)
+        W_new = p_dict["p_rec4_ie"].constrain_update(dW,W4to4_ie,None,A,\
+                p_dict["p_rec4_ie"].c_orth,p_dict["p_rec4_ie"].s_orth,dt)
+        W4to4 = tf.concat([tf.concat([W4to4[:N,:N],W_new],0),W4to4[:,N:]],1)
+        params_dict["W4to4"] = W4to4
 
     if p_dict["p_rec4_ei"] is not None:
         N = W4to4.shape[0]//2

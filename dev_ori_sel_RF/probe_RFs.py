@@ -11,7 +11,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from dev_ori_sel_RF import image_dir,data_dir,config_dict,dynamics_np,\
+from dev_ori_sel_RF import image_dir,data_dir,config_dict,dynamics_np,dynamics,\
 system_generation,network
 from dev_ori_sel_RF.tools import analysis_tools,misc,update_params_dict
 
@@ -25,13 +25,13 @@ def fio_powerlaw(x):
 	x[x<0] = 0
 	return x**2
 
-def probe_RFs_one_layer(Version):
+def probe_RFs_one_layer(Version,config_name):
 	RF_mode = "load_from_external"
 	system_mode = "one_layer"
 	connectivity_type = "EI"
 	load_location = 'local'
 
-	load_path = data_dir + "layer4/v{v}/".format(v=Version)
+	load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
 	probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
 
 	gamma_ff = probe_config_dict["gamma_lgn"]
@@ -39,7 +39,7 @@ def probe_RFs_one_layer(Version):
 	probe_config_dict["Wlgn_to4_params"].update({
 	    "W_mode": RF_mode,
 	    "load_from_prev_run" : Version})
-	pdf_path = image_dir + "grating_responses/v{}_{}/".format(Version,load_location)
+	pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
 	Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
 	                         probe_config_dict["N23"],probe_config_dict["Nvert"]
 	suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])

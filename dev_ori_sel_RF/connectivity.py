@@ -50,7 +50,7 @@ def gaussian_filter(ar,sigma):
 
 
 class Connectivity:
-	def __init__(self, from_size, to_size, random_seed, Nvert=1, full_output=False):
+	def __init__(self, from_size, to_size, random_seed, Nvert=1, full_output=False, verbose=True):
 		self.from_size = from_size
 		self.to_size = to_size
 		if isinstance(Nvert,int):
@@ -60,6 +60,7 @@ class Connectivity:
 		# self.rng = np.random.default_rng(random_seed*90)
 		self.full_output = full_output
 		self.full_output_dict = {}
+		self.verbose = verbose
 		
 	
 	def gen_ecp(self, x, y, conn_params):
@@ -114,7 +115,7 @@ class Connectivity:
 				arbor = self.create_arbor(radius=kwargs["r_A"],profile=profile_A,\
 						arbor_params=arbor_params)
 				arbor = arbor.reshape(xdelta.shape)
-				print("CHECK radius",kwargs["r_A"])
+				if self.verbose: print("CHECK radius",kwargs["r_A"])
 			else:
 				arbor = None
 		else:
@@ -190,7 +191,7 @@ class Connectivity:
 			
 			if arbor is not None:
 				disc_gaussian[np.logical_not(arbor)] = 0.
-				print("arbor",arbor.shape)
+				if self.verbose: print("arbor",arbor.shape)
 			norm_factor = np.sum(disc_gaussian,axis=(2,3))[:,:,None,None]
 			conn_matrix = ampl * disc_gaussian / norm_factor
 			
@@ -434,7 +435,7 @@ class Connectivity:
 			# if arbor is not None:
 			# 	conn_matrix[np.logical_not(arbor)] = 0.
 
-		elif profile in ("random_delta","initialize","initialize2"):
+		elif profile in ("random_delta","initialize","initialize2","initializegauss"):
 			s_noise = conn_params["s_noise"]
 			if profile=="initialize2":
 				disc_gaussian = gaussian(xdelta,ydelta,0.2)
@@ -651,7 +652,7 @@ class Connectivity_2pop():
 	from retina to lgn
 	'''
 	def __init__(self, from_size_E, from_size_I, to_size_E, to_size_I, random_seed,\
-				 Nvert=1, full_output=False):
+				 Nvert=1, full_output=False, verbose=True):
 		self.random_seed = random_seed
 		self.from_Ne = from_size_E
 		self.from_Ni = from_size_I
@@ -662,6 +663,7 @@ class Connectivity_2pop():
 		self.Nvert = Nvert
 		self.full_output = full_output
 		self.full_output_dict = {}
+		self.verbose = verbose
 
 	def create_matrix_2pop(self, conn_params, profile, **kwargs):
 		# profile : "Lognormal_2pop" "Gaussian_2pop" "Gaussian_2pop_dense"
@@ -671,8 +673,9 @@ class Connectivity_2pop():
 		##TODO: different random seed for E, I conn
 
 		profile_conn = profile.replace("2pop","")
-		print("profile_conn",profile_conn)
-		print("Warning: Currently E and I units are matched in their abs phases/same realization of existing conns")
+		if self.verbose:
+			print("profile_conn",profile_conn)
+			print("Warning: Currently E and I units are matched in their abs phases/same realization of existing conns")
 		if not "density" in conn_params.keys():
 			conn_params["density"] = 1.
 		if not "ncluster" in conn_params.keys():
@@ -686,33 +689,69 @@ class Connectivity_2pop():
 
 		rA_E = conn_params["rA_E"]
 		rA_I = conn_params["rA_I"]
-		W4to4_params_EE = copy(conn_params)
-		W4to4_params_EE.update({"sigma" : conn_params["sigma_EE"] * sigma_rec,\
-						 		"ampl" : conn_params["aEE"], "type" : "EE"})
-		conn_EE,arb_EE = Connectivity(self.from_Ne, self.to_Ne,\
-				 self.random_seed, self.Nvert,full_output=self.full_output\
-				 ).create_matrix(W4to4_params_EE, profile_conn_EE, r_A=rA_E, **kwargs)
+		arbor_params = {}
+		if conn_params.get("ret_scatter",False):
+			arbor_params = {"ret_scatter" : conn_params["ret_scatter"]}
+		if profile_conn in ("random_delta","initialize","initialize2"):
+			W4to4_params_EE = copy(conn_params)
+			Wrec4_EE = Connectivity(self.from_Ne, self.to_Ne,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose)
+			conn_EE,_ = Wrec4_EE.create_matrix(W4to4_params_EE, profile_conn_EE, r_A=rA_E, profile_A="heaviside", **kwargs)
+			arb_EE = Wrec4_EE.create_arbor(radius=rA_E,\
+							profile=conn_params["arbor_profile_E"],\
+							arbor_params=arbor_params)
 
-		W4to4_params_IE = copy(conn_params)
-		W4to4_params_IE.update({"sigma" : conn_params["sigma_IE"] * sigma_rec,\
-						 		"ampl" : conn_params["aIE"], "type" : "IE"})
-		conn_IE,arb_IE = Connectivity(self.from_Ne, self.to_Ni,\
-		 			self.random_seed, self.Nvert,full_output=self.full_output\
-		 			).create_matrix(W4to4_params_IE, profile_conn_IE, r_A=rA_E, **kwargs)
+			W4to4_params_IE = copy(conn_params)
+			Wrec4_IE = Connectivity(self.from_Ne, self.to_Ni,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose)
+			conn_IE,_ = Wrec4_IE.create_matrix(W4to4_params_IE, profile_conn_IE, r_A=rA_E, profile_A="heaviside", **kwargs)
+			arb_IE = Wrec4_IE.create_arbor(radius=rA_E,\
+							profile=conn_params["arbor_profile_E"],\
+							arbor_params=arbor_params)
 
-		W4to4_params_EI = copy(conn_params)
-		W4to4_params_EI.update({"sigma" : conn_params["sigma_EI"] * sigma_rec,\
-								 "ampl" : conn_params["aEI"], "type" : "EI"})
-		conn_EI,arb_EI = Connectivity(self.from_Ni, self.to_Ne,\
-				 self.random_seed, self.Nvert,full_output=self.full_output\
-				 ).create_matrix(W4to4_params_EI, profile_conn_EI, r_A=rA_I, **kwargs)
+			W4to4_params_EI = copy(conn_params)
+			Wrec4_EI = Connectivity(self.from_Ni, self.to_Ne,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose)
+			conn_EI,_ = Wrec4_EI.create_matrix(W4to4_params_EI, profile_conn_EI, r_A=rA_I, profile_A="heaviside", **kwargs)
+			arb_EI = Wrec4_EI.create_arbor(radius=rA_I,\
+							profile=conn_params["arbor_profile_I"],\
+							arbor_params=arbor_params)
 
-		W4to4_params_II = copy(conn_params)
-		W4to4_params_II.update({"sigma" : conn_params["sigma_II"] * sigma_rec,\
-						 		"ampl" : conn_params["aII"], "type" : "II"})
-		conn_II,arb_II = Connectivity(self.from_Ni, self.to_Ni,\
-		 			self.random_seed, self.Nvert,full_output=self.full_output\
-		 			).create_matrix(W4to4_params_II, profile_conn_II, r_A=rA_I, **kwargs)
+			W4to4_params_II = copy(conn_params)
+			Wrec4_II = Connectivity(self.from_Ni, self.to_Ni,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose)
+			conn_II,_ = Wrec4_II.create_matrix(W4to4_params_II, profile_conn_II, r_A=rA_I, profile_A="heaviside", **kwargs)
+			arb_II = Wrec4_II.create_arbor(radius=rA_I,\
+							profile=conn_params["arbor_profile_I"],\
+							arbor_params=arbor_params)
+		else:
+			W4to4_params_EE = copy(conn_params)
+			W4to4_params_EE.update({"sigma" : conn_params["sigma_EE"] * sigma_rec,\
+							 		"ampl" : conn_params["aEE"], "type" : "EE"})
+			conn_EE,arb_EE = Connectivity(self.from_Ne, self.to_Ne,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose\
+					 ).create_matrix(W4to4_params_EE, profile_conn_EE, r_A=rA_E, **kwargs)
+
+			W4to4_params_IE = copy(conn_params)
+			W4to4_params_IE.update({"sigma" : conn_params["sigma_IE"] * sigma_rec,\
+							 		"ampl" : conn_params["aIE"], "type" : "IE"})
+			conn_IE,arb_IE = Connectivity(self.from_Ne, self.to_Ni,\
+			 			self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose\
+			 			).create_matrix(W4to4_params_IE, profile_conn_IE, r_A=rA_E, **kwargs)
+
+			W4to4_params_EI = copy(conn_params)
+			W4to4_params_EI.update({"sigma" : conn_params["sigma_EI"] * sigma_rec,\
+									 "ampl" : conn_params["aEI"], "type" : "EI"})
+			conn_EI,arb_EI = Connectivity(self.from_Ni, self.to_Ne,\
+					 self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose\
+					 ).create_matrix(W4to4_params_EI, profile_conn_EI, r_A=rA_I, **kwargs)
+
+			W4to4_params_II = copy(conn_params)
+			W4to4_params_II.update({"sigma" : conn_params["sigma_II"] * sigma_rec,\
+							 		"ampl" : conn_params["aII"], "type" : "II"})
+			conn_II,arb_II = Connectivity(self.from_Ni, self.to_Ni,\
+			 			self.random_seed, self.Nvert,full_output=self.full_output,verbose=self.verbose\
+			 			).create_matrix(W4to4_params_II, profile_conn_II, r_A=rA_I, **kwargs)
 
 		if self.full_output:
 			output_dict_EE,arb_EE = arb_EE
@@ -724,9 +763,10 @@ class Connectivity_2pop():
 										  "IE" : output_dict_IE,
 										  "EI" : output_dict_EI,
 										  "II" : output_dict_II,})
-		print("")
-		print("CHECK CONN VALS",profile_conn,np.nanmax(conn_EE),np.nanmax(conn_IE),\
-				np.nanmax(conn_EI),np.nanmax(conn_II))
+		if self.verbose:
+			print("")
+			print("CHECK CONN VALS",profile_conn,np.nanmax(conn_EE),np.nanmax(conn_IE),\
+					np.nanmax(conn_EI),np.nanmax(conn_II))
 		
 		from_Ne_total = np.prod(self.from_Ne) * self.Nvert[0]
 		from_Ni_total = np.prod(self.from_Ni) * self.Nvert[0]
@@ -741,23 +781,24 @@ class Connectivity_2pop():
 		# normalise conn matrix if the maximal real eigenvalue is given
 		if Wrec.shape[0]==Wrec.shape[1]:
 			ew,_ = linalg.eig(Wrec,right=True)
-			print("orig max ew",np.nanmax(np.real(ew)),max_ew)
+			if self.verbose: print("orig max ew",np.nanmax(np.real(ew)),max_ew)
 			if isinstance(max_ew,float):
 				Wrec /= np.nanmax(np.real(ew)) / max_ew
-				print("max_ew",max_ew)
+				if self.verbose: print("max_ew",max_ew)
 
 			Wee = np.sum(Wrec[:to_Ne_total,:from_Ne_total],axis=1)[0]
 			Wei = np.abs(np.sum(Wrec[:to_Ne_total,from_Ne_total:],axis=1)[0])
 			Wie = np.sum(Wrec[to_Ne_total:,:from_Ne_total],axis=1)[0]
 			Wii = np.abs(np.sum(Wrec[to_Ne_total:,from_Ne_total:],axis=1)[0])
-			print("WEE={},WEI={},WIE={},WII={}".format(Wee,Wei,Wie,Wii))
-			print("omega_i=Wie-Wee={}".format(Wie-Wee))
-			print("omega_e=Wii-Wei={}".format(Wii-Wei))
+			if self.verbose:
+				print("WEE={},WEI={},WIE={},WII={}".format(Wee,Wei,Wie,Wii))
+				print("omega_i=Wie-Wee={}".format(Wie-Wee))
+				print("omega_e=Wii-Wei={}".format(Wii-Wei))
 		else:
 			svds = linalg.svdvals(Wrec)
 			Wrec /= np.nanmax(np.real(svds)) / max_ew
-			print('svd,Wrec',np.sqrt(svds[:5]))
-		print("")
+			if self.verbose: print('svd,Wrec',np.sqrt(svds[:5]))
+		if self.verbose: print("")
 		
 		if arb_EE is None:
 			arbor = None

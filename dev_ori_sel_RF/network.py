@@ -10,6 +10,10 @@ class Network:
 		self.Version = Version
 		self.config_dict = config_dict
 		self.kwargs = kwargs
+		try:
+			self.verbose = kwargs['verbose']
+		except:
+			self.verbose = True
 
 		self.Nret = config_dict["Nret"]
 		self.Nlgn = config_dict["Nlgn"]
@@ -23,7 +27,7 @@ class Network:
 		## retina to lgn connectivity
 		## moving sinusoidal input of varying orientation and spatial frequency
 		self.Wret_to_lgn,_ = connectivity.Connectivity((self.Nret,self.Nret),(self.Nlgn,self.Nlgn),\
-						  random_seed=self.config_dict["random_seed"],Nvert=1).create_matrix(\
+						  random_seed=self.config_dict["random_seed"],Nvert=1, verbose=self.verbose).create_matrix(\
 						  self.config_dict["Wret_to_lgn_params"],\
 						  self.config_dict["Wret_to_lgn_params"]["profile"])
 		self.Wret_to_lgn *= self.config_dict["Wret_to_lgn_params"]["gamma_ret"]
@@ -31,7 +35,7 @@ class Network:
 		if self.config_dict["Wret_to_lgn_params"]["profile"]=="Gaussian_broadOFF":
 			Wret_to_lgn_OFF,_ = connectivity.Connectivity((self.Nret,self.Nret),\
 								(self.Nlgn,self.Nlgn),\
-								random_seed=self.config_dict["random_seed"],Nvert=1).create_matrix(\
+								random_seed=self.config_dict["random_seed"],Nvert=1, verbose=self.verbose).create_matrix(\
 								{"ampl" : self.config_dict["Wret_to_lgn_params"]["ampl"],\
 								"noise" : self.config_dict["Wret_to_lgn_params"]["noise"],\
 								"sigma" : 2*self.config_dict["Wret_to_lgn_params"]["sigma"]},\
@@ -43,15 +47,17 @@ class Network:
 		## lgn to l4 connectivity
 		Wlgn4 = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
 				 						   random_seed=self.config_dict["random_seed"],\
-				 						   Nvert=(1,self.Nvert))
-		self.Wlgn_to_4 = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4,\
+				 						   Nvert=(1,self.Nvert), verbose=self.verbose)
+		self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2 = \
+			self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4,\
 									  system_mode=self.config_dict["system"],**self.kwargs)
+		self.arbor2 = np.concatenate([self.arbor2]*(self.config_dict["num_lgn_paths"]//2))
 		if (self.config_dict["Wlgn_to4_params"]["connectivity_type"]=="EI" and\
 		 	self.config_dict["Wlgn_to4_params"]["W_mode"]!="load_from_external"):
 			Wlgn4_I = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
 				 								 random_seed=self.config_dict["random_seed"]+1,\
-				 								 Nvert=(1,self.Nvert))
-			Wlgn_to_4_I = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4_I,\
+				 								 Nvert=(1,self.Nvert), verbose=self.verbose)
+			Wlgn_to_4_I,_,_,_ = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4_I,\
 										system_mode=self.config_dict["system"], **self.kwargs)
 			self.Wlgn_to_4 = np.concatenate([self.Wlgn_to_4,Wlgn_to_4_I])
 
@@ -72,24 +78,9 @@ class Network:
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="None":
 			self.init_weights = np.array([]) ## not needed
 
-
-		## arbor from LGN to L4
-		arbor_params = {}
-		if self.config_dict["Wlgn_to4_params"].get("ret_scatter",False):
-			arbor_params = {"ret_scatter" : self.config_dict["Wlgn_to4_params"]["ret_scatter"]}
-		self.arbor_on = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_on"],\
-						profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_on"],\
-						arbor_params=arbor_params)
-		self.arbor_on *= self.config_dict["Wlgn_to4_params"]["ampl_on"]
-		self.arbor_off = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_off"],\
-							profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_off"],\
-							arbor_params=arbor_params)
-		self.arbor_off *= self.config_dict["Wlgn_to4_params"]["ampl_off"]
-		self.arbor2 = np.stack([self.arbor_on,self.arbor_off]*(self.config_dict["num_lgn_paths"]//2))
-
 		# recurrent connectivity
 		W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
-										random_seed=self.config_dict["random_seed"],Nvert=self.Nvert)
+										random_seed=self.config_dict["random_seed"],Nvert=self.Nvert,verbose=self.verbose)
 		Wrec_mode = self.config_dict["W4to4_params"]["Wrec_mode"]
 		##  =========== 1pop ===========
 		sigma_rec = self.config_dict["W4to4_params"]["sigma_factor"]
@@ -99,19 +90,20 @@ class Network:
 			W4 = connectivity.Connectivity_2pop((self.N4,self.N4),(self.N4,self.N4),\
 												(self.N4,self.N4), (self.N4,self.N4),\
 			 									random_seed=self.config_dict["random_seed"],\
-			 									Nvert=self.Nvert)
+			 									Nvert=self.Nvert, verbose=self.verbose)
 			self.W4to4,self.arbor4to4 = W4.create_matrix_2pop(self.config_dict["W4to4_params"],Wrec_mode)
 		else:
-			print("")
-			print("creating rec connectivity")
+			if self.verbose:
+				print("")
+				print("creating rec connectivity")
 			self.config_dict["W4to4_params"]["sigma"] *= sigma_rec
 			x_I = np.clip(self.config_dict["W4to4_params"]["sigma"]*2,0.1,self.N4/2.)
-			print("params",self.config_dict["W4to4_params"])
+			if self.verbose: print("params",self.config_dict["W4to4_params"])
 			self.W4to4,self.arbor4to4 = W4.create_matrix(self.config_dict["W4to4_params"],\
 										 profile=Wrec_mode)#, r_A=x_I)
 			ew,_ = linalg.eig(self.W4to4,right=True)
 			self.W4to4 /= np.nanmax(np.real(ew))/max_ew
-			print("")
+			if self.verbose: print("")
 		
 
 		if self.config_dict["system"]=="one_layer":
@@ -122,7 +114,7 @@ class Network:
 			N23 = self.config_dict["N23"]
 			W4 = connectivity.Connectivity_2pop((self.N23,self.N23),(self.N23,self.N23),
 												(self.N23,self.N23),(self.N23,self.N23),\
-				 								random_seed=self.config_dict["random_seed"])
+				 								random_seed=self.config_dict["random_seed"], verbose=self.verbose)
 			Wrec_mode = self.config_dict["W23_params"]["Wrec_mode"]
 			self.W23to23,self.arbor23 = W4.create_matrix_2pop(self.config_dict["W23_params"],Wrec_mode)
 			## not scaled to Nvert, because no Nvert, should be fine
@@ -132,7 +124,7 @@ class Network:
 			W4 = connectivity.Connectivity_2pop((self.N4,self.N4),(self.N4,self.N4),\
 												(self.N23,self.N23),(self.N23,self.N23),\
 												 random_seed=self.config_dict["random_seed"],\
-												 Nvert=(self.Nvert,1))
+												 Nvert=(self.Nvert,1), verbose=self.verbose)
 			Wrec_mode = self.config_dict["W4to23_params"]["Wrec_mode"]
 			r_A = None
 			if self.config_dict["W4to23_params"]["plasticity_rule"]!="None":
@@ -156,7 +148,7 @@ class Network:
 			W4 = connectivity.Connectivity_2pop((self.N23,self.N23),(self.N23,self.N23),\
 												(self.N4,self.N4),(self.N4,self.N4),\
 				 								random_seed=self.config_dict["random_seed"],\
-				 								Nvert=(1,self.Nvert))
+				 								Nvert=(1,self.Nvert), verbose=self.verbose)
 			Wrec_mode = self.config_dict["W23to4_params"]["Wrec_mode"]
 			self.W23to4,_ = W4.create_matrix_2pop(self.config_dict["W23to4_params"],Wrec_mode)
 
@@ -176,7 +168,7 @@ class Network:
 		Version = self.Version
 		Wret_to_lgn = self.Wret_to_lgn
 
-		print("mode in generate_inputs",self.config_dict["Inp_params"]["input_type"])
+		if self.verbose: print("mode in generate_inputs",self.config_dict["Inp_params"]["input_type"])
 		if self.config_dict["Inp_params"]["input_type"]=="moving_grating_online":
 			Wret_to_lgn = np.diagflat(np.ones(self.Nlgn**2,dtype=float))
 
@@ -245,19 +237,20 @@ class Network:
 		"""
 		generate or load pre-computed feedforward connectivity from LGN to L4
 		"""
-		print("mode in get_RFs",mode)
-		if mode in ("initialize","initialize2"):
-			Wlgn4 = kwargs["Wlgn4"]
+		Wlgn4 = kwargs["Wlgn4"]
+		if self.verbose: print("mode in get_RFs",mode)
+		if mode in ("initialize","initialize2","initializegauss"):
 			W_mode = self.config_dict["Wlgn_to4_params"].get("W_mode","random_delta")
+			if mode=="initializegauss":
+				W_mode = "initialize"
 			Won_to_4,_ = Wlgn4.create_matrix(self.config_dict["Wlgn_to4_params"], W_mode,\
 						r_A=self.config_dict["Wlgn_to4_params"]["r_A_on"],profile_A="heaviside")
 			Wof_to_4,_ = Wlgn4.create_matrix(self.config_dict["Wlgn_to4_params"], W_mode,\
 						r_A=self.config_dict["Wlgn_to4_params"]["r_A_off"],profile_A="heaviside")
 			Wlgn_to_4 = np.stack([Won_to_4,Wof_to_4])
-
 		elif mode=="gabor":
 			conn = connectivity.Connectivity((self.Nlgn,self.Nlgn),(self.N4,self.N4),\
-											random_seed=12345)
+											random_seed=12345, verbose=self.verbose)
 
 			## smooth OPM generation
 			grid = np.linspace(0,1,self.N4,endpoint=False)
@@ -305,65 +298,122 @@ class Network:
 		elif mode=="load_from_external":
 			Version = self.config_dict["Wlgn_to4_params"]["load_from_prev_run"]
 			num_lgn_paths = self.config_dict["num_lgn_paths"]
-			print(" ")
-			print("Load ff connection from version {}".format(Version))
-			print(" ")
+			if self.verbose:
+				print(" ")
+				print("Load ff connection from version {}".format(Version))
+				print(" ")
 			if kwargs["system_mode"]=="two_layer":
 			
 				if kwargs["load_location"] in ("","local"):
-					yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
 					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 			
 				elif kwargs["load_location"]=="habanero":
 					if os.environ["USER"]=="bh2757":
-						yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+						if self.config_dict.get("config_name",False):
+							yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+								s=self.config_dict["config_name"],v=Version))
+						else:
+							yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
 					else:
-						yfile = np.load(\
-							"/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
-							"data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
+						if self.config_dict.get("config_name",False):
+							yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+								"data/two_layer/habanero/{s}/v{v}/y_v{v}.npz".format(
+								s=self.config_dict["config_name"],v=Version))
+						else:
+							yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+								"data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
 					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 					# with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
 					# 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 			
 				elif kwargs["load_location"]=="aws":
-					yfile = np.load(\
-						"/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+					if self.config_dict.get("config_name",False):
+						yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+						"ori_dev_model/data/two_layer/aws/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
 						"ori_dev_model/data/two_layer/aws/v{v}/y_v{v}.npz".format(v=Version))
 					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 
 			elif kwargs["system_mode"]=="one_layer":
 			
-				try:
-					if os.environ["USER"]=="bh2757":
-						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-					elif os.environ["USER"]=="tuannguyen":
-						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-					elif os.environ["USER"]=="thn2112":
-						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+				if os.environ["USER"]=="bh2757":
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "layer4/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
 					else:
-						yfile = np.load(data_dir + "layer4/habanero/y_files/y_v{v}.npz".format(\
-										v=Version))
-						Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
+					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+				elif os.environ["USER"]=="tuannguyen":
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "layer4/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
+					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+				elif os.environ["USER"]=="thn2112":
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "layer4/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
+					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+				elif kwargs["load_location"]=="habanero":
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "layer4/habanero/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(data_dir + "layer4/habanero/y_files/y_v{v}.npz".format(v=Version))
+					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 				
-				except Exception as e:
-					yfile = np.load(\
-						"/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
-						"data/layer4/habanero/v{v}/y_v{v}.npz".format(v=Version))
+				else:
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(\
+							"/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+							"data/layer4/habanero/{s}/v{v}/y_v{v}.npz".format(
+								s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(\
+							"/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+							"data/layer4/habanero/v{v}/y_v{v}.npz".format(v=Version))
 					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 					# with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
 					# 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
-		return Wlgn_to_4
+		arbor_params = {}
+		if self.config_dict["Wlgn_to4_params"].get("ret_scatter",False):
+			arbor_params = {"ret_scatter" : self.config_dict["Wlgn_to4_params"]["ret_scatter"]}
+		arbor_on = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_on"],\
+						profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_on"],\
+						arbor_params=arbor_params)
+		arbor_on *= self.config_dict["Wlgn_to4_params"]["ampl_on"]
+		arbor_off = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_off"],\
+							profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_off"],\
+							arbor_params=arbor_params)
+		arbor_off *= self.config_dict["Wlgn_to4_params"]["ampl_off"]
+		arbor2 = np.stack([arbor_on,arbor_off])
+
+		if mode=="initializegauss":
+			new_Wlgn_to_4 = Wlgn_to_4 * arbor2
+			old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,np.newaxis]
+			new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,np.newaxis]
+			Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm
+
+		return Wlgn_to_4,arbor_on,arbor_off,arbor2
 
 
 	def load_W4to23(self,**kwargs):
 		Version = self.config_dict["Wlgn_to4_params"]["load_from_prev_run"]
-		print(" ")
-		print("Load W4to23 connection from version {}".format(Version))
-		print(" ")
+		if self.verbose:
+			print(" ")
+			print("Load W4to23 connection from version {}".format(Version))
+			print(" ")
 		if kwargs["load_location"] in ("","local"):
 			yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(\
 							v=Version))
