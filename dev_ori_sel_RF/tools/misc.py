@@ -173,6 +173,8 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 		 system_dict["W4to23_params"]["plasticity_rule"] is not None):
 		load_orth_vectors = True
 
+	r_lim = arbor_dict.get("r_lim",1.0)
+
 	if load_orth_vectors:
 		## Arbor parameters
 		N4 = system_dict["N4"]
@@ -198,12 +200,12 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 			rA_on = arbor_dict["r_A_on"]
 			rA_off = arbor_dict["r_A_off"]
 		if rA_on==rA_off:
-			name_rA = "_rA{}".format(np.around(rA_on,2))
+			name_rA = "_rA{}_rlim{}".format(np.around(rA_on,2),np.around(r_lim,2))
 		else:
 			if layer=="rec4":
-				name_rA = "_rAE{}_rAI{}".format(np.around(rA_on,2),np.around(rA_off,2))
+				name_rA = "_rAE{}_rAI{}_rlim{}".format(np.around(rA_on,2),np.around(rA_off,2),np.around(r_lim,2))
 			else:
-				name_rA = "_rAon{}_rAoff{}".format(np.around(rA_on,2),np.around(rA_off,2))
+				name_rA = "_rAon{}_rAoff{}_rlim{}".format(np.around(rA_on,2),np.around(rA_off,2),np.around(r_lim,2))
 
 		if layer=="rec4":
 			ampl_on = arbor_dict["ampl_E"]
