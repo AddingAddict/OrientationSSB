@@ -34,7 +34,7 @@ def runjobs():
     cluster = str(args["cluster_"])
     initver = int(args["initver"])
     nrep = int(args["nrep"])
-    config_name = int(args['config'])
+    config_name = str(args['config'])
 
     
     if (args2.test):
@@ -91,7 +91,7 @@ def runjobs():
     inpath = currwd + "/sim_config.py"
     c1 = "{:s} -v {:d} -n {:d} -c {:s}".format(inpath,initver,nrep,config_name)
     
-    jobname="{:s}".format('ori_dev_sim_config')
+    jobname="{:s}".format('ori_dev_sim_config_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)

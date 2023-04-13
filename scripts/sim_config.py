@@ -25,7 +25,7 @@ parser.add_argument('--config', '-c', help='version',type=str, default="test")
 args = vars(parser.parse_args())
 Version = int(args['initver'])
 nrep = int(args['nrep'])
-config_name = int(args['config'])
+config_name = str(args['config'])
 
 for i in range(nrep):
     config_dict = misc.load_external_params("params_"+config_name)
