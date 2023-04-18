@@ -97,6 +97,7 @@ Wlgn_to4_params:
     plasticity_rule:   "activity_based"
     constraint_mode:   "xalpha"
     mult_norm:   "xalpha"
+    freeze_weights: False
 
     W_mode:            "initializegauss"
     clip_weights:       True

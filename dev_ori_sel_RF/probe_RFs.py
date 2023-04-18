@@ -371,7 +371,7 @@ def probe_RFs_one_layer(Version,config_name):
 	pp = PdfPages(pdf_path + filename)
 
 	sf = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
-	rA = int(probe_config_dict["Wlgn_to4_params"]["r_A_on"] * N4)
+	rA = int(probe_config_dict["Wlgn_to4_params"]["r_A_on"] * probe_config_dict["Wlgn_to4_params"].get("r_lim",1.) * N4)
 	DA = 2*rA + 5
 	RF,_,_,_ = analysis_tools.get_RF_form(sf,N4,Nlgn,DA,calc_PF=False,Nvert=Nvert,mode="o")
 	ext = np.nanmax(np.abs(RF))

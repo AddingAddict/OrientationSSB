@@ -167,7 +167,7 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 	load_orth_vectors = False
 	if (mode=="xalpha" and layer=="layer4"):
 		load_orth_vectors = True
-	elif (mode=="xalpha" and layer=="rec4"): # we will treat arbor_on = arbor_e and arbor_off = arbor_i
+	elif (mode=="postprex" and "rec4" in layer): # we will treat arbor_on = arbor_e/i for rec4_e/i. arbor_off should be 0
 		load_orth_vectors = True
 	elif (mode=="xalpha" and layer=="layer23" and\
 		 system_dict["W4to23_params"]["plasticity_rule"] is not None):
@@ -182,38 +182,49 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 		Nlgn = system_dict["Nlgn"]
 		Nvert = system_dict["Nvert"]
 		
-		if layer=="rec4":
+		if layer=="rec4_E":
 			arbor_profile_on = arbor_dict["arbor_profile_E"]
-			arbor_profile_off = arbor_dict["arbor_profile_I"]
+			arbor_profile_off = None
+		elif layer=="rec4_I":
+			arbor_profile_on = arbor_dict["arbor_profile_I"]
+			arbor_profile_off = None
 		else:
 			arbor_profile_on = arbor_dict["arbor_profile_on"]
 			arbor_profile_off = arbor_dict["arbor_profile_off"]
-		if arbor_profile_on==arbor_profile_off:
+		if arbor_profile_on==arbor_profile_off or "rec4" in layer:
 			name_profile = "_{}".format(arbor_profile_on)
 		else:
 			name_profile = "_{}-{}".format(arbor_profile_on,arbor_profile_off)
 
-		if layer=="rec4":
+		if layer=="rec4_E":
 			rA_on = arbor_dict["rA_E"]
-			rA_off = arbor_dict["rA_I"]
+			rA_off = 0.
+		elif layer=="rec4_I":
+			rA_on = arbor_dict["rA_E"]
+			rA_off = 0.
 		else:
 			rA_on = arbor_dict["r_A_on"]
 			rA_off = arbor_dict["r_A_off"]
 		if rA_on==rA_off:
 			name_rA = "_rA{}_rlim{}".format(np.around(rA_on,2),np.around(r_lim,2))
 		else:
-			if layer=="rec4":
-				name_rA = "_rAE{}_rAI{}_rlim{}".format(np.around(rA_on,2),np.around(rA_off,2),np.around(r_lim,2))
+			if layer=="rec4_E":
+				name_rA = "_rAE{}_rlim{}".format(np.around(rA_on,2),np.around(r_lim,2))
+			if layer=="rec4_I":
+				name_rA = "_rAI{}_rlim{}".format(np.around(rA_on,2),np.around(r_lim,2))
 			else:
 				name_rA = "_rAon{}_rAoff{}_rlim{}".format(np.around(rA_on,2),np.around(rA_off,2),np.around(r_lim,2))
 
-		if layer=="rec4":
+		if layer=="rec4_E":
 			ampl_on = arbor_dict["ampl_E"]
-			ampl_off = arbor_dict["ampl_I"]
+			ampl_off = 0.
+		elif layer=="rec4_I":
+			ampl_on = arbor_dict["ampl_I"]
+			ampl_off = 0.
 		else:
 			ampl_on = arbor_dict["ampl_on"]
 			ampl_off = arbor_dict["ampl_off"]
-		if (ampl_on!=ampl_off or ampl_on!=1):
+		if (ampl_on!=ampl_off or ampl_on!=1) and "rec4" not in layer:
 			name_ampl = "_amplon{}_amploff{}".format(ampl_on,ampl_off)
 		else:
 			name_ampl = ""
@@ -228,11 +239,12 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 									 "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 									 N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),
 									 name))
-				if layer=="rec4":
-					constraint_vec = np.load(data_dir +\
-									 "layer4/P_orth/N4{}_rec{}{}.npy".format(\
-									 N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),
-									 name))
+				elif "rec4" in layer:
+					# constraint_vec = np.load(data_dir +\
+					# 				 "layer4/P_orth/N4{}_rec{}{}.npy".format(\
+					# 				 N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),
+					# 				 name))
+					raise Exception("Too many arbors for recurrent L4")
 				elif layer=="layer23":
 					constraint_vec = np.load(data_dir +\
 									 "two_layer/P_orth/N23{}_N4{}{}{}.npy".format(\
@@ -244,7 +256,7 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 									 "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 									 N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),
 									 name))
-				if layer=="rec4":
+				elif "rec4" in layer:
 					constraint_vec = np.load(data_dir +\
 									 "layer4/P_orth/N4{}_rec{}{}.npy".format(\
 									 N4,"" if Nvert==1 else "_Nvert{}".format(Nvert),
@@ -272,13 +284,14 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(N4,\
 							Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))
-				if layer=="rec4":
-					c_orth,s_orth = nc.generate_simIO_normalisation(N4,N4,arbor_on,Nvert)
-					if not(os.path.exists(data_dir + "layer4/P_orth/")):
-					    os.mkdir(data_dir + "layer4/P_orth/")
-					np.save(data_dir + "layer4/P_orth/N4{}_rec{}{}.npy".format(N4,\
-							"" if Nvert==1 else "_Nvert{}".format(Nvert),\
-							name),np.concatenate([c_orth,s_orth]))
+				elif "rec4" in layer:
+					# c_orth,s_orth = nc.generate_simIO_normalisation(N4,N4,arbor_on,Nvert)
+					# if not(os.path.exists(data_dir + "layer4/P_orth/")):
+					#     os.mkdir(data_dir + "layer4/P_orth/")
+					# np.save(data_dir + "layer4/P_orth/N4{}_rec{}{}.npy".format(N4,\
+					# 		"" if Nvert==1 else "_Nvert{}".format(Nvert),\
+					# 		name),np.concatenate([c_orth,s_orth]))
+					raise Exception("Too many arbors for recurrent L4")
 				elif layer=="layer23":
 					if not(os.path.exists(data_dir + "two_layer/P_orth/")):
 					    os.mkdir(data_dir + "two_layer/P_orth/")
@@ -296,9 +309,9 @@ def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,laye
 					np.save(data_dir + "layer4/P_orth/N4{}_Nlgn{}{}{}.npy".format(\
 							N4,Nlgn,"" if Nvert==1 else "_Nvert{}".format(Nvert),\
 							name),np.concatenate([c_orth,s_orth]))
-				if layer=="rec4":
-					c_orth,s_orth = nc.generate_simIO_normalisation_onoff(N4,N4,\
-																		arbor_on,arbor_off,Nvert)
+				if "rec4" in layer:
+					c_orth,s_orth = nc.generate_simIO_normalisation_oneUnittype_rec(N4,\
+																		arbor_on,Nvert)
 					if not(os.path.exists(data_dir + "layer4/P_orth/")):
 					    os.mkdir(data_dir + "layer4/P_orth/")
 					np.save(data_dir + "layer4/P_orth/N4{}_rec{}{}.npy".format(\

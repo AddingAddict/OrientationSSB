@@ -275,6 +275,91 @@ def generate_simIO_normalisation_oneUnittype(N4,N23,arbor,Nvert=1):
 	return c_orth,s_orth,p_orth
 
 
+def generate_simIO_normalisation_oneUnittype_rec(N4,arbor,Nvert=1):
+	"""generate orthogonalised normalisation vectors
+	assuming E,I units receive/project with same arbor
+	s = An^r
+	c = n^r
+	input : arbor.shape = N23**2 x N4**2
+	"""
+	N = N4**2*Nvert
+	arb_bool = (arbor>0)
+	arb_idx = np.arange(1,1+Ninp)[None,:]*arb_bool.astype(int)
+	arbor_sq = np.sqrt(arbor)
+
+	arbsize = np.sum(arb_bool)
+	arbarea = np.sum(arb_bool,axis=1)
+	arbarea_cs = np.concatenate([np.array([0]),np.cumsum(arbarea)])
+
+	## order of c_vec is first axis: out E, out I, in E, in I
+	## second axis: E to E, I to E, (E to I, I to I) assume only conn from E
+	npop = 1
+	c_vec = np.zeros((N+N,npop,arbsize))
+	s_vec = np.zeros((N+N,npop,arbsize))
+	c_help = np.zeros((arbsize),dtype=int)
+	## fill first vectors for receiving conections
+	for i in range(N):
+		## E receiving/to E
+		c_vec[i+N,0,arbarea_cs[i]:arbarea_cs[i+1]] = arb_bool[i,arb_bool[i,:]]
+		# c_vec[i+N*2,1,arbarea_cs[i]:arbarea_cs[i+1]] = arb_bool[i,arb_bool[i,:]]
+		# c_vec[i+N*2+N,3,arbarea_cs[i]:arbarea_cs[i+1]] = arb_bool[i,arb_bool[i,:]]
+		c_help[arbarea_cs[i]:arbarea_cs[i+1]] = arb_idx[i,arb_bool[i,:]]
+
+	c_sum = np.sum(c_vec,axis=0)
+	## fill c vectors for outgoing conections
+	for i in range(1,1+Ninp):
+		this_alpha = (c_help==i)
+		c_vec[i-1,0,this_alpha] = c_sum[0,this_alpha]
+	c_vec[:Ninp,1,:] = c_vec[:Ninp,0,:]
+	# c_vec[Ninp:2*Ninp,1,:] = c_vec[:Ninp,0,:]
+	# c_vec[Ninp:2*Ninp,3,:] = c_vec[:Ninp,0,:]
+	c_vec = c_vec.reshape(-1,npop*arbsize)
+
+	s_sum = np.sum(s_vec,axis=0)
+	## fill s vectors for outgoing conections
+	for i in range(1,1+Ninp):
+		this_alpha = (c_help==i)
+		s_vec[i-1,0,this_alpha] = s_sum[0,this_alpha]
+	s_vec[:Ninp,1,:] = s_vec[:Ninp,0,:]
+	# s_vec[Ninp:2*Ninp,1,:] = s_vec[:Ninp,0,:]
+	# s_vec[Ninp:2*Ninp,3,:] = s_vec[:Ninp,0,:]
+	s_vec = s_vec.reshape(-1,npop*arbsize)
+
+	## orthogonalise arbor vectors	
+	c_orth = calc_tools.gs_fast(c_vec, Ninp, row_vecs=True, norm=True)
+	s_orth = calc_tools.gs_fast(s_vec, Ninp, row_vecs=True, norm=True)
+	## normalise one of the vectors to simplify computation of normalisation
+	c_orth = c_orth / np.diag(np.dot(s_orth,c_orth.T))[:,None]
+
+
+	## re-order second axis of c_orth, s_orth to match order of W4to23 for to E and to I
+	# arbor_hstack = np.hstack([arbor,arbor])
+	# arbor2 = np.concatenate([arbor_hstack,arbor_hstack])
+	# arb_idx = (np.arange(1,1+Nout*2,2)[:,None]*arb_bool.astype(int))
+	# arb_idx2 = (np.arange(2,2+Nout*2,2)[:,None]*arb_bool.astype(int))
+	# arb_idx3 = (np.arange(N23**2*2+1,N23**2*2+1+Nout*2,2)[:,None]*arb_bool.astype(int))
+	# arb_idx4 = (np.arange(N23**2*2+2,N23**2*2+2+Nout*2,2)[:,None]*arb_bool.astype(int))
+	# arb_sorted = np.concatenate([arb_idx[arb_bool],arb_idx2[arb_bool],arb_idx3[arb_bool],\
+	# 							arb_idx4[arb_bool]])
+
+	# idx_cum = 0
+	# c_orth_sorted = np.zeros_like(c_orth)
+	# s_orth_sorted = np.zeros_like(s_orth)
+	# for idx in np.unique(arb_sorted):
+	# 	num_idx = np.sum(arb_sorted==idx)
+	# 	c_orth_sorted[:,idx_cum:idx_cum+num_idx] = c_orth[:,arb_sorted==idx]
+	# 	s_orth_sorted[:,idx_cum:idx_cum+num_idx] = s_orth[:,arb_sorted==idx]
+	# 	idx_cum += num_idx
+	# c_orth = c_orth_sorted
+	# s_orth = s_orth_sorted
+
+	print("COMMENT OUT FOLLOWING LINE")
+	p_orth = np.dot(s_orth.T,c_orth / np.diag(np.dot(s_orth,c_orth.T))[:,None])
+
+	print("TODO: change output ")
+	return c_orth,s_orth,p_orth
+
+
 def generate_simIO_normalisation_old(Nlgn,N4,arbor):
 	Nout = N4**2*Nvert
 	Ninp = Nlgn**2
