@@ -394,19 +394,19 @@ class Network:
 		arbor_on = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_on"],\
 						profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_on"],\
 						arbor_params=arbor_params)
-		arbor_on /= np.sum(arbor_on,axis=-1)[:,np.newaxis]
+		arbor_on /= np.sum(arbor_on,axis=-1)[:,None]
 		arbor_on *= self.config_dict["Wlgn_to4_params"]["ampl_on"]
 		arbor_off = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_off"],\
 							profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_off"],\
 							arbor_params=arbor_params)
-		arbor_off /= np.sum(arbor_off,axis=-1)[:,np.newaxis]
+		arbor_off /= np.sum(arbor_off,axis=-1)[:,None]
 		arbor_off *= self.config_dict["Wlgn_to4_params"]["ampl_off"]
 		arbor2 = np.stack([arbor_on,arbor_off])
 
 		if mode=="initializegauss":
 			new_Wlgn_to_4 = Wlgn_to_4 * arbor2
-			old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,np.newaxis]
-			new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,np.newaxis]
+			old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,None]
+			new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,None]
 			Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm
 
 		return Wlgn_to_4,arbor_on,arbor_off,arbor2
