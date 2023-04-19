@@ -131,6 +131,11 @@ def constrain_update_divisive(dW,W_old,A,dt):
     # print("constraint",W_new.ndim,constraint[:3],tf.reduce_sum(W_new,axis=-1)[:3],W_new.shape)
     return W_new
 
+def clip_by_norm_arbor(W,A,Wlim):
+    norm = tf.reduce_sum(A,axis=-1,keepdims=True)
+    norm_A = A / norm
+    return tf.clip_by_value(W,0,norm_A*Wlim)
+
 # multiplicative normlaisation
 def synaptic_normalization(W_clipped,H,arbor,Wlim,init_W,c_orth=None,axis=1,mode="xalpha"):
     if c_orth is None:
@@ -331,7 +336,7 @@ class Plasticity:
 
     def _init_clip_weights(self):
         if self.clip_mode:
-            self.clip_weights = lambda W,A,Wlim: tf.clip_by_value(W,0,A*Wlim)
+            self.clip_weights = lambda W,A,Wlim: clip_by_norm_arbor(W,A,Wlim)
         else:
             self.clip_weights = lambda W,A,Wlim: W
         

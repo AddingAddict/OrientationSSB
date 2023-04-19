@@ -373,12 +373,10 @@ class Network:
         arbor_on = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_on"],\
                         profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_on"],\
                         arbor_params=arbor_params)
-        arbor_on /= np.sum(arbor_on,axis=-1)[:,None]
         arbor_on *= self.config_dict["Wlgn_to4_params"]["ampl_on"]
         arbor_off = Wlgn4.create_arbor(radius=self.config_dict["Wlgn_to4_params"]["r_A_off"],\
                             profile=self.config_dict["Wlgn_to4_params"]["arbor_profile_off"],\
                             arbor_params=arbor_params)
-        arbor_off /= np.sum(arbor_off,axis=-1)[:,None]
         arbor_off *= self.config_dict["Wlgn_to4_params"]["ampl_off"]
         arbor2 = np.stack([arbor_on,arbor_off])
 
@@ -517,7 +515,6 @@ class Network:
         arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+conn_type],\
                         profile=self.config_dict["W4to4_params"]["arbor_profile_"+conn_type],\
                         arbor_params=arbor_params)
-        arbor /= np.sum(arbor,axis=-1)[:,None]
         arbor *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
 
         if mode=="initializegauss":
