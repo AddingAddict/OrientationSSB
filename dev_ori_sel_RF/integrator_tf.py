@@ -532,7 +532,7 @@ class Tf_integrator_new:
 															self.params_dict["arbor23to23_full"],\
 															dt,self.params_dict)
 
-				for rep in range(2):
+				for rep in range(4):
 					# synaptic normalisation
 					Wlgn_to_4,W4to4,W4to23,W23to23 =\
 					 plasticity_dynamics.clip_weights_wrapper(self.p_dict,Wlgn_to_4,\
