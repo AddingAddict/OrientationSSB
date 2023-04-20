@@ -169,7 +169,7 @@ class Network:
 		Wret_to_lgn = self.Wret_to_lgn
 
 		if self.verbose: print("mode in generate_inputs",self.config_dict["Inp_params"]["input_type"])
-		if self.config_dict["Inp_params"]["input_type"]=="moving_grating_online":
+		if "moving_grating_online" in self.config_dict["Inp_params"]["input_type"]:
 			Wret_to_lgn = np.diagflat(np.ones(self.Nlgn**2,dtype=float))
 
 			lgn_input_on,lgn_input_off = [],[]
@@ -185,10 +185,10 @@ class Network:
 					self.config_dict["Inp_params"]["orientation"] = orientation # vary in 8 steps 
 					on_inp = inputs.Inputs_lgn((self.Nret,self.Nret),1,2020).create_lgn_input(\
 												self.config_dict["Inp_params"],\
-												"moving_grating_online", Wret_to_lgn)
+												self.config_dict["Inp_params"]["input_type"], Wret_to_lgn)
 					off_inp = inputs.Inputs_lgn((self.Nret,self.Nret),1,2020).create_lgn_input(\
 												 self.config_dict["Inp_params"],\
-												 "moving_grating_online", -Wret_to_lgn)
+												 self.config_dict["Inp_params"]["input_type"], -Wret_to_lgn)
 					lgn_input_on.append(on_inp)
 					lgn_input_off.append(off_inp)
 			lgn_input_on = np.array(lgn_input_on)

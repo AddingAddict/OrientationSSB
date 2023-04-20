@@ -354,7 +354,11 @@ class Inputs_lgn(Inputs):
 				# make input similar in amplitude and sparsity to retinal waves in antolik et al
 				# lgn /= 10.
 				# lgn += 0.06
-				# lgn = np.clip(lgn,0,np.nanmax(lgn))				
+				# lgn = np.clip(lgn,0,np.nanmax(lgn))	
+			elif "sharp" in profile:
+				lgn /= np.sqrt(2*np.nanmean(lgn**2))
+				lgn = np.clip(lgn,0,1.5)
+				lgn = lgn**8
 			else:
 				# normalise lgn input to between 0 and 1
 				# if np.nanmax(lgn)>0:

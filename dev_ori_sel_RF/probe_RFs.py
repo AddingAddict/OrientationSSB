@@ -48,7 +48,7 @@ def probe_RFs_one_layer(Version,config_name):
 	T_pd = 1000
 	dt = probe_config_dict["dt"]
 	t = np.arange(0,T_pd/dt,1).astype(int)
-	probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online"})
+	probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
 	# probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
 	last_timestep = t[-1]
 	probe_config_dict.update({
@@ -61,7 +61,7 @@ def probe_RFs_one_layer(Version,config_name):
 	kwargs = {
 	            ## parameters for moving gratings
 	            "num_freq" : 1,
-	            "spat_frequencies" : np.array([40,60,80]),#40,60,90
+	            "spat_frequencies" : np.array([60,80,100]),#40,60,90
 	            "orientations" : np.linspace(0,np.pi,4,endpoint=False),
 	            "Nsur" : 10,
 	}
@@ -220,7 +220,7 @@ def probe_RFs_one_layer(Version,config_name):
 	            idmin = np.argmin(mod_ratio[k])
 	            ymin,xmin = idmin//N4,idmin%N4
 
-	            if (k<2 and probe_config_dict["Inp_params"]["input_type"]=="moving_grating_online"):
+	            if (k<2 and "moving_grating_online" in probe_config_dict["Inp_params"]["input_type"]):
 	                ## raw input trace
 	                ax = fig.add_subplot(nrows,ncols,1)
 	                ax.set_ylabel("Raw input")
