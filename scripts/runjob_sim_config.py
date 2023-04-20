@@ -24,9 +24,10 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--initver', '-v', help='version',type=int, default=-1)
-    parser.add_argument('--nrep', '-n', help='version',type=int, default=20)
-    parser.add_argument('--config', '-c', help='version',type=str, default="test")
+    parser.add_argument('--initver', '-v', help='initial version to simulate',type=int, default=-1)
+    parser.add_argument('--nrep', '-n', help='number of repetitions for simulation',type=int, default=20)
+    parser.add_argument('--config', '-c', help='param config to load',type=str, default="test")
+    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
     args2 = parser.parse_args()
     args = vars(args2)
@@ -35,6 +36,7 @@ def runjobs():
     initver = int(args["initver"])
     nrep = int(args["nrep"])
     config_name = str(args['config'])
+    gb = int(args['gb'])
 
     
     if (args2.test):
@@ -102,7 +104,7 @@ def runjobs():
             text_file.write("#SBATCH --account=theory \n")
         text_file.write("#SBATCH --job-name="+jobname+ "\n")
         text_file.write("#SBATCH -t 0-11:59  \n")
-        text_file.write("#SBATCH --mem-per-cpu=6gb \n")
+        text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
         text_file.write("#SBATCH --gres=gpu\n")
         text_file.write("#SBATCH -c 1 \n")
         text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
