@@ -21,6 +21,8 @@ elif current_user=="tuannguyen":
 elif current_user=="thn2112":
 	home_dir = "/burg/theory/users/thn2112/"
 	base_dir = os.path.join(home_dir, "OrientationSSB/dev_ori_sel_RF/")
+elif current_user=="alex":
+	base_dir = os.path.join(home_dir, "Desktop/Columbia/Ken Miller/Codes/SSB/OrientationSSB/dev_ori_sel_RF/")
 data_dir = os.path.join(base_dir,'data/')
 image_dir = os.path.join(base_dir,'image/')
 movie_dir = os.path.join(base_dir,'movie/')
