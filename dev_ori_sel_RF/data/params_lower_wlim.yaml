@@ -51,7 +51,7 @@ Inp_params:
 Wret_to_lgn_params:
     sigma1:   0.07
     sigma2:   0.2
-    ampl1:   1.0
+    ampl1:   2.0
     ampl2:   1.0
     gamma_ret:   1.0
     noise:   0.0
