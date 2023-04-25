@@ -1,0 +1,204 @@
+config_name	big_grid
+developing_params	[]
+dt	0.05
+gamma_23	1.0
+gamma_4	1.0
+gamma_lgn	4.0
+Inp_params
+	avg_no_inp	1
+	expanse_time	1
+	init_radius	0.15
+	input_type	white_noise_online
+	mean_width	0.15
+	ndim	25
+	Nsur	16
+	off_bias_region_size	0.5
+	off_bias_strength	0.0
+	onoff_corr_factor	1.0
+	onoff_rel_weight	1.0
+	pattern_duration	2500
+	radius	1.5
+	simulate_activity	dynamics
+	width	0.5
+integrator	Euler
+last_timestep	80000.0
+learning_rate_decay_const	160000.0
+maxew	[0.95]
+N23	1
+N4	30
+Nlgn	30
+nonlinearity_l23	rectifier
+nonlinearity_l4	rectifier
+Nret	30
+num_lgn_paths	4
+Nvert	1
+plasticity_rule	activity_based
+random_seed	19
+RF_mode	initialize
+runtime	4000
+saving_stepsize	10
+system	one_layer
+tau	1.0
+test_lowDsubset	False
+Version	67
+W23_params
+	aEE	11.4
+	aEI	10.0
+	aIE	11.5
+	aII	10.0
+	beta_P	0.0005
+	constraint_mode	None
+	density	0.5
+	firing_threshold	0.0
+	heterogeneity_type	independent
+	learning_rate	0.2
+	max_ew	orig
+	mean_eccentricity	0.0
+	mult_norm	None
+	ncluster	3
+	nu_23	1.0
+	plasticity_rule	None
+	rA_E	0.3
+	rA_I	0.3
+	SD_eccentricity	0.0
+	SD_size	0.0
+	sigma_EE	0.2
+	sigma_EI	0.15
+	sigma_factor	0.2
+	sigma_IE	0.2
+	sigma_II	0.075
+	smoothness_width	0.05
+	Wlim	12
+	Wrec_mode	Gaussian2pop
+W23to4_params
+	aEE	11.4
+	aEI	10.0
+	aIE	11.5
+	aII	10.0
+	beta_P	0.1
+	constraint_mode	None
+	heterogeneity_type	None
+	learning_rate	0.2
+	max_ew	orig
+	mean_eccentricity	0.0
+	mult_norm	None
+	nu_23	1.0
+	plasticity_rule	None
+	SD_eccentricity	0.0
+	SD_size	0.0
+	sigma_EE	0.2
+	sigma_EI	0.15
+	sigma_factor	0.2
+	sigma_IE	0.2
+	sigma_II	0.075
+	smoothness_width	0.05
+	Wlim	12
+	Wrec_mode	Gaussian2pop
+W4to23_params
+	aEE	11.4
+	aEI	10.0
+	aIE	11.5
+	aII	10.0
+	arbor_profile	gaussian
+	beta_P	0.1
+	constraint_mode	None
+	heterogeneity_type	None
+	learning_rate	0.2
+	max_ew	orig
+	mean_eccentricity	0.0
+	mult_norm	None
+	nu_4	1.0
+	plasticity_rule	None
+	r_A	0.3
+	rA_E	0.3
+	rA_I	0.3
+	s_noise	0.2
+	SD_eccentricity	0.0
+	SD_size	0.0
+	sigma_EE	0.2
+	sigma_EI	0.15
+	sigma_factor	0.2
+	sigma_IE	0.2
+	sigma_II	0.075
+	smoothness_width	0.05
+	Wlim	12
+	Wrec_mode	Gaussian2pop
+W4to4_params
+	aEE	11.4
+	aEI	10.0
+	aIE	11.5
+	aII	10.0
+	ampl	1.0
+	ampl1	1.0
+	ampl2	1.0
+	beta_P	0.0005
+	constraint_mode	None
+	density	0.5
+	firing_threshold	adaptive
+	heterogeneity_type	None
+	learning_rate	0.5
+	max_ew	0.95
+	mean_eccentricity	0.0
+	mult_norm	None
+	ncluster	3
+	noise	0.0
+	nu_4	3.0
+	plasticity_rule	None
+	r_lim	1.5
+	rA_E	0.15
+	rA_I	0.15
+	SD_eccentricity	0.0
+	SD_size	0.0
+	sigma	0.1
+	sigma1	0.08
+	sigma2	0.15
+	sigma_EE	0.1
+	sigma_EI	0.075
+	sigma_factor	1.0
+	sigma_IE	0.1
+	sigma_II	0.0375
+	smoothness_width	0.05
+	Wlim	12
+	Wrec_mode	Gaussian2pop
+Wlgn_to4_params
+	ampl	1.0
+	ampl_off	1.0
+	ampl_on	1.0
+	arbor_profile_off	gaussian
+	arbor_profile_on	gaussian
+	beta_P	0.005
+	clip_weights	True
+	connectivity_type	EI
+	constraint_mode	xalpha
+	freeze_weights	False
+	heterogeneity_type	None
+	learning_rate	0.5
+	load_from_prev_run	66
+	mean_eccentricity	0.0
+	mult_norm	xalpha
+	noise	0.0
+	plasticity_rule	activity_based
+	r_A_off	0.075
+	r_A_on	0.075
+	r_lim	1.5
+	s_noise	0.01
+	SD_eccentricity	0.0
+	SD_size	0.0
+	sigma	0.1
+	smoothness_width	0.05
+	W_mode	load_from_external
+	Wlim	2
+Wret_to_lgn_params
+	ampl	1.0
+	ampl1	2.0
+	ampl2	1.0
+	gamma_ret	1.0
+	heterogeneity_type	None
+	mean_eccentricity	0.6
+	noise	0.0
+	profile	Gaussian
+	SD_eccentricity	0.05
+	SD_size	0.05
+	sigma	0.0225
+	sigma1	0.035
+	sigma2	0.1
