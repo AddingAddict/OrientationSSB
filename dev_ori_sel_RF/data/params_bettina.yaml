@@ -82,7 +82,7 @@ Wlgn_to4_params:
     r_A_off:   0.2
     arbor_profile_off:   "gaussian"
     ampl_off:   1.
-    r_lim:      1.5
+    r_lim:      1.0
 
     ## params for heterogeneously varying anisotropic Connections
     mean_eccentricity:   0.
@@ -125,7 +125,7 @@ W4to4_params:
 
     rA_E:   0.3
     rA_I:   0.3
-    r_lim:  1.5
+    r_lim:  1.0
 
     Wrec_mode:   "Gaussian2pop"
     sigma_factor:   1.0
