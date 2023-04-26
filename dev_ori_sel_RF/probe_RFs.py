@@ -71,13 +71,13 @@ def probe_RFs_one_layer(Version,config_name):
 	lgn -= np.nanmin(lgn) #- 0.5
 	print("lgn",lgn.shape)
 
-	lgn_rshp = lgn.reshape(2,-1,400,4,10)
+	lgn_rshp = lgn.reshape(2,-1,Nlgn**2,4,10)
 	print(lgn_rshp.shape)
 	lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
 	print(lgn_rshp.shape)
-	lgn_rshp = lgn_rshp.reshape(2,400,4,3,10)
+	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,4,3,10)
 	print(lgn_rshp.shape)
-	lgn_rshp = lgn_rshp.reshape(2,400,3,4,10)
+	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,3,4,10)
 	print(lgn_rshp.shape)
 	# lgn_rshp /= 4
 

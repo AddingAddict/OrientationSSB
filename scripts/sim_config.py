@@ -43,6 +43,6 @@ for i in range(nrep):
             "W_mode": "load_from_external",
             "load_from_prev_run" : Version-1})
 
-    run_onelayer.parameter_sweep_layer4(Version,config_dict,not_saving_temp=False)
+    run_onelayer.parameter_sweep_layer4(Version,config_dict,not_saving_temp=True)
 
     Version += 1
