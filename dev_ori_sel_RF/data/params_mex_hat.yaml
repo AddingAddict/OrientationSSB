@@ -1,7 +1,7 @@
 # General network settings
-Nret: 24
-Nlgn: 24
-N4: 24
+Nret: 32
+Nlgn: 32
+N4: 32
 N23: 1
 Nvert: 1
 
@@ -49,7 +49,7 @@ Inp_params:
     off_bias_region_size: 0.5
 
 Wret_to_lgn_params:
-    sigma1:   0.03
+    sigma1:   0.0225
     sigma2:   0.06
     ampl1:   2.0
     ampl2:   1.0
