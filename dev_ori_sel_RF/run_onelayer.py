@@ -145,7 +145,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 	
 	sys.stdout.flush()
 	if config_dict["Inp_params"]["simulate_activity"]:
-		if not kwargs["not_saving_temp"]:
+		if True: #not kwargs["not_saving_temp"]:
 			y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
 			if config_dict["test_lowDsubset"]:
 				yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
