@@ -5,7 +5,7 @@ N4: 32
 N23: 1
 Nvert: 1
 
-runtime:   8000
+runtime:   16000
 dt:   0.05
 tau:   1.
 num_lgn_paths:   4

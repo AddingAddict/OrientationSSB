@@ -1,4 +1,6 @@
+scripts/Ofiles/*
 **/.DS_Store
-**/__pycache__/**
+dev_ori_sel_RF/__pycache__/*
+dev_ori_sel_RF/tools/__pycache__/*
 **/.ipynb_checkpoints/**
 dev_ori_sel_RF/data/layer4/P_orth/*
