@@ -84,13 +84,13 @@ class Network:
         if ("2pop" in self.config_dict["W4to4_params"]["Wrec_mode"] and\
             self.config_dict["W4to4_params"]["Wrec_mode"]!="load_from_external"):
             W4to4_EE,arbor4to4_EE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="E",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type="EE",system_mode=self.config_dict["system"],**self.kwargs)
             W4to4_IE,arbor4to4_IE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="E",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type="IE",system_mode=self.config_dict["system"],**self.kwargs)
             W4to4_EI,arbor4to4_EI = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="I",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type="EI",system_mode=self.config_dict["system"],**self.kwargs)
             W4to4_II,arbor4to4_II = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="I",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type="II",system_mode=self.config_dict["system"],**self.kwargs)
             self.W4to4 = np.block([[W4to4_EE,-W4to4_EI],[W4to4_IE,-W4to4_II]])
             self.arbor4to4 = np.block([[arbor4to4_EE,arbor4to4_EI],[arbor4to4_IE,arbor4to4_II]])
         else:
@@ -104,12 +104,12 @@ class Network:
         # init normalization
         # syn norm over x
         if self.config_dict["W4to4_params"]["mult_norm"]=="postx":
-            self.init_weights_4to4 = np.sum(self.W4to4.reshape(num_pops,N4*N4*Nvert,
-                num_pops,N4*N4*Nvert).transpose(0,2,1,3).reshape(num_pops**2,N4*N4*Nvert,N4*N4*Nvert),axis=1)
+            self.init_weights_4to4 = np.sum(self.W4to4.reshape(num_pops,self.N4**2*self.Nvert,
+                num_pops,self.N4**2*self.Nvert).transpose(0,2,1,3).reshape(num_pops**2,self.N4**2*self.Nvert,self.N4**2*self.Nvert),axis=1)
         # syn norm over alpha
         elif self.config_dict["W4to4_params"]["mult_norm"]=="prex":
-            self.init_weights_4to4 = np.sum(self.W4to4.reshape(num_pops,N4*N4*Nvert,
-                num_pops,N4*N4*Nvert).transpose(0,2,1,3).reshape(num_pops**2,N4*N4*Nvert,N4*N4*Nvert),axis=2)
+            self.init_weights_4to4 = np.sum(self.W4to4.reshape(num_pops,self.N4**2*self.Nvert,
+                num_pops,self.N4**2*self.Nvert).transpose(0,2,1,3).reshape(num_pops**2,self.N4**2*self.Nvert,self.N4**2*self.Nvert),axis=2)
         # syn norm over x and alpha
         elif self.config_dict["W4to4_params"]["mult_norm"]=="postprex":
             self.init_weights_4to4 = None ## create in script, needs orth norm vectors
@@ -401,6 +401,7 @@ class Network:
                 W_mode = "initialize"
             W4to4,_ = W4.create_matrix(self.config_dict["W4to4_params"], W_mode,\
                         r_A=self.config_dict["W4to4_params"]["rA_"+conn_type],profile_A="heaviside")
+            W4to4 *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
         elif mode=="gabor":
             conn = connectivity.Connectivity((self.N4,self.N4),(self.N4,self.N4),\
                                             random_seed=12345, verbose=self.verbose)

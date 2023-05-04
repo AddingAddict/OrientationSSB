@@ -25,7 +25,7 @@ def fio_powerlaw(x):
 	x[x<0] = 0
 	return x**2
 
-def probe_RFs_one_layer(Version,config_name):
+def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10):
 	RF_mode = "load_from_external"
 	system_mode = "one_layer"
 	connectivity_type = "EI"
@@ -61,9 +61,9 @@ def probe_RFs_one_layer(Version,config_name):
 	kwargs = {
 	            ## parameters for moving gratings
 	            "num_freq" : 1,
-	            "spat_frequencies" : np.array([60,80,100]),#40,60,90
-	            "orientations" : np.linspace(0,np.pi,4,endpoint=False),
-	            "Nsur" : 10,
+	            "spat_frequencies" : freqs,#40,60,90
+	            "orientations" : oris,
+	            "Nsur" : Nsur,
 	}
 	lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
 	                        same_EI_input=True,**kwargs)
@@ -71,13 +71,13 @@ def probe_RFs_one_layer(Version,config_name):
 	lgn -= np.nanmin(lgn) #- 0.5
 	print("lgn",lgn.shape)
 
-	lgn_rshp = lgn.reshape(2,-1,Nlgn**2,4,10)
+	lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
 	print(lgn_rshp.shape)
 	lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
 	print(lgn_rshp.shape)
-	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,4,3,10)
+	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
 	print(lgn_rshp.shape)
-	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,3,4,10)
+	lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
 	print(lgn_rshp.shape)
 	# lgn_rshp /= 4
 
@@ -258,7 +258,7 @@ def probe_RFs_one_layer(Version,config_name):
 	            ax.plot(spectrum_list[k][0][:,ymax,xmax],"-",c="gray",label="max mod")
 	            ax.plot(spectrum_list[k][0][:,ymin,xmin],"--",c="gray",label="min mod")
 	            ax.plot(spectrum_list[k][1],"-k",label="avg")
-	            ax.set_xlim(0,10*temp_freq)
+	            ax.set_xlim(0,Nsur*temp_freq)
 	            ax.set_ylim(0,1)
 
 	            if k<2:

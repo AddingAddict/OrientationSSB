@@ -358,7 +358,7 @@ class Inputs_lgn(Inputs):
 			elif "sharp" in profile:
 				lgn /= np.sqrt(2*np.nanmean(lgn**2))
 				lgn = np.clip(lgn,0,1.5)
-				lgn = lgn**8
+				lgn = lgn**2
 			else:
 				# normalise lgn input to between 0 and 1
 				# if np.nanmax(lgn)>0:
