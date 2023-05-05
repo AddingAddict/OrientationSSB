@@ -1,11 +1,11 @@
 # General network settings
-Nret: 20
-Nlgn: 20
-N4: 20
+Nret: 32
+Nlgn: 32
+N4: 32
 N23: 1
 Nvert: 1
 
-runtime:   4000
+runtime:   16000
 dt:   0.05
 tau:   1.
 num_lgn_paths:   4
@@ -49,14 +49,14 @@ Inp_params:
     off_bias_region_size: 0.5
 
 Wret_to_lgn_params:
-    sigma1:   0.07
-    sigma2:   0.2
-    ampl1:   1.0
+    sigma1:   0.0225
+    sigma2:   0.06
+    ampl1:   2.0
     ampl2:   1.0
     gamma_ret:   1.0
     noise:   0.0
 
-    sigma:   0.045
+    sigma:   0.03375
     ampl:   1.0
     profile:   "Gaussian"
 
@@ -70,19 +70,19 @@ Wlgn_to4_params:
     sigma:   0.2
     ampl:   1.0
     noise:   0.0
-    s_noise:   0.05
-    Wlim:   4
+    s_noise:   0.01
+    Wlim:   12
     load_from_prev_run:   None
     connectivity_type:   "EI"
 
     ## arbor params
-    r_A_on:   0.1
+    r_A_on:   0.15
     arbor_profile_on:   "gaussian"
     ampl_on:   1.
-    r_A_off:   0.1
+    r_A_off:   0.15
     arbor_profile_off:   "gaussian"
     ampl_off:   1.
-    r_lim:  2.
+    r_lim:      1.0
 
     ## params for heterogeneously varying anisotropic Connections
     mean_eccentricity:   0.
@@ -106,7 +106,7 @@ Wlgn_to4_params:
 W4to4_params:
     ##Initialize
     noise:   0.0
-    s_noise:   0.05
+    s_noise:   0.01
     ## MH
     sigma1:   0.16
     sigma2:   0.3
@@ -117,21 +117,35 @@ W4to4_params:
     ampl:   1.0
     noise:   0.0
     ##Gaussian2pop
-    sigma_EE:   0.2
-    sigma_IE:   0.2
-    sigma_EI:   0.15
-    sigma_II:   0.075
+    sigma_EE:   0.15
+    sigma_IE:   0.15
+    sigma_EI:   0.1125
+    sigma_II:   0.0525
     aEE:   11.4
     aIE:   11.5
     aEI:   10.
     aII:   10.
 
-    rA_E:   0.15
-    rA_I:   0.1
-    ampl_E: 1.
-    ampl_I: 1.
-    arbor_profile_E:   "gaussian"
-    arbor_profile_I:   "gaussian"
+    rA_EE:   0.2
+    rA_IE:   0.15
+    rA_EI:   0.1125
+    rA_II:   0.0525
+    # ampl_EE:   11.4
+    # ampl_IE:   11.5
+    # ampl_EI:   10.
+    # ampl_II:   10.
+    ampl_EE:   3.552
+    ampl_IE:   3.583
+    ampl_EI:   3.116
+    ampl_II:   3.116
+    # ampl_EE:   1.
+    # ampl_IE:   1.
+    # ampl_EI:   1.
+    # ampl_II:   1.
+    arbor_profile_EE:   "gaussian"
+    arbor_profile_IE:   "gaussian"
+    arbor_profile_EI:   "gaussian"
+    arbor_profile_II:   "gaussian"
     r_lim:  2.
 
     Wrec_mode:   "initializegauss2pop"

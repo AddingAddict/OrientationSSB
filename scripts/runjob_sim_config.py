@@ -53,24 +53,26 @@ def runjobs():
 
     #--------------------------------------------------------------------------
     # Ofiles folder
+
+    user = os.environ["USER"]
         
     if cluster=='haba':
-        path_2_package="/rigel/theory/users/thn2112/OrientationSSB/scripts"
+        path_2_package="/rigel/theory/users/"+user+"/OrientationSSB/scripts"
         ofilesdir = path_2_package + "/Ofiles/"
         resultsdir = path_2_package + "/results/"
 
     if cluster=='moto':
-        path_2_package="/moto/theory/users/thn2112/OrientationSSB/scripts"
+        path_2_package="/moto/theory/users/"+user+"/OrientationSSB/scripts"
         ofilesdir = path_2_package + "/Ofiles/"
         resultsdir = path_2_package + "/results/"
 
     if cluster=='burg':
-        path_2_package="/burg/theory/users/thn2112/OrientationSSB/scripts"
+        path_2_package="/burg/theory/users/"+user+"/OrientationSSB/scripts"
         ofilesdir = path_2_package + "/Ofiles/"
         resultsdir = path_2_package + "/results/"
         
     elif cluster=='axon':
-        path_2_package="/home/thn2112/OrientationSSB/scripts"
+        path_2_package="/home/"+user+"/OrientationSSB/scripts"
         ofilesdir = path_2_package + "/Ofiles/"
         resultsdir = path_2_package + "/results/"
         
