@@ -257,6 +257,8 @@ class Tf_integrator_new:
 		init_weights = None
 		if mult_norm in ("x","alpha","xalpha"):
 			init_weights = self.params_dict["init_weights"][:2,:]
+		elif mult_norm in ("xalpha_approx"):
+			init_weights = [self.params_dict["init_weights"][0][:2,:],self.params_dict["init_weights"][1][:2,:]]
 		freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
 		
 		p_dict["p_lgn_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
@@ -265,8 +267,11 @@ class Tf_integrator_new:
 
 		if self.connectivity_type=="EI":
 			init_weights = None
-			if mult_norm in ("x","alpha"):
+			if mult_norm in ("x","alpha","xalpha"):
 				init_weights = self.params_dict["init_weights"][2:,:]
+			elif mult_norm in ("xalpha_approx"):
+				init_weights = [self.params_dict["init_weights"][0][2:,:],self.params_dict["init_weights"][1][2:,:]]
+			elif 
 			p_dict["p_lgn_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
 								plasticity_rule,constraint_mode,mult_norm,clip_mode,\
 								weight_strength,Wlim,init_weights,freeze_weights)

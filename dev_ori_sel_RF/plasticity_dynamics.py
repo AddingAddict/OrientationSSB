@@ -53,15 +53,17 @@ def constrain_update_alpha(dW,W_old,mask,A,dt):
 
 def constrain_update_xalpha_approx(dW,W_old,mask,A,dt):
     ## first sum over alpha and on/off, then over x
-    norm = tf.reduce_sum(A,axis=(0,2))
-    norm = tf.where(tf.equal(norm, 0), tf.ones(tf.shape(norm),dtype=tf.float32), norm )
-    eps = 1.*tf.reduce_sum(dW,axis=(0,2))/norm
-    dW_alpha = (dW - eps[None,:,None]*A) * mask
+    dW_constraint = dW
+    for i in range(2):
+        norm = tf.reduce_sum(A,axis=(0,2))
+        norm = tf.where(tf.equal(norm, 0), tf.ones(tf.shape(norm),dtype=tf.float32), norm )
+        eps = 1.*tf.reduce_sum(dW_constraint,axis=(0,2))/norm
+        dW_alpha = (dW_constraint - eps[None,:,None]*A) * mask
 
-    norm = tf.reduce_sum(A,axis=1)
-    norm = tf.where(tf.equal(norm, 0), tf.ones(tf.shape(norm),dtype=tf.float32), norm )
-    eps = 1.*tf.reduce_sum(dW_alpha,axis=1)/norm
-    dW_constraint = (dW_alpha - eps[:,None,:] * A) * mask
+        norm = tf.reduce_sum(A,axis=1)
+        norm = tf.where(tf.equal(norm, 0), tf.ones(tf.shape(norm),dtype=tf.float32), norm )
+        eps = 1.*tf.reduce_sum(dW_alpha,axis=1)/norm
+        dW_constraint = (dW_alpha - eps[:,None,:] * A) * mask
     return dW_constraint*dt+W_old
 
 def constrain_update_xalpha(dW,W_old,mask,A,c_orth,s_orth,dt):
@@ -362,6 +364,20 @@ class Plasticity:
              lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
                                                                     c_orth=self.c_orth,\
                                                                     axis=None)
+
+        elif self.multiplicative_normalisation=="xalpha_approx":
+            def xalpha_approx_mult_norm(Wnew,A,H,l4,l4_target):
+                Wnew_xalpha = Wnew
+                H_xalpha = H
+                for i in range(2):
+                    Wnew_alpha,H_alpha = synaptic_normalization(Wnew_xalpha,H_xalpha,A,self.Wlim,\
+                                                                    self.init_weights[0],\
+                                                                    c_orth=None,axis=(0,2))
+                    Wnew_xalpha,H_xalpha = synaptic_normalization(Wnew_alpha,H_alpha,A,self.Wlim,\
+                                                                    self.init_weights[1],\
+                                                                    c_orth=None,axis=1)
+                return Wnew_xalpha,H_xalpha
+            self.mult_normalization = xalpha_approx_mult_norm
 
         elif self.multiplicative_normalisation=="postx":
             self.mult_normalization =\

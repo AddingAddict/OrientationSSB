@@ -108,7 +108,10 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 					"Nret" : tf.constant(Nret, dtype=tf.int32),
 					"Nvert" : tf.constant(Nvert, dtype=tf.int32),
 					
-					"init_weights" : tf.convert_to_tensor(init_weights,dtype=tf.float32),
+					"init_weights" : tf.convert_to_tensor(init_weights,dtype=tf.float32)
+						if config_dict["Wlgn_to4_params"]["mult_norm"]!="xalpha_approx"
+						else [tf.convert_to_tensor(init_weights[0],dtype=tf.float32),
+							tf.convert_to_tensor(init_weights[1],dtype=tf.float32)],
 					"Wret_to_lgn" : tf.convert_to_tensor(Wret_to_lgn,dtype=tf.float32),
 					"W4to4" : tf.convert_to_tensor(W4to4, dtype=tf.float32),
 					"W23to23" : tf.convert_to_tensor(np.array([]), dtype=tf.float32),

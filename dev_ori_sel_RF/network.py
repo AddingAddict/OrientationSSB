@@ -71,6 +71,8 @@ class Network:
 		# syn norm over x and alpha
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
 			self.init_weights = None ## create in script, needs orth norm vectors
+		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha_approx":
+			self.init_weights = [np.sum(self.Wlgn_to_4,axis=2),np.sum(self.Wlgn_to_4,axis=1)]
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
 			self.init_weights = np.array([]) ## not needed
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="divisive":
