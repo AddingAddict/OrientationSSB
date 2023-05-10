@@ -1,7 +1,7 @@
 # General network settings
-Nret: 32
-Nlgn: 32
-N4: 32
+Nret: 64
+Nlgn: 64
+N4: 64
 N23: 1
 Nvert: 1
 
@@ -49,14 +49,14 @@ Inp_params:
     off_bias_region_size: 0.5
 
 Wret_to_lgn_params:
-    sigma1:   0.0225
-    sigma2:   0.06
+    sigma1:   0.01125
+    sigma2:   0.03
     ampl1:   2.0
     ampl2:   1.0
     gamma_ret:   1.0
     noise:   0.0
 
-    sigma:   0.03375
+    sigma:   0.016875
     ampl:   1.0
     profile:   "Gaussian"
 
@@ -76,10 +76,10 @@ Wlgn_to4_params:
     connectivity_type:   "EI"
 
     ## arbor params
-    r_A_on:   0.15
+    r_A_on:   0.075
     arbor_profile_on:   "gaussian"
     ampl_on:   1.
-    r_A_off:   0.15
+    r_A_off:   0.075
     arbor_profile_off:   "gaussian"
     ampl_off:   1.
     r_lim:      1.0
@@ -105,26 +105,26 @@ Wlgn_to4_params:
 # Layer 4 
 W4to4_params:
     ## MH
-    sigma1:   0.16
-    sigma2:   0.3
+    sigma1:   0.08
+    sigma2:   0.15
     ampl1:   1.0
     ampl2:   1.0
     ##Gaussian
-    sigma:   0.2
+    sigma:   0.1
     ampl:   1.0
     noise:   0.0
     ##Gaussian2pop
-    sigma_EE:   0.15
-    sigma_IE:   0.15
-    sigma_EI:   0.1125
-    sigma_II:   0.0525
+    sigma_EE:   0.075
+    sigma_IE:   0.075
+    sigma_EI:   0.05625
+    sigma_II:   0.02625
     aEE:   11.4
     aIE:   11.5
     aEI:   10.
     aII:   10.
 
-    rA_E:   0.225
-    rA_I:   0.225
+    rA_E:   0.1125
+    rA_I:   0.1125
     r_lim:  1.0
 
     Wrec_mode:   "Gaussian2pop"
