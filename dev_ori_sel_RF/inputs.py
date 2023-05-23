@@ -405,20 +405,20 @@ class Inputs_lgn(Inputs):
 				off_dominant *= inp_params["off_bias_strength"]/np.nanstd(off_dominant)
 
 				## multiplicative
-				# exp_off_dominant = 1+off_dominant #np.exp(off_dominant)
-				## changes local mean and std:
-				# lgn[0,:] /= exp_off_dominant
-				# lgn[1,:] *= exp_off_dominant
+				exp_off_dominant = 1+off_dominant #np.exp(off_dominant)
+				# changes local mean and std:
+				lgn[0,:] /= exp_off_dominant
+				lgn[1,:] *= exp_off_dominant
 
 				## change local std
 				# exp_off_dominant_on = np.clip(exp_off_dominant,1,np.max(exp_off_dominant))
 				# exp_off_dominant_of = np.clip(1./exp_off_dominant,1,np.max(1./exp_off_dominant))
 				
 				## additive constant
-				exp_off_dominant_on = np.zeros_like(off_dominant)
-				exp_off_dominant_on[off_dominant>0] += inp_params["off_bias_strength"]
-				exp_off_dominant_of = np.zeros_like(off_dominant)
-				exp_off_dominant_of[off_dominant<0] += inp_params["off_bias_strength"]
+				# exp_off_dominant_on = np.zeros_like(off_dominant)
+				# exp_off_dominant_on[off_dominant>0] += inp_params["off_bias_strength"]
+				# exp_off_dominant_of = np.zeros_like(off_dominant)
+				# exp_off_dominant_of[off_dominant<0] += inp_params["off_bias_strength"]
 
 				exp = rng.choice([-1,1],size=2)
 
