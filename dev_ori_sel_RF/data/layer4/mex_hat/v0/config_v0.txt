@@ -187,7 +187,7 @@ Wlgn_to4_params
 	sigma	0.2
 	smoothness_width	0.05
 	W_mode	initializegauss
-	Wlim	12
+	Wlim	2
 Wret_to_lgn_params
 	ampl	1.0
 	ampl1	2.0

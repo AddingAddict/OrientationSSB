@@ -20,7 +20,7 @@ def tf_check_type(t, y0):
 # 	return tf.clip_by_value(Wlgn_to_4,0,arbor*Wlim)
 
 def check_for_frozen_weights(Wlgn_to_4,Wlim,arbor):
-	frozen = tf.math.logical_or(Wlgn_to_4[arbor>0]>=(Wlim*arbor[arbor>0]), Wlgn_to_4[arbor>0]<=0)
+	frozen = tf.math.logical_or(Wlgn_to_4.values>=(Wlim*arbor[arbor>0]), Wlgn_to_4.values<=0)
 	return np.sum(frozen)>0
 
 
@@ -632,7 +632,7 @@ class Tf_integrator_new:
 
 def odeint_new(func1, y0, t, dt, params_dict, mode="dynamic"):
 	t = tf.convert_to_tensor(t, name='t', dtype=tf.float32)
-	y0 = tf.convert_to_tensor(y0, name='y0', dtype=tf.float32)
+	#y0 = tf.convert_to_tensor(y0, name='y0', dtype=tf.float32)
 	dt = tf.convert_to_tensor(dt,name="dt", dtype=tf.float32)
 	tf_check_type(t, y0)
 	if mode=="dynamic":

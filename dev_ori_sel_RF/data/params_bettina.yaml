@@ -71,7 +71,7 @@ Wlgn_to4_params:
     ampl:   1.0
     noise:   0.0
     s_noise:   0.01
-    Wlim:   12
+    Wlim:   2.
     load_from_prev_run:   None
     connectivity_type:   "EI"
 
