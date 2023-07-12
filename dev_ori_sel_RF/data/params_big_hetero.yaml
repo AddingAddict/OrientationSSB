@@ -143,10 +143,10 @@ W4to4_params:
     ncluster:   3
 
     ## params for heterogeneously varying anisotropic Connections
-    mean_eccentricity:   0.
-    SD_eccentricity:   0.
-    SD_size:   0.
-    heterogeneity_type:   None
+    mean_eccentricity:   0.7
+    SD_eccentricity:   0.0175
+    SD_size:   0.0021
+    heterogeneity_type:   "independent"
     smoothness_width:   0.05
 
     # plasticity params
