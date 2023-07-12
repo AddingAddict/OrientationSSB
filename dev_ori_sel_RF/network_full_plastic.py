@@ -71,6 +71,16 @@ class Network:
         # syn norm over x and alpha
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
             self.init_weights = None ## create in script, needs orth norm vectors
+        # == ff and rec plasticity
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":            
+            self.init_weights = np.stack( \
+                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    )
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_pre":
+            pass
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_prepost":
+            pass
+        # ========================
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
             self.init_weights = np.array([]) ## not needed
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="divisive":
@@ -117,10 +127,17 @@ class Network:
             self.init_weights_4to4 = np.array([]) ## not needed
         elif self.config_dict["W4to4_params"]["mult_norm"]=="divisive":
             self.init_weights_4to4 = np.array([]) ## not needed
+        # === ff and rec platicity 
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_post":
+            self.init_weights_4to4 = np.reshape(np.sum(self.W4to4,axis=0),(2,-1))
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_pre":
+            pass
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_prepost":
+            pass
+        # =======================
         elif self.config_dict["W4to4_params"]["mult_norm"]=="None":
             self.init_weights_4to4 = np.array([]) ## not needed
         
-
         if self.config_dict["system"]=="one_layer":
             self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2,self.init_weights,
                 self.W4to4,self.arbor4to4,self.init_weights_4to4)

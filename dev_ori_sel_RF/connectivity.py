@@ -62,7 +62,6 @@ class Connectivity:
 		self.full_output_dict = {}
 		self.verbose = verbose
 		
-	
 	def gen_ecp(self, x, y, conn_params):
 		"""
 		generate ecp - solution of wolf model

@@ -1,5 +1,4 @@
 # General network settings
-<<<<<<<< HEAD:dev_ori_sel_RF/data/params_big_off_bias.yaml
 Nret: 64
 Nlgn: 64
 N4: 64
@@ -7,15 +6,6 @@ N23: 1
 Nvert: 1
 
 runtime:   32000
-========
-Nret: 32
-Nlgn: 32
-N4: 32
-N23: 1
-Nvert: 1
-
-runtime:   320
->>>>>>>> d17a880554325d4affe7340dc1275872b199f2dc:dev_ori_sel_RF/data/params_test1.yaml
 dt:   0.05
 tau:   1. 
 num_lgn_paths:   4
@@ -127,11 +117,7 @@ W4to4_params:
     sigma_EE:   0.075
     sigma_IE:   0.075
     sigma_EI:   0.05625
-<<<<<<<< HEAD:dev_ori_sel_RF/data/params_big_off_bias.yaml
     sigma_II:   0.02625
-========
-    sigma_II:   0.02625 
->>>>>>>> d17a880554325d4affe7340dc1275872b199f2dc:dev_ori_sel_RF/data/params_test1.yaml
     aEE:   11.4
     aIE:   11.5
     aEI:   10.

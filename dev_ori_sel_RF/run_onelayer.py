@@ -61,6 +61,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 					"system" : "one_layer",
 					"Version" : Version,
 					})
+	# ================== Network system =========================================
 	n = network.Network(Version,config_dict)
 	Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4 = n.system
 	Wrec_mode = config_dict["W4to4_params"]["Wrec_mode"]

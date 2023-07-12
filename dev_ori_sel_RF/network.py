@@ -23,7 +23,6 @@ class Network:
 		self.Nvert = config_dict["Nvert"]
 		self._init_connectivity()
 	
-
 	def _init_connectivity(self):
 		## retina to lgn connectivity
 		## moving sinusoidal input of varying orientation and spatial frequency
@@ -45,14 +44,17 @@ class Network:
 			self.Wret_to_lgn = np.stack([self.Wret_to_lgn,Wret_to_lgn_OFF])
 
 
-		## lgn to l4 connectivity
+		## ============ lgn to l4 connectivity
 		Wlgn4 = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
 				 						   random_seed=self.config_dict["random_seed"],\
 				 						   Nvert=(1,self.Nvert), verbose=self.verbose)
+		
 		self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2 = \
 			self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4,\
 									  system_mode=self.config_dict["system"],**self.kwargs)
+		
 		self.arbor2 = np.concatenate([self.arbor2]*(self.config_dict["num_lgn_paths"]//2))
+		
 		if (self.config_dict["Wlgn_to4_params"]["connectivity_type"]=="EI" and\
 		 	self.config_dict["Wlgn_to4_params"]["W_mode"]!="load_from_external"):
 			Wlgn4_I = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
@@ -63,7 +65,7 @@ class Network:
 			self.Wlgn_to_4 = np.concatenate([self.Wlgn_to_4,Wlgn_to_4_I])
 		self.Wlgn_to_4 = tf.sparse.from_dense(self.Wlgn_to_4) 
 
-		# init normalization
+		# =========== init normalization INIT WEIGHTS ======================
 		# syn norm over x
 		if self.config_dict["Wlgn_to4_params"]["mult_norm"]=="x":
 			self.init_weights = tf.sparse.reduce_sum(self.Wlgn_to_4,axis=1)
@@ -81,15 +83,16 @@ class Network:
 			self.init_weights = np.array([]) ## not needed
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="None":
 			self.init_weights = np.array([]) ## not needed
+        # =================================================================
 
-		# recurrent connectivity
+		# ============= ONE LAYER ============= recurrent connectivity
 		W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
 										random_seed=self.config_dict["random_seed"],Nvert=self.Nvert,verbose=self.verbose)
 		Wrec_mode = self.config_dict["W4to4_params"]["Wrec_mode"]
 		##  =========== 1pop ===========
 		sigma_rec = self.config_dict["W4to4_params"]["sigma_factor"]
 		max_ew = self.config_dict["W4to4_params"]["max_ew"]
-
+        ## ============ 2pop ===========
 		if "2pop" in Wrec_mode:
 			W4 = connectivity.Connectivity_2pop((self.N4,self.N4),(self.N4,self.N4),\
 												(self.N4,self.N4), (self.N4,self.N4),\
@@ -113,7 +116,8 @@ class Network:
 		if self.config_dict["system"]=="one_layer":
 			self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,\
 							self.arbor2,self.init_weights,self.W4to4)
-
+ 
+        ## ========== TWO LAYERS ===================
 		elif self.config_dict["system"]=="two_layer":
 			N23 = self.config_dict["N23"]
 			W4 = connectivity.Connectivity_2pop((self.N23,self.N23),(self.N23,self.N23),
@@ -159,8 +163,6 @@ class Network:
 			self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,\
 							self.arbor2,self.init_weights,self.W4to4,self.arbor4to4,self.W23to23,\
 							self.arbor23,self.W4to23,self.arbor4to23,self.init_weights_4to23,self.W23to4)
-
-
 
 	def generate_inputs(self,**kwargs):
 		"""
@@ -235,7 +237,6 @@ class Network:
 			pass
 
 		return lgn
-
 
 	def get_RFs(self,mode,**kwargs):
 		"""
@@ -375,6 +376,13 @@ class Network:
 					else:
 						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
 					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+				elif os.environ["USER"]=="ah3913":
+					if self.config_dict.get("config_name",False):
+						yfile = np.load(data_dir + "layer4/{s}/v{v}/y_v{v}.npz".format(
+							s=self.config_dict["config_name"],v=Version))
+					else:
+						yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
+					Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 				elif kwargs["load_location"]=="habanero":
 					if self.config_dict.get("config_name",False):
 						yfile = np.load(data_dir + "layer4/habanero/{s}/v{v}/y_v{v}.npz".format(
@@ -419,7 +427,6 @@ class Network:
 			Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm
 
 		return Wlgn_to_4,arbor_on,arbor_off,arbor2
-
 
 	def load_W4to23(self,**kwargs):
 		Version = self.config_dict["Wlgn_to4_params"]["load_from_prev_run"]

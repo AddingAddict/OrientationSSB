@@ -61,6 +61,8 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                     "system" : "one_layer",
                     "Version" : Version,
                     })
+    
+    # =================== Network system ===============================================
     n = network_full_plastic.Network(Version,config_dict)
     Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,init_weights_4to4 = n.system
     arbor_e = arbor4to4[:N4*N4*Nvert,:N4*N4*Nvert]
@@ -122,7 +124,10 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                     "Nvert" : tf.constant(Nvert, dtype=tf.int32),
                     "invert_rec" : True,
                     
-                    "init_weights" : tf.convert_to_tensor(init_weights,dtype=tf.float32),
+                    "init_weights" : [tf.convert_to_tensor(init_weights[0],dtype=tf.float32),
+							tf.convert_to_tensor(init_weights[1],dtype=tf.float32)] 
+						if config_dict["Wlgn_to4_params"]["mult_norm"] = "xalpha_approx"
+						else tf.convert_to_tensor(init_weights,dtype=tf.float32),
                     "Wret_to_lgn" : tf.convert_to_tensor(Wret_to_lgn,dtype=tf.float32),
                     "W4to4" : tf.convert_to_tensor(W4to4, dtype=tf.float32),
                     "W23to23" : tf.convert_to_tensor(np.array([]), dtype=tf.float32),

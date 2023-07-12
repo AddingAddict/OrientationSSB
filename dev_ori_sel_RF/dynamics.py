@@ -117,7 +117,6 @@ def dynamics_twolayer(scan_func, y, t, dt, params_dict, **kwargs):
 	# out = tf.concat([dW, dl4, dl23, 0*y[s+l4_size+l23_size:]], axis=0)
 	return out,l4_avg,theta_4
 
-
 def dynamics_l4_sgl(y, t, params_dict, yt):
 	"""ff plasticity update after each stimlus, with vertical cortical units"""
 	N4 = params_dict["N4"]
@@ -192,7 +191,6 @@ def dynamics_l4_sgl(y, t, params_dict, yt):
 	out = tf.concat([dW, dl4], axis=0)
 	return out
 
-
 def lowD_GRF_l4(scan_func,y,t,dt,params_dict,**kwargs):
 	ndim = params_dict["lowD_subset"].shape[1]
 	idx = tf.random.uniform([1],minval=0,maxval=ndim,dtype=tf.int32)
@@ -208,7 +206,6 @@ def lowD_GRF_l4(scan_func,y,t,dt,params_dict,**kwargs):
 
 	out = tf.concat([y[:s], l4], axis=0)
 	return out
-
 
 def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
 	"""only Layer 4 dynamics after number of stimuli with vertical units"""
@@ -273,7 +270,6 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
 	out = tf.concat([y[:s], l4], axis=0)
 	return out,l4_avg,theta_4
 
-
 def dynamics_Wonly(y, t, params_dict, yt):
 	"""plasticity dynamics only, cortical activity assumed to be converged
 	in linear approximation"""
@@ -337,7 +333,6 @@ def dynamics_Wonly(y, t, params_dict, yt):
 	dW = tf.reshape(dW, [s])
 	return dW
 	
-
 def rhs_l4(l_act,t,inp,gamma_FF,gamma_rec,Wff_to_l,W_rec,tau,nl):
 	'''
 	input:
@@ -350,7 +345,7 @@ def rhs_l4(l_act,t,inp,gamma_FF,gamma_rec,Wff_to_l,W_rec,tau,nl):
 
 	return 1./tau * (nl(arg) - l_act)
 
-def arg_l4_1pop(l_act,inp_on,inp_off,gamma_FF,gamma_rec,Won_to_l,Woff_to_l,W_rec,tau):
+def arg_l4_1pop(l_act,inp_on,inp_off,gamma_FF,gamma_rec,Won_to_l,Woff_to_l,W_rec,tau): #argument of non-linear function f
 	arg_ff = gamma_FF * tf.linalg.matvec(Won_to_l,inp_on) +\
 			 gamma_FF * tf.linalg.matvec(Woff_to_l,inp_off)
 	arg_rec = gamma_rec * tf.linalg.matvec(W_rec, l_act)
@@ -401,7 +396,6 @@ def rhs_l4EI_full_LGN_input(l_act,t,**kwargs):
 						Wff_to_l[3,:,:],W_rec[N:,:],tau)
 	return 1./tau * (nl( tf.concat([argE,argI], axis=0) ) - l_act)
 
-
 def rhs_twolayer_l4EI(act,t,**kwargs):
 	N = kwargs["N"]
 	inp_ff = kwargs["inp_ff"]
@@ -448,7 +442,6 @@ def rhs_twolayer_l4EI_full_LGN_input(act,t,**kwargs):
 	# print("arg",arg_ff.shape,Wff_to_l.shape,argE.shape,argI.shape,act.shape)
 	return 1./tau * (nl( tf.concat([argE,argI], axis=0) ) - act)
 
-
 def rhs_twolayer_l23EI(act,t,**kwargs):
 	N = kwargs["N"]
 	inp_ff = kwargs["inp_ff"]
@@ -465,7 +458,6 @@ def rhs_twolayer_l23EI(act,t,**kwargs):
 	argI = gamma_ff * tf.linalg.matvec(Wff_to_l[N:,:],inp_ff) +\
 		   gamma_rec * tf.linalg.matvec(W_rec[N:,:], act)
 	return 1./tau * (nl( tf.concat([argE,argI], axis=0) ) - act)
-
 
 def rhs_l23(act,t,**kwargs):
 	'''
@@ -512,7 +504,6 @@ def rhs_l4_wfb(l_act,
 	# print("rec",np.nanmax(tf.linalg.matvec(W_rec_23, l23)),np.nanmin(tf.linalg.matvec(W_rec_23, l23)))
 	return 1./tau * (nl(arg) - l_act)
 
-
 def constrain_plasticity_update_W4to23(y,dt,dW4to23,arbor,arbor2,Wlim,params_dict,\
 	c_orth,s_orth):
 	"""Plasticity update averaged over avg_no_inp number of input patterns"""
@@ -543,7 +534,6 @@ def constrain_plasticity_update_W4to23(y,dt,dW4to23,arbor,arbor2,Wlim,params_dic
 
 	W4to23 += dt*delta2
 	return W4to23
-
 
 def constrained_plasticity(t,
 				l4,
@@ -578,8 +568,6 @@ def constrained_plasticity(t,
 													c_orth,s_orth)
 	return constrained_delta
 	
-
-
 def rhs_W(t, l23, inp, Wff_to_23, beta_P, beta_post):
 	# arbor = tf.where(tf.greater(Wff_to_23, 0), tf.ones(tf.shape(Wff_to_23),dtype=tf.float32),\
 	#  tf.zeros(tf.shape(Wff_to_23),dtype=tf.float32) )

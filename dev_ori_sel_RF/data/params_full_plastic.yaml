@@ -28,6 +28,8 @@ test_lowDsubset:   False
 
 developing_params: []
 
+q_dict:  False
+
 # External Input
 Inp_params:
     ndim: 25
