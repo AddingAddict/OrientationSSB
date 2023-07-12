@@ -149,7 +149,7 @@ class Connectivity:
 				size_field_y = size_field_x*np.sqrt(1 - ecc_field**2)
 				
 				## orientations of elongated connections				
-				orientation_field = np.angle(z_field)*0.5
+				orientation_field = .5*np.angle(z_field)
 				cos_theta = np.cos(orientation_field)[None,None,:,:]
 				sin_theta = np.sin(orientation_field)[None,None,:,:]
 

@@ -126,11 +126,10 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	            inp = lgn_rshp[:,:,i,j,lgn_t]
 	            out = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
 	                                 W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
-	            try:
-	                dy = out[0]
-	            except:
-	                dy = out
-	            y = y + dt*dy
+                try:
+		            y = y + dt*out
+		        except:
+		        	y = y + dt*out[0]
 	            yt.append( y )
 
 	            # ff input
