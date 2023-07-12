@@ -37,11 +37,11 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	gamma_ff = probe_config_dict["gamma_lgn"]
 
 	probe_config_dict["Wlgn_to4_params"].update({
-	    "W_mode": RF_mode,
-	    "load_from_prev_run" : Version})
+		"W_mode": RF_mode,
+		"load_from_prev_run" : Version})
 	pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
 	Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
-	                         probe_config_dict["N23"],probe_config_dict["Nvert"]
+							 probe_config_dict["N23"],probe_config_dict["Nvert"]
 	suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])
 	misc.ensure_path(pdf_path)
 
@@ -52,21 +52,21 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	# probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
 	last_timestep = t[-1]
 	probe_config_dict.update({
-	                    "last_timestep" : last_timestep,
-	                    "RF_mode" : RF_mode,
-	                    "system" : system_mode,
-	                    "Version" : Version
-	                    })
+						"last_timestep" : last_timestep,
+						"RF_mode" : RF_mode,
+						"system" : system_mode,
+						"Version" : Version
+						})
 	n = network.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
 	kwargs = {
-	            ## parameters for moving gratings
-	            "num_freq" : 1,
-	            "spat_frequencies" : freqs,#40,60,90
-	            "orientations" : oris,
-	            "Nsur" : Nsur,
+				## parameters for moving gratings
+				"num_freq" : 1,
+				"spat_frequencies" : freqs,#40,60,90
+				"orientations" : oris,
+				"Nsur" : Nsur,
 	}
 	lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
-	                        same_EI_input=True,**kwargs)
+							same_EI_input=True,**kwargs)
 	# lgn += 0.1
 	lgn -= np.nanmin(lgn) #- 0.5
 	print("lgn",lgn.shape)
@@ -87,23 +87,23 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
 	y0 = l40
 	def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
-	                    W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
-	    return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
-	                                        tau,fio=fio_rect)
+						W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+		return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
+											tau,fio=fio_rect)
 	if connectivity_type=="EI":
-	    def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
-	                        W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
-	        return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
-	                                                        gamma_ff,N4,tau,fio=fio_rect)
+		def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
+							W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+			return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
+															gamma_ff,N4,tau,fio=fio_rect)
 	W4to23 = 0
 	W23to4 = 0
 	W23to23= 0
 
 	if probe_config_dict["tau"]!=1:
-	    tau = np.ones((N4**2*2*Nvert),dtype=float)
-	    tau[N4**2*Nvert:] *= probe_config_dict["tau"]
+		tau = np.ones((N4**2*2*Nvert),dtype=float)
+		tau[N4**2*Nvert:] *= probe_config_dict["tau"]
 	else:
-	    tau = 1.
+		tau = 1.
 
 	I = np.linalg.inv(np.diagflat(np.ones(N4*N4*2*Nvert)) - W4to4)
 
@@ -112,261 +112,261 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	temporal_duration = 500
 	num_reps = t[-1]/temporal_duration
 	for i,spat_frequency in enumerate(kwargs["spat_frequencies"]):
-	    all_phase = []
-	    act_last_timestep = []
-	    for j,orientation in enumerate(kwargs["orientations"]):
-	        mod_ratio = []
-	        phases = []
-	        yt = [y0]
-	        y = y0
-	        It = [l40*0]
-	        for kt in t:
-	            lgn_t = int((kt//temporal_duration)%kwargs["Nsur"])#
-	            # inp = lgn[:2,:,0]
-	            inp = lgn_rshp[:,:,i,j,lgn_t]
-	            out = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
-	                                 W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
-                try:
-		            y = y + dt*out
-		        except:
-		        	y = y + dt*out[0]
-	            yt.append( y )
+		all_phase = []
+		act_last_timestep = []
+		for j,orientation in enumerate(kwargs["orientations"]):
+			mod_ratio = []
+			phases = []
+			yt = [y0]
+			y = y0
+			It = [l40*0]
+			for kt in t:
+				lgn_t = int((kt//temporal_duration)%kwargs["Nsur"])#
+				# inp = lgn[:2,:,0]
+				inp = lgn_rshp[:,:,i,j,lgn_t]
+				out = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
+									 W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
+				try:
+					y = y + dt*out
+				except:
+					y = y + dt*out[0]
+				yt.append( y )
 
-	            # ff input
-	            ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],inp[0,:])+\
-	                                 np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
-	            ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],inp[0,:])+\
-	                                 np.dot(Wlgn_to_4[3,:,:],inp[1,:]))				
-	            It.append(np.concatenate([ff_inp_E,ff_inp_I]))
+				# ff input
+				ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],inp[0,:])+\
+									 np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
+				ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],inp[0,:])+\
+									 np.dot(Wlgn_to_4[3,:,:],inp[1,:]))				
+				It.append(np.concatenate([ff_inp_E,ff_inp_I]))
 
-	        yt = np.array(yt)
-	        It = np.array(It)
-	        print("It",It.shape,yt.shape)
+			yt = np.array(yt)
+			It = np.array(It)
+			print("It",It.shape,yt.shape)
 
-	        ## collect last responses for all orientations
-	        ## take max response over last moving grating
-	        last_response = np.nanmax(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
-	        ## take mean response over last moving grating
-	        # last_response = np.nanmean(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
-	        ## take last frame of ff input to show pattern
-	        last_input = It[-1,...]
-	        act_last_timestep.append(last_response)
+			## collect last responses for all orientations
+			## take max response over last moving grating
+			last_response = np.nanmax(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
+			## take mean response over last moving grating
+			# last_response = np.nanmean(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
+			## take last frame of ff input to show pattern
+			last_input = It[-1,...]
+			act_last_timestep.append(last_response)
 
-	        t1 = 500
-	        t2 = int(probe_config_dict["last_timestep"]+1)
-	        dT = t2-t1
-	        temp_freq = int((last_timestep+1)//temporal_duration//kwargs["Nsur"])
-	        print("temp_freq",temp_freq)
-	        if system_mode=="one_layer":
-	            labels = ["L4,E","L4,I"]
-	            L4_size = N4*N4*Nvert
-	            yt_list = [yt[t1:t2,:L4_size].reshape(dT,N4,N4*Nvert),\
-	                        yt[t1:t2,L4_size:].reshape(dT,N4,N4*Nvert)]
-	            yfinal_list = [last_response[:L4_size].reshape(N4,N4*Nvert),\
-	                            last_response[L4_size:].reshape(N4,N4*Nvert)]
-	            It_list = [It[t1:t2,:L4_size].reshape(dT,N4,N4*Nvert),\
-	                        It[t1:t2,L4_size:L4_size*2].reshape(dT,N4,N4*Nvert)]
-	            Ifinal_list = [last_input[:L4_size].reshape(N4,N4*Nvert),\
-	                            last_input[L4_size:L4_size*2].reshape(N4,N4*Nvert)]
-
-
-	        trace_list = []
-	        spectrum_list = []
-	        for yt_pop in yt_list:
-	            ## compute modulation ratio per pixel
-	            trace = np.nanmean(yt_pop,axis=(1,2))
-	            spectrum_avg = np.abs(np.fft.fftshift(np.fft.fft(trace-np.nanmean(trace))))
-	            spectrum = np.abs(np.fft.fft(yt_pop-np.nanmean(yt_pop,axis=0),axis=0))
-	            trace_list.append(trace)
-	            spectrum_list.append([spectrum/np.nanmax(spectrum[:40,:],axis=0)[None,:],\
-	                                  spectrum_avg/np.nanmax(spectrum_avg[:40])])
-	            mod_ratio.append(analysis_tools.compute_MR(yt_pop,0,temp_freq))
-	            pref_phase = analysis_tools.find_preferred_abs_phase(yt_pop,\
-	                                                                    temp_freq=temp_freq)
-	            print("pref_phase",np.nanmax(pref_phase),np.nanmin(pref_phase))
-	            phases.append(pref_phase)
-	        all_phase.append(phases)
-	        print("Spat frequency={:.0f}, orientation={:.0f} deg".format(spat_frequency,\
-	                orientation*180/np.pi),len(phases))
-
-	        ## figure names
-	        if system_mode=="one_layer":
-	            if RF_mode in ("gabor","initialize"):
-	                filename = "MR_freq{:.0f}_ori{:.0f}_Gabor{}.pdf".format(\
-	                            spat_frequency,orientation/np.pi*180,suffix)
-	            elif RF_mode=="load_from_external":
-	                filename = "MR_freq{:.0f}_ori{:.0f}_V{}{}.pdf".format(\
-	                            spat_frequency,orientation/np.pi*180,probe_config_dict["Version"],\
-	                            suffix)
-
-	        pp = PdfPages(pdf_path + filename)
-	        ## figures for comparing stats of L4 and L23
-	        ncols,nrows = 4,1
-	        figc = plt.figure(figsize=(6*ncols,5*nrows))
-	        figc.suptitle("Comparing L4 and L23")
-	        axes = []
-	        for k in range(nrows):
-	            for l in range(ncols):
-	                axes.append(figc.add_subplot(nrows,ncols,l+k*ncols+1))
-	        for k,(yt_pop,label) in enumerate(zip(yt_list,labels)):
-	            ## figs for L4 E,I and L23 E,I
-	            ncols,nrows = 8,1
-	            fig = plt.figure(figsize=(6*ncols,5*nrows))
-	            fig.suptitle(label)
-
-	            idmax = np.argmax(mod_ratio[k])
-	            ymax,xmax = idmax//N4,idmax%N4
-	            idmin = np.argmin(mod_ratio[k])
-	            ymin,xmin = idmin//N4,idmin%N4
-
-	            if (k<2 and "moving_grating_online" in probe_config_dict["Inp_params"]["input_type"]):
-	                ## raw input trace
-	                ax = fig.add_subplot(nrows,ncols,1)
-	                ax.set_ylabel("Raw input")
-	                ax.set_xlabel("Timesteps")
-	                ax.plot(np.nanmean(lgn_rshp[0,:,i,j,:],axis=1),"-k",label="avg")
-	                ax.plot(np.nanmean(lgn_rshp[1,:,i,j,:],axis=1),"--k",label="avg")
-	                ax.plot(lgn_rshp[0,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"-",c="gray",label="max mod")
-	                ax.plot(lgn_rshp[1,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"--",c="gray",label="max mod")
-	                ax.legend(loc="best")
-
-	            if (k<2):
-	                ## input trace to L4 (raw input convolved with RF)
-	                ax = fig.add_subplot(nrows,ncols,2)
-	                ax.set_ylabel("Input to LGN")
-	                ax.set_xlabel("Timesteps")
-	                ax.plot(np.arange(t1,t2),np.nanmean(It_list[k],axis=(1,2)),"-k",label="avg")
-	                ax.plot(np.arange(t1,t2),It_list[k][:,ymax,xmax],"-",c="gray",label="max mod")
-	                # ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
-	                ax.legend(loc="best")
+			t1 = 500
+			t2 = int(probe_config_dict["last_timestep"]+1)
+			dT = t2-t1
+			temp_freq = int((last_timestep+1)//temporal_duration//kwargs["Nsur"])
+			print("temp_freq",temp_freq)
+			if system_mode=="one_layer":
+				labels = ["L4,E","L4,I"]
+				L4_size = N4*N4*Nvert
+				yt_list = [yt[t1:t2,:L4_size].reshape(dT,N4,N4*Nvert),\
+							yt[t1:t2,L4_size:].reshape(dT,N4,N4*Nvert)]
+				yfinal_list = [last_response[:L4_size].reshape(N4,N4*Nvert),\
+								last_response[L4_size:].reshape(N4,N4*Nvert)]
+				It_list = [It[t1:t2,:L4_size].reshape(dT,N4,N4*Nvert),\
+							It[t1:t2,L4_size:L4_size*2].reshape(dT,N4,N4*Nvert)]
+				Ifinal_list = [last_input[:L4_size].reshape(N4,N4*Nvert),\
+								last_input[L4_size:L4_size*2].reshape(N4,N4*Nvert)]
 
 
-	            ## activity trace
-	            ax = fig.add_subplot(nrows,ncols,3)
-	            ax.set_ylabel("Activity")
-	            ax.set_xlabel("Timesteps")
-	            ax.plot(np.arange(t1,t2),trace_list[k],"-k",label="avg")
-	            ax.plot(np.arange(t1,t2),yt_pop[:,ymax,xmax],"-",c="gray",label="max mod")
-	            # ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
-	            ax.legend(loc="best")
+			trace_list = []
+			spectrum_list = []
+			for yt_pop in yt_list:
+				## compute modulation ratio per pixel
+				trace = np.nanmean(yt_pop,axis=(1,2))
+				spectrum_avg = np.abs(np.fft.fftshift(np.fft.fft(trace-np.nanmean(trace))))
+				spectrum = np.abs(np.fft.fft(yt_pop-np.nanmean(yt_pop,axis=0),axis=0))
+				trace_list.append(trace)
+				spectrum_list.append([spectrum/np.nanmax(spectrum[:40,:],axis=0)[None,:],\
+									  spectrum_avg/np.nanmax(spectrum_avg[:40])])
+				mod_ratio.append(analysis_tools.compute_MR(yt_pop,0,temp_freq))
+				pref_phase = analysis_tools.find_preferred_abs_phase(yt_pop,\
+																		temp_freq=temp_freq)
+				print("pref_phase",np.nanmax(pref_phase),np.nanmin(pref_phase))
+				phases.append(pref_phase)
+			all_phase.append(phases)
+			print("Spat frequency={:.0f}, orientation={:.0f} deg".format(spat_frequency,\
+					orientation*180/np.pi),len(phases))
 
-	            ## frequency spectrum
-	            ax = fig.add_subplot(nrows,ncols,4)
-	            ax.set_ylabel("Spectrum")
-	            ax.set_xlabel("Frequency")
-	            ax.plot(spectrum_list[k][0][:,ymax,xmax],"-",c="gray",label="max mod")
-	            ax.plot(spectrum_list[k][0][:,ymin,xmin],"--",c="gray",label="min mod")
-	            ax.plot(spectrum_list[k][1],"-k",label="avg")
-	            ax.set_xlim(0,Nsur*temp_freq)
-	            ax.set_ylim(0,1)
+			## figure names
+			if system_mode=="one_layer":
+				if RF_mode in ("gabor","initialize"):
+					filename = "MR_freq{:.0f}_ori{:.0f}_Gabor{}.pdf".format(\
+								spat_frequency,orientation/np.pi*180,suffix)
+				elif RF_mode=="load_from_external":
+					filename = "MR_freq{:.0f}_ori{:.0f}_V{}{}.pdf".format(\
+								spat_frequency,orientation/np.pi*180,probe_config_dict["Version"],\
+								suffix)
 
-	            if k<2:
-	                ## input from LGN to L4
-	                ax = fig.add_subplot(nrows,ncols,5)
-	                ax.set_title("FF input last timestep")
-	                im=ax.imshow(Ifinal_list[k],interpolation="nearest",cmap="binary")
-	                plt.colorbar(im,ax=ax)
+			pp = PdfPages(pdf_path + filename)
+			## figures for comparing stats of L4 and L23
+			ncols,nrows = 4,1
+			figc = plt.figure(figsize=(6*ncols,5*nrows))
+			figc.suptitle("Comparing L4 and L23")
+			axes = []
+			for k in range(nrows):
+				for l in range(ncols):
+					axes.append(figc.add_subplot(nrows,ncols,l+k*ncols+1))
+			for k,(yt_pop,label) in enumerate(zip(yt_list,labels)):
+				## figs for L4 E,I and L23 E,I
+				ncols,nrows = 8,1
+				fig = plt.figure(figsize=(6*ncols,5*nrows))
+				fig.suptitle(label)
 
-	            ## max/mean resposne over last moving grating
-	            ax = fig.add_subplot(nrows,ncols,6)
-	            ax.set_title("Activity last timestep")
-	            # im=ax.imshow(yfinal_list[k],interpolation="nearest",cmap="binary")
-	            im=ax.imshow(np.nanmean(yt_pop[-temporal_duration*kwargs["Nsur"]:,:,:],axis=0),interpolation="nearest",cmap="binary")
-	            plt.colorbar(im,ax=ax)
+				idmax = np.argmax(mod_ratio[k])
+				ymax,xmax = idmax//N4,idmax%N4
+				idmin = np.argmin(mod_ratio[k])
+				ymin,xmin = idmin//N4,idmin%N4
 
-	            ax = fig.add_subplot(nrows,ncols,7)
-	            ax.set_title("Modulation ratio")
-	            im=ax.imshow(mod_ratio[k],interpolation="nearest",cmap="binary",vmin=0,vmax=1)
-	            plt.colorbar(im,ax=ax)
+				if (k<2 and "moving_grating_online" in probe_config_dict["Inp_params"]["input_type"]):
+					## raw input trace
+					ax = fig.add_subplot(nrows,ncols,1)
+					ax.set_ylabel("Raw input")
+					ax.set_xlabel("Timesteps")
+					ax.plot(np.nanmean(lgn_rshp[0,:,i,j,:],axis=1),"-k",label="avg")
+					ax.plot(np.nanmean(lgn_rshp[1,:,i,j,:],axis=1),"--k",label="avg")
+					ax.plot(lgn_rshp[0,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"-",c="gray",label="max mod")
+					ax.plot(lgn_rshp[1,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"--",c="gray",label="max mod")
+					ax.legend(loc="best")
 
-	            ax = fig.add_subplot(nrows,ncols,8)
-	            ax.set_title("Phase preference")
-	            im=ax.imshow(all_phase[-1][k],interpolation="nearest",cmap="hsv",vmin=0,vmax=2*np.pi)
-	            plt.colorbar(im,ax=ax)
-	            pp.savefig(fig,dpi=300,bbox_inches="tight")
-	            plt.close(fig)
-
-
-	            axes[0].plot(np.sort(yt_pop[-temporal_duration*kwargs["Nsur"]:,:].mean(0).flatten()),\
-	                        np.linspace(0,1,yfinal_list[k].size),'-',label=label)
-	            axes[1].plot(np.sort(mod_ratio[k].flatten()),\
-	                        np.linspace(0,1,mod_ratio[k].size),'-',label=label)
-
-	        axes[0].set_xlabel("Activity")
-	        axes[0].set_ylabel("Cumulative distribution")
-	        axes[1].set_xlabel("Modulation ratio")
-	        axes[1].set_ylabel("Cumulative distribution")
-	        axes[1].set_xlim(0,1)
-	        for ax in axes:
-	            ax.legend(loc="best")
-	        pp.savefig(figc,dpi=300,bbox_inches="tight")
-	        plt.close(figc)
+				if (k<2):
+					## input trace to L4 (raw input convolved with RF)
+					ax = fig.add_subplot(nrows,ncols,2)
+					ax.set_ylabel("Input to LGN")
+					ax.set_xlabel("Timesteps")
+					ax.plot(np.arange(t1,t2),np.nanmean(It_list[k],axis=(1,2)),"-k",label="avg")
+					ax.plot(np.arange(t1,t2),It_list[k][:,ymax,xmax],"-",c="gray",label="max mod")
+					# ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
+					ax.legend(loc="best")
 
 
-	        ## LGN input
-	        # exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn[0,i,j,0,:]) +\
-	        # 						 np.dot(Wlgn_to_4[1,:,:],lgn[1,i,j,0,:]))
-	        exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],inp[0,:]) +\
-	                                 np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
-	        ## visual stimuli
-	        fig = plt.figure(figsize=(18,5))
-	        ax = fig.add_subplot(131)
-	        ax.set_title("Input ON")
-	        im=ax.imshow(gamma_ff*inp[0,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
-	                    cmap="binary")
-	        plt.colorbar(im,ax=ax)
-	        ax = fig.add_subplot(132)
-	        ax.set_title("Input OFF")
-	        im=ax.imshow(gamma_ff*inp[1,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
-	                    cmap="binary")
-	        plt.colorbar(im,ax=ax)
-	        ax = fig.add_subplot(133)
-	        ax.set_title("Total LGN input")
-	        im=ax.imshow(exc_ff_inp.reshape(Nlgn,Nlgn),interpolation="nearest",\
-	                    cmap="binary")
-	        plt.colorbar(im,ax=ax)
-	        pp.savefig(fig,dpi=300,bbox_inches="tight")
-	        plt.close(fig)
+				## activity trace
+				ax = fig.add_subplot(nrows,ncols,3)
+				ax.set_ylabel("Activity")
+				ax.set_xlabel("Timesteps")
+				ax.plot(np.arange(t1,t2),trace_list[k],"-k",label="avg")
+				ax.plot(np.arange(t1,t2),yt_pop[:,ymax,xmax],"-",c="gray",label="max mod")
+				# ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
+				ax.legend(loc="best")
 
-	        ## VARIABILITY IN RESPONSE PATTERN DURING ONE GRATING OSCILLATION
-	        oscillation_duration = (last_timestep+1)/temp_freq
-	        timesteps = np.array([last_timestep-oscillation_duration,\
-	                             last_timestep-3/4.*oscillation_duration,\
-	                             last_timestep-1./2*oscillation_duration,\
-	                             last_timestep-1./4*oscillation_duration]).astype(int)
-	        ncol,nrow = len(timesteps),1
-	        fig = plt.figure(figsize=(6*ncol,5*nrow))
-	        for k in range(ncol):
-	            ax = fig.add_subplot(nrow,ncol,k+1)
-	            ax.set_title("t={}".format(timesteps[k]))
-	            im=ax.imshow(yt[timesteps[k],:L4_size].reshape(N4,N4),interpolation="nearest",\
-	                        cmap="binary")
-	            plt.colorbar(im,ax=ax)
-	        pp.savefig(fig,dpi=300,bbox_inches="tight")
-	        plt.close(fig)
+				## frequency spectrum
+				ax = fig.add_subplot(nrows,ncols,4)
+				ax.set_ylabel("Spectrum")
+				ax.set_xlabel("Frequency")
+				ax.plot(spectrum_list[k][0][:,ymax,xmax],"-",c="gray",label="max mod")
+				ax.plot(spectrum_list[k][0][:,ymin,xmin],"--",c="gray",label="min mod")
+				ax.plot(spectrum_list[k][1],"-k",label="avg")
+				ax.set_xlim(0,Nsur*temp_freq)
+				ax.set_ylim(0,1)
 
-	        pp.close()
-	        print("plot done",orientation,spat_frequency)
+				if k<2:
+					## input from LGN to L4
+					ax = fig.add_subplot(nrows,ncols,5)
+					ax.set_title("FF input last timestep")
+					im=ax.imshow(Ifinal_list[k],interpolation="nearest",cmap="binary")
+					plt.colorbar(im,ax=ax)
+
+				## max/mean resposne over last moving grating
+				ax = fig.add_subplot(nrows,ncols,6)
+				ax.set_title("Activity last timestep")
+				# im=ax.imshow(yfinal_list[k],interpolation="nearest",cmap="binary")
+				im=ax.imshow(np.nanmean(yt_pop[-temporal_duration*kwargs["Nsur"]:,:,:],axis=0),interpolation="nearest",cmap="binary")
+				plt.colorbar(im,ax=ax)
+
+				ax = fig.add_subplot(nrows,ncols,7)
+				ax.set_title("Modulation ratio")
+				im=ax.imshow(mod_ratio[k],interpolation="nearest",cmap="binary",vmin=0,vmax=1)
+				plt.colorbar(im,ax=ax)
+
+				ax = fig.add_subplot(nrows,ncols,8)
+				ax.set_title("Phase preference")
+				im=ax.imshow(all_phase[-1][k],interpolation="nearest",cmap="hsv",vmin=0,vmax=2*np.pi)
+				plt.colorbar(im,ax=ax)
+				pp.savefig(fig,dpi=300,bbox_inches="tight")
+				plt.close(fig)
+
+
+				axes[0].plot(np.sort(yt_pop[-temporal_duration*kwargs["Nsur"]:,:].mean(0).flatten()),\
+							np.linspace(0,1,yfinal_list[k].size),'-',label=label)
+				axes[1].plot(np.sort(mod_ratio[k].flatten()),\
+							np.linspace(0,1,mod_ratio[k].size),'-',label=label)
+
+			axes[0].set_xlabel("Activity")
+			axes[0].set_ylabel("Cumulative distribution")
+			axes[1].set_xlabel("Modulation ratio")
+			axes[1].set_ylabel("Cumulative distribution")
+			axes[1].set_xlim(0,1)
+			for ax in axes:
+				ax.legend(loc="best")
+			pp.savefig(figc,dpi=300,bbox_inches="tight")
+			plt.close(figc)
+
+
+			## LGN input
+			# exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn[0,i,j,0,:]) +\
+			# 						 np.dot(Wlgn_to_4[1,:,:],lgn[1,i,j,0,:]))
+			exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],inp[0,:]) +\
+									 np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
+			## visual stimuli
+			fig = plt.figure(figsize=(18,5))
+			ax = fig.add_subplot(131)
+			ax.set_title("Input ON")
+			im=ax.imshow(gamma_ff*inp[0,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
+						cmap="binary")
+			plt.colorbar(im,ax=ax)
+			ax = fig.add_subplot(132)
+			ax.set_title("Input OFF")
+			im=ax.imshow(gamma_ff*inp[1,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
+						cmap="binary")
+			plt.colorbar(im,ax=ax)
+			ax = fig.add_subplot(133)
+			ax.set_title("Total LGN input")
+			im=ax.imshow(exc_ff_inp.reshape(Nlgn,Nlgn),interpolation="nearest",\
+						cmap="binary")
+			plt.colorbar(im,ax=ax)
+			pp.savefig(fig,dpi=300,bbox_inches="tight")
+			plt.close(fig)
+
+			## VARIABILITY IN RESPONSE PATTERN DURING ONE GRATING OSCILLATION
+			oscillation_duration = (last_timestep+1)/temp_freq
+			timesteps = np.array([last_timestep-oscillation_duration,\
+								 last_timestep-3/4.*oscillation_duration,\
+								 last_timestep-1./2*oscillation_duration,\
+								 last_timestep-1./4*oscillation_duration]).astype(int)
+			ncol,nrow = len(timesteps),1
+			fig = plt.figure(figsize=(6*ncol,5*nrow))
+			for k in range(ncol):
+				ax = fig.add_subplot(nrow,ncol,k+1)
+				ax.set_title("t={}".format(timesteps[k]))
+				im=ax.imshow(yt[timesteps[k],:L4_size].reshape(N4,N4),interpolation="nearest",\
+							cmap="binary")
+				plt.colorbar(im,ax=ax)
+			pp.savefig(fig,dpi=300,bbox_inches="tight")
+			plt.close(fig)
+
+			pp.close()
+			print("plot done",orientation,spat_frequency)
 
 	all_phase = np.array(all_phase)
 	act_last_timestep = np.array(act_last_timestep)
 	num_oris = len(kwargs["orientations"])
 	if system_mode=="one_layer":
-	    labels = ["L4,E","L4,I"]
-	    L4_size = N4*N4*Nvert
-	    final_act_list = [act_last_timestep[:,:L4_size].reshape(num_oris,N4,N4*Nvert),\
-	                      act_last_timestep[:,L4_size:].reshape(num_oris,N4,N4*Nvert)]
-	    all_phase_list = [all_phase[:,0,:,:],all_phase[:,1,:,:]]
+		labels = ["L4,E","L4,I"]
+		L4_size = N4*N4*Nvert
+		final_act_list = [act_last_timestep[:,:L4_size].reshape(num_oris,N4,N4*Nvert),\
+						  act_last_timestep[:,L4_size:].reshape(num_oris,N4,N4*Nvert)]
+		all_phase_list = [all_phase[:,0,:,:],all_phase[:,1,:,:]]
 
 	## file names
 	if system_mode=="one_layer":
-	    if RF_mode=="gabor":
-	        filename = "ori_phase_freq{:.0f}_Gabor{}.pdf".format(spat_frequency,suffix)
-	    elif RF_mode=="initialize":
-	        filename = "ori_phase_freq{:.0f}_init{}.pdf".format(spat_frequency,suffix)
-	    elif RF_mode=="load_from_external":
-	        filename = "ori_phase_freq{:.0f}_V{}{}.pdf".format(spat_frequency,\
-	                                                         probe_config_dict["Version"],suffix)
+		if RF_mode=="gabor":
+			filename = "ori_phase_freq{:.0f}_Gabor{}.pdf".format(spat_frequency,suffix)
+		elif RF_mode=="initialize":
+			filename = "ori_phase_freq{:.0f}_init{}.pdf".format(spat_frequency,suffix)
+		elif RF_mode=="load_from_external":
+			filename = "ori_phase_freq{:.0f}_V{}{}.pdf".format(spat_frequency,\
+															 probe_config_dict["Version"],suffix)
 	pp = PdfPages(pdf_path + filename)
 
 	sf = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
@@ -386,46 +386,46 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 	orientations_binning = np.concatenate([kwargs["orientations"],np.array([np.pi])])
 	# orientations_binning -= np.pi/2./num_oris
 	for j,(final_act,jall_phase) in enumerate(zip(final_act_list,all_phase_list)):
-	    opm = analysis_tools.compute_orientation_tuning_from_activity(final_act,\
-	                                                    kwargs["orientations"]*2,norm=True)
-	    sel = np.abs(opm)
-	    ori = np.angle(opm)*0.5
-	    ori = ori - (np.sign(ori)-1)*0.5*np.pi
+		opm = analysis_tools.compute_orientation_tuning_from_activity(final_act,\
+														kwargs["orientations"]*2,norm=True)
+		sel = np.abs(opm)
+		ori = np.angle(opm)*0.5
+		ori = ori - (np.sign(ori)-1)*0.5*np.pi
 
-	    ori_bin = np.searchsorted(orientations_binning,ori,side='left')
-	    ori_bin[ori_bin==num_oris] = 0
-	    ori_bin[ori_bin==num_oris+1] = 0
-	    pref_phase_full = np.zeros_like(ori,dtype=float)
-	    for y in range(ori.shape[0]):
-	        for x in range(ori.shape[1]):
-	            pref_phase_full[y,x] = jall_phase[ori_bin[y,x],y,x]
+		ori_bin = np.searchsorted(orientations_binning,ori,side='left')
+		ori_bin[ori_bin==num_oris] = 0
+		ori_bin[ori_bin==num_oris+1] = 0
+		pref_phase_full = np.zeros_like(ori,dtype=float)
+		for y in range(ori.shape[0]):
+			for x in range(ori.shape[1]):
+				pref_phase_full[y,x] = jall_phase[ori_bin[y,x],y,x]
 
-	    fig = plt.figure(figsize=(6*ncols,nrows*5))
-	    ax = fig.add_subplot(nrows,ncols,1)
-	    ax.set_title("Orientation preference map {}".format(labels[j]))
-	    # im=ax.imshow(misc.plot_complex_map(opm),interpolation="nearest")
-	    im=ax.imshow(ori,cmap="twilight",interpolation="nearest",vmin=0,vmax=np.pi)
-	    plt.colorbar(im,ax=ax,orientation="horizontal")
+		fig = plt.figure(figsize=(6*ncols,nrows*5))
+		ax = fig.add_subplot(nrows,ncols,1)
+		ax.set_title("Orientation preference map {}".format(labels[j]))
+		# im=ax.imshow(misc.plot_complex_map(opm),interpolation="nearest")
+		im=ax.imshow(ori,cmap="twilight",interpolation="nearest",vmin=0,vmax=np.pi)
+		plt.colorbar(im,ax=ax,orientation="horizontal")
 
-	    ax = fig.add_subplot(nrows,ncols,2)
-	    opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(opm - np.nanmean(opm))))
-	    ax.set_title("Spectrum Orientation preference map {}".format(labels[j]))
-	    im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
-	    plt.colorbar(im,ax=ax,orientation="horizontal")
+		ax = fig.add_subplot(nrows,ncols,2)
+		opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(opm - np.nanmean(opm))))
+		ax.set_title("Spectrum Orientation preference map {}".format(labels[j]))
+		im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
+		plt.colorbar(im,ax=ax,orientation="horizontal")
 
-	    ax = fig.add_subplot(nrows,ncols,3)
-	    ax.set_title("Preferred absolute phase {}".format(labels[j]))
-	    im=ax.imshow(pref_phase_full,interpolation="nearest",cmap="twilight",vmin=0,vmax=2*np.pi)
-	    plt.colorbar(im,ax=ax,orientation="horizontal")
+		ax = fig.add_subplot(nrows,ncols,3)
+		ax.set_title("Preferred absolute phase {}".format(labels[j]))
+		im=ax.imshow(pref_phase_full,interpolation="nearest",cmap="twilight",vmin=0,vmax=2*np.pi)
+		plt.colorbar(im,ax=ax,orientation="horizontal")
 
-	    ax = fig.add_subplot(nrows,ncols,4)
-	    opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(pref_phase_full - np.nanmean(pref_phase_full))))
-	    ax.set_title("Spectrum Preferred absolute phase {}".format(labels[j]))
-	    im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
-	    plt.colorbar(im,ax=ax,orientation="horizontal")
+		ax = fig.add_subplot(nrows,ncols,4)
+		opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(pref_phase_full - np.nanmean(pref_phase_full))))
+		ax.set_title("Spectrum Preferred absolute phase {}".format(labels[j]))
+		im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
+		plt.colorbar(im,ax=ax,orientation="horizontal")
 
-	    pp.savefig(dpi=300,bbox_inches="tight")
-	    plt.close(fig)
+		pp.savefig(dpi=300,bbox_inches="tight")
+		plt.close(fig)
 
 	pp.close()
 
