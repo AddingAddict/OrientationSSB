@@ -463,7 +463,7 @@ class Tf_integrator_new:
 		yt = tf.convert_to_tensor([y0])
 		time_dep_dict = defaultdict(list)
 		time_dep_dict["l4t"].append(y0[num_lgn_paths*lim:num_lgn_paths*lim+crt_size])
-		if self.p_dict["p_rec4_ii"] is not None:
+		if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_ON_l4"] is not None:
 			time_dep_dict["W4to4t"].append(self.params_dict["W4to4"].numpy())
 		if self.p_dict["p_rec23_ii"] is not None:
 			time_dep_dict["W23to23t"].append(self.params_dict["W4to4"].numpy())
@@ -558,14 +558,16 @@ class Tf_integrator_new:
 						dW[key] += value
 						print("key",key,istep,np.nanmin(value),np.nanmax(value))
 					
-
-				print("CHECK SHAPE2",dW["dW_lgn_e"].shape)					
-				if isinstance(dW["dW_lgn_e"],int):
-					print("int break")
-					break
-				elif np.isnan(np.nanmedian(dW["dW_lgn_e"][tf.reshape(arbor2[:2,:,:],[-1])>0])):
-					print("Median plasticity update is NaN at t={}, exit!".format(kinput))
-					break
+				try:
+					print("CHECK SHAPE2",dW["dW_lgn_e"].shape)					
+					if isinstance(dW["dW_lgn_e"],int):
+						print("int break")
+						break
+					elif np.isnan(np.nanmedian(dW["dW_lgn_e"][tf.reshape(arbor2[:2,:,:],[-1])>0])):
+						print("Median plasticity update is NaN at t={}, exit!".format(kinput))
+						break
+				except: 
+					pass
 
 			
 				# Plasticity update averaged over avg_no_inp number of input patterns
@@ -653,7 +655,7 @@ class Tf_integrator_new:
 
 				if ((istep%self.saving_stepsize)==0 or istep==(self.num_plasticity_steps-1)):
 					yt = tf.concat([yt,[y]], 0)
-					if self.p_dict["p_rec4_ii"] is not None:
+					if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_ON_l4"] is not None:
 						time_dep_dict["W4to4t"].append(self.params_dict["W4to4"])
 					if self.p_dict["p_rec23_ii"] is not None:
 						time_dep_dict["W23to23t"].append(self.params_dict["W23to23"])

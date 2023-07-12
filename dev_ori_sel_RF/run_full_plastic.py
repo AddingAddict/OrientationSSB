@@ -37,7 +37,7 @@ set_tf_loglevel(logging.FATAL)
 
 
 # def parameter_sweep_layer4(Version,sigma_rec,sigma_cc,r_A):
-def parameter_sweep_layer4(Version,config_dict,**kwargs):
+def parameter_sweep_ffrec(Version,config_dict,**kwargs):
     ## Parameters
     Nvert = config_dict["Nvert"]
     N4 = config_dict["N4"]
@@ -76,7 +76,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     c_orth,s_orth = misc.get_projection_operators(config_dict,config_dict["Wlgn_to4_params"],\
                                                   arbor_on,arbor_off,\
                                                   config_dict["Wlgn_to4_params"]["constraint_mode"],\
-                                                  "layer4")
+                                                  "ffrec")
     c_orth_4to4_e,s_orth_4to4_e = misc.get_projection_operators(config_dict,config_dict["W4to4_params"],\
                                                   arbor_e,0,\
                                                   config_dict["W4to4_params"]["constraint_mode"],\
@@ -126,7 +126,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                     
                     "init_weights" : [tf.convert_to_tensor(init_weights[0],dtype=tf.float32),
 							tf.convert_to_tensor(init_weights[1],dtype=tf.float32)] 
-						if config_dict["Wlgn_to4_params"]["mult_norm"] = "xalpha_approx"
+						if config_dict["Wlgn_to4_params"]["mult_norm"] == "xalpha_approx"
 						else tf.convert_to_tensor(init_weights,dtype=tf.float32),
                     "Wret_to_lgn" : tf.convert_to_tensor(Wret_to_lgn,dtype=tf.float32),
                     "W4to4" : tf.convert_to_tensor(W4to4, dtype=tf.float32),
@@ -171,7 +171,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     
     sys.stdout.flush()
     if config_dict["Inp_params"]["simulate_activity"]:
-        if not kwargs["not_saving_temp"]:
+        if True:
             y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
             if config_dict["test_lowDsubset"]:
                 yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
@@ -183,93 +183,95 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
             #                                y0, t, dt, params_dict, mode="dynamic")
             l4t = np.array(time_dep_dict["l4t"])[:,:2*N4**2*Nvert]
 
-    #         print("CHECK SHAOE",yt.shape,l4t.shape)
-    #         y = yt[-1,:]
-    #         l4 = l4t[-1,:]
-    #         try:
-    #             del params_dict["config_dict"]["W4to4_params"]['l4_avg']
-    #             del params_dict["config_dict"]["W4to4_params"]['theta_4']
-    #         except:
-    #             pass
+            print("CHECK SHAOE",yt.shape,l4t.shape)
+            y = yt[-1,:]
+            l4 = l4t[-1,:]
+            W4to4t = time_dep_dict["W4to4t"]
+            W4to4 = W4to4t[-1]
+            try:
+                del params_dict["config_dict"]["W4to4_params"]['l4_avg']
+                del params_dict["config_dict"]["W4to4_params"]['theta_4']
+            except:
+                pass
 
-    #     else:
-    #         t = t[:-config_dict["Inp_params"]["pattern_duration"]]
-    #         y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
-    #         y = integrator_tf.odeint(dynamics.dynamics_l4_sgl, y0, t, dt, params_dict,\
-    #                                     mode="single_stim_update")
-    #         l4 = y[2*s:]
+        else:
+            t = t[:-config_dict["Inp_params"]["pattern_duration"]]
+            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+            y,_ = integrator_tf.odeint(dynamics.dynamics_l4_sgl, y0, t, dt, params_dict,\
+                                        mode="single_stim_update")
+            l4 = y[2*s:]
 
-    # else:
-    #     y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
-    #     if config_dict["test_lowDsubset"]:
-    #         yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
-    #                                         y0, t, dt, params_dict, mode="dynamic")
-    #     else:
-    #         yt,time_dep_dict = integrator_tf.odeint_new(dynamics.dynamics_l4_new,y0,t,dt,params_dict,\
-    #                                             mode="static")
-    #     l4t = np.array(time_dep_dict["l4t"])[:,:2*N4**2*Nvert]
-    #     y = yt[-1,:]
-    #     l4 = l4t[-1,:]
-    
+    else:
+        y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+        if config_dict["test_lowDsubset"]:
+            yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
+                                            y0, t, dt, params_dict, mode="dynamic")
+        else:
+            yt,time_dep_dict = integrator_tf.odeint_new(dynamics.dynamics_l4_new,y0,t,dt,params_dict,\
+                                                mode="static")
+        l4t = np.array(time_dep_dict["l4t"])[:,:2*N4**2*Nvert]
+        y = yt[-1,:]
+        l4 = l4t[-1,:]
+        W4to4 = time_dep_dict["W4to4t"][-1]    
+    #################################################################################
+    ############################# SAVE PARAMS AND DATA ##############################
+    try:
+        if not os.path.exists(data_dir + "ffrec/{s}".format(s=config_dict["config_name"])):
+            os.makedirs(data_dir + "ffrec/{s}".format(s=config_dict["config_name"]))
+        if not os.path.exists(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=Version)):
+            os.makedirs(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=Version))
+        filename = "ffrec/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+    except:
+        if not os.path.exists(data_dir + "ffrec/v{v}".format(v=Version)):
+            os.makedirs(data_dir + "ffrec/v{v}".format(v=Version))
+        filename = "ffrec/v{v}/yt_v{v}.npz".format(v=Version)
+    print("Version",Version,s);sys.stdout.flush()
+    if config_dict["Inp_params"]["simulate_activity"]:
+        if not kwargs["not_saving_temp"]:
+            data_dict_time = {
+                "Wt"        :   yt[:,:config_dict["num_lgn_paths"]*s],\
+                "Wrect"     :   W4to4t,
+                #optional:
+                # "lgn_inp" :   lgn,\
+                # "cct"     :   cct,\
+                "l4t"       :   l4t
+            }
+        data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "l4" : l4}
+    else:
+        data_dict_time = {
+                "Wt"        :   yt[:,:config_dict["num_lgn_paths"]*s],\
+                "Wrect"     :   W4to4t,
+                "l4t"       :   l4t
+        }
+        data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "Wrec" : W4to4, "l4" : l4}
+    ## save time development of ff connections and activity
+    if not kwargs["not_saving_temp"]:
+        misc.save_data(Version, filename, data_dict_time)
+
+    ## save ff connections and activity of last timestep separately
+    try:
+        filename = "ffrec/{s}/v{v}/y_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+    except:
+        filename = "ffrec/v{v}/y_v{v}.npz".format(v=Version)
+    misc.save_data(Version, filename, data_dict)
+
+    ## save parameter settings
+    try:
+        filename = "ffrec/{s}/v{v}/config_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+    except:
+        filename = "ffrec/v{v}/config_v{v}".format(v=Version)
+    config_dict.update({
+                "maxew"     : np.array([max_ew])\
+        })
+    misc.save_params(Version,filename,config_dict)
     # #################################################################################
-    # ############################# SAVE PARAMS AND DATA ##############################
-    # try:
-    #     if not os.path.exists(data_dir + "layer4/{s}".format(s=config_dict["config_name"])):
-    #         os.makedirs(data_dir + "layer4/{s}".format(s=config_dict["config_name"]))
-    #     if not os.path.exists(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version)):
-    #         os.makedirs(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version))
-    #     filename = "layer4/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    # except:
-    #     if not os.path.exists(data_dir + "layer4/v{v}".format(v=Version)):
-    #         os.makedirs(data_dir + "layer4/v{v}".format(v=Version))
-    #     filename = "layer4/v{v}/yt_v{v}.npz".format(v=Version)
-    # print("Version",Version,s);sys.stdout.flush()
-    # if config_dict["Inp_params"]["simulate_activity"]:
-    #     if not kwargs["not_saving_temp"]:
-    #         data_dict_time = {
-    #             "Wt"        :   yt[:,:config_dict["num_lgn_paths"]*s],\
-    #             "Wrect"     :   None,
-    #             #optional:
-    #             # "lgn_inp" :   lgn,\
-    #             # "cct"     :   cct,\
-    #             "l4t"       :   l4t
-    #         }
-    #     data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "l4" : l4}
-    # else:
-    #     data_dict_time = {
-    #             "Wt"        :   yt[:,:config_dict["num_lgn_paths"]*s],\
-    #             "Wrect"     :   None,
-    #             "l4t"       :   l4t
-    #     }
-    #     data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "Wrec" : None, "l4" : l4}
-    # ## save time development of ff connections and activity
-    # if not kwargs["not_saving_temp"]:
-    #     misc.save_data(Version, filename, data_dict_time)
-
-    # ## save ff connections and activity of last timestep separately
-    # try:
-    #     filename = "layer4/{s}/v{v}/y_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    # except:
-    #     filename = "layer4/v{v}/y_v{v}.npz".format(v=Version)
-    # misc.save_data(Version, filename, data_dict)
-
-    # ## save parameter settings
-    # try:
-    #     filename = "layer4/{s}/v{v}/config_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    # except:
-    #     filename = "layer4/v{v}/config_v{v}".format(v=Version)
-    # config_dict.update({
-    #             "maxew"     : np.array([max_ew])\
-    #     })
-    # misc.save_params(Version,filename,config_dict)
-    # # #################################################################################
-    # # #################################################################################
+    # #################################################################################
 
 
-    # # try:
-    # #     del yt
-    # # except:
-    # #     pass
+    try:
+        del yt
+    except:
+        pass
 
 
 
@@ -292,7 +294,7 @@ if __name__=="__main__":
     if args_dict["V"] is not None:
         Version = args_dict["V"]
     else:
-        Version = misc.get_version(data_dir + "layer4/",version=None,readonly=False)
+        Version = misc.get_version(data_dir + "ffrec/",version=None,readonly=False)
 
     
 
@@ -313,7 +315,7 @@ if __name__=="__main__":
     print(" ")
     print('gamma_lgn',config_dict["gamma_lgn"])
 
-    parameter_sweep_layer4(Version,config_dict,**args_dict)
+    parameter_sweep_ffrec(Version,config_dict,**args_dict)
     print("done")
 
 
