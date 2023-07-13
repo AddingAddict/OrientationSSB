@@ -782,13 +782,16 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
     # =======================================================================
 
     # ========== Q_dict cases for pre synpatic normalisation ================
-    #if p_dict["p_lgnE_E"] is not None:
-
-    #if p_dict["p_lgnE_I"] is not None:
-
-    #if p_dict["p_I_E"] is not None:
-
-    #if p_dict["p_I_I"] is not None:    
+    if p_dict["p_lgnE_E"] is not None:
+        #assume dWpre["dW_lgnE_E"] 
+        #(constrain_update_prex = constrain_update)
+        pass
+    if p_dict["p_lgnE_I"] is not None:
+        pass
+    if p_dict["p_I_E"] is not None:
+        pass
+    if p_dict["p_I_I"] is not None:   
+        pass 
     # =======================================================================
 
     return Wlgn_to_4,W4to4,W4to23,W23to23

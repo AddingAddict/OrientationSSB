@@ -61,33 +61,6 @@ class Network:
                                         system_mode=self.config_dict["system"], **self.kwargs)
             self.Wlgn_to_4 = np.concatenate([self.Wlgn_to_4,Wlgn_to_4_I])
 
-        # init normalization
-        # syn norm over x
-        if self.config_dict["Wlgn_to4_params"]["mult_norm"]=="x":
-            self.init_weights = np.sum(self.Wlgn_to_4,axis=1)
-        # syn norm over alpha
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="alpha":
-            self.init_weights = np.sum(self.Wlgn_to_4,axis=2)
-        # syn norm over x and alpha
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
-            self.init_weights = None ## create in script, needs orth norm vectors
-        # == ff and rec plasticity
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":            
-            self.init_weights = np.stack( \
-                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
-                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    )
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_pre":
-            pass
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_prepost":
-            pass
-        # ========================
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
-            self.init_weights = np.array([]) ## not needed
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="divisive":
-            self.init_weights = np.array([]) ## not needed
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="None":
-            self.init_weights = np.array([]) ## not needed
-
         # recurrent connectivity
         W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
                                         random_seed=self.config_dict["random_seed"],Nvert=self.Nvert,verbose=self.verbose)
@@ -113,6 +86,37 @@ class Network:
 
         # init normalization
         # syn norm over x
+        if self.config_dict["Wlgn_to4_params"]["mult_norm"]=="x":
+            self.init_weights = np.sum(self.Wlgn_to_4,axis=1)
+        # syn norm over alpha
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="alpha":
+            self.init_weights = np.sum(self.Wlgn_to_4,axis=2)
+        # syn norm over x and alpha
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
+            self.init_weights = None ## create in script, needs orth norm vectors
+        # == ff and rec plasticity
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":            
+            self.init_weights = np.stack( \
+                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    )
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_pre":
+            N = self.W4to4.shape[1]//2
+            self.init_weights = np.stack( \
+                ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
+                    np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_prepost":
+            pass
+        # ========================
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
+            self.init_weights = np.array([]) ## not needed
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="divisive":
+            self.init_weights = np.array([]) ## not needed
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="None":
+            self.init_weights = np.array([]) ## not needed
+
+
+        # init normalization
+        # syn norm over x
         if self.config_dict["W4to4_params"]["mult_norm"]=="postx":
             self.init_weights_4to4 = np.sum(self.W4to4.reshape(num_pops,self.N4**2*self.Nvert,
                 num_pops,self.N4**2*self.Nvert).transpose(0,2,1,3).reshape(num_pops**2,self.N4**2*self.Nvert,self.N4**2*self.Nvert),axis=1)
@@ -131,7 +135,7 @@ class Network:
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_post":
             self.init_weights_4to4 = np.reshape(np.sum(self.W4to4,axis=0),(2,-1))
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_pre":
-            pass
+            self.init_weights_4to4 = np.reshape(np.sum(self.W4to4[:,N:],axis=1),(2,-1)) #[0,:] I to E and [1,:] I to I 
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_prepost":
             pass
         # =======================

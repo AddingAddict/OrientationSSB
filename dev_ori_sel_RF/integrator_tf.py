@@ -279,7 +279,27 @@ class Tf_integrator_new:
 							Wlim,init_weights[1][1,:],freeze_weights)	
 
 			elif mult_norm in ("ffrec_pre"):
-				pass
+				init_weights = [ self.params_dict["init_weights"], \
+					                      self.params_dict["init_weights_4to4"] ] #[  arr[lgne_e,lgn_i], arr[i_e,i_i]   ]
+				freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
+
+				ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+				rec_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+				beta_P = [ff_beta_P,rec_beta_P]
+
+				q_dict["p_LGNe_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+							plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+							Wlim,init_weights[0][0,:],freeze_weights)
+				q_dict["p_LGNe_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+							plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+							Wlim,init_weights[0][1,:],freeze_weights)
+				q_dict["p_i_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+							plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+							Wlim,init_weights[1][0,:],freeze_weights)
+				q_dict["p_i_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+							plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+							Wlim,init_weights[1][1,:],freeze_weights)
+												
 			elif mult_norm in ("ffrec_prepost_approx"):
 				pass
 			self.p_dict = q_dict									
