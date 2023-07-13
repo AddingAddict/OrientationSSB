@@ -63,20 +63,20 @@ class Network:
 			Wlgn_to_4_I,_,_,_ = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4_I,\
 										system_mode=self.config_dict["system"], **self.kwargs)
 			self.Wlgn_to_4 = np.concatenate([self.Wlgn_to_4,Wlgn_to_4_I])
-		self.Wlgn_to_4 = tf.sparse.from_dense(self.Wlgn_to_4) 
+		# self.Wlgn_to_4 = tf.sparse.from_dense(self.Wlgn_to_4) 
 
 		# =========== init normalization INIT WEIGHTS ======================
 		# syn norm over x
 		if self.config_dict["Wlgn_to4_params"]["mult_norm"]=="x":
-			self.init_weights = tf.sparse.reduce_sum(self.Wlgn_to_4,axis=1)
+			self.init_weights = tf.reduce_sum(self.Wlgn_to_4,axis=1)
 		# syn norm over alpha
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="alpha":
-			self.init_weights = tf.sparse.reduce_sum(self.Wlgn_to_4,axis=2)
+			self.init_weights = tf.reduce_sum(self.Wlgn_to_4,axis=2)
 		# syn norm over x and alpha
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
 			self.init_weights = None ## create in script, needs orth norm vectors
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha_approx":
-			self.init_weights = [tf.sparse.reduce_sum(self.Wlgn_to_4,axis=2),tf.sparse.reduce_sum(self.Wlgn_to_4,axis=1)]
+			self.init_weights = [tf.reduce_sum(self.Wlgn_to_4,axis=2),tf.reduce_sum(self.Wlgn_to_4,axis=1)]
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
 			self.init_weights = np.array([]) ## not needed
 		elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="divisive":

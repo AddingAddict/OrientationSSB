@@ -236,7 +236,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                 # "cct"     :   cct,\
                 "l4t"       :   l4t
             }
-        data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "l4" : l4}
+        data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "Wrec" : W4to4, "l4" : l4}
     else:
         data_dict_time = {
                 "Wt"        :   yt[:,:config_dict["num_lgn_paths"]*s],\
