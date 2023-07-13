@@ -527,8 +527,13 @@ class Tf_integrator_new:
 					self.params_dict["config_dict"]["W4to4_params"]["theta_4"] = theta_4
 					self.params_dict["config_dict"]["W4to4_params"]["l4_avg"] = l4_avg
 					l4 = y[lim*num_lgn_paths:num_lgn_paths*lim+crt_size]
-					print("L4",istep,np.nanmin(l4),np.nanmax(l4),\
-						np.nanmin(theta_4),np.nanmin(l4_avg))
+					if self.connectivity_type=="EI":
+						print("L4",istep,np.nanmin(l4[:crt_size//2]),np.nanmax(l4[:crt_size//2]),\
+							np.nanmin(l4[crt_size//2:]),np.nanmax(l4[crt_size//2:]),\
+					     	np.nanmin(theta_4),np.nanmin(l4_avg))
+					else:
+						print("L4",istep,np.nanmin(l4),np.nanmax(l4),\
+							np.nanmin(theta_4),np.nanmin(l4_avg))
 
 					# compute running average of l4 activity
 					self.running_avg(y[lim*num_lgn_paths:num_lgn_paths*lim+l4_size])

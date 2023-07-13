@@ -57,8 +57,8 @@ def generate_topology_map(patchsize_y,patchsize_x, ring_size, ring_thickness,\
 
 
 def generate_ring(window_size_y, window_size_x, mean, stds):
-	mean = np.float(mean)
-	stds = np.float(stds)
+	mean = float(mean)
+	stds = float(stds)
 	coords_x = np.tile((np.arange(window_size_x) - ((window_size_x) / 2))[None, :], (window_size_y, 1)).astype(float)
 	coords_y = np.tile((np.arange(window_size_y) - ((window_size_y) / 2))[:, None], (1, window_size_x)).astype(float)
 
