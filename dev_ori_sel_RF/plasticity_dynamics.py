@@ -835,7 +835,7 @@ def clip_weights_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[:N,N:]
         W4to4_ei = W4to4[:N,N:]
-        W4to4_ei = p_dict["p_rec4_ei"].clip_weights(W4to4_ei,A,p_dict["p_rec4_ei"].Wlim)
+        W4to4_ei = -p_dict["p_rec4_ei"].clip_weights(-W4to4_ei,A,p_dict["p_rec4_ei"].Wlim)
         W4to4 = tf.concat([W4to4[:,:N],tf.concat([W4to4_ei,W4to4[N:,N:]],0)],1)
         params_dict["W4to4"] = W4to4
 
@@ -846,7 +846,7 @@ def clip_weights_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[N:,N:]
         W4to4_ii = W4to4[N:,N:]
-        W4to4_ii = p_dict["p_rec4_ii"].clip_weights(W4to4_ii,A,p_dict["p_rec4_ii"].Wlim)
+        W4to4_ii = -p_dict["p_rec4_ii"].clip_weights(-W4to4_ii,A,p_dict["p_rec4_ii"].Wlim)
         W4to4 = tf.concat([W4to4[:,:N],tf.concat([W4to4[:N,N:],W4to4_ii],0)],1)
         params_dict["W4to4"] = W4to4
 
@@ -876,7 +876,7 @@ def clip_weights_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         N = W4to4.shape[0]//2
         Wi_to_l4 = W4to4[:,N:]
         arbor_i_to_l4 = arbor4to4[:,N:]
-        Wi_to_l4 = p_dict["p_i_l4"].clip_weights(Wi_to_l4,arbor_i_to_l4,p_dict["p_i_l4"].Wlim)
+        Wi_to_l4 = -p_dict["p_i_l4"].clip_weights(-Wi_to_l4,arbor_i_to_l4,p_dict["p_i_l4"].Wlim)
         W4to4 = tf.concat([W4to4[:,:N],Wi_to_l4],1)
         params_dict["W4to4"] = W4to4
 

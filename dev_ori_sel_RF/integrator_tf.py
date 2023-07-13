@@ -565,7 +565,12 @@ class Tf_integrator_new:
 								self.params_dict["W4to23"], self.params_dict["W23to23"], timestep)
 					for key,value in dW_dict.items():
 						dW[key] += value
-						print("key",key,istep,np.nanmin(value),np.nanmax(value))
+						pre_size = value.shape[-1]
+						if self.connectivity_type=="EI":
+							print("key",key,istep,np.nanmin(value[...,:pre_size//2]),np.nanmax(value[...,:pre_size//2]),
+	     						np.nanmin(value[...,pre_size//2:]),np.nanmax(value[...,pre_size//2:]))
+						else:
+							print("key",key,istep,np.nanmin(value),np.nanmax(value))
 					
 				try:
 					print("CHECK SHAPE2",dW["dW_lgn_e"].shape)					
