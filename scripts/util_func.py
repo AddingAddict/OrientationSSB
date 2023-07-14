@@ -7,7 +7,7 @@ from math import floor, ceil
 import numpy as np
 
 import dev_ori_sel_RF
-from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network,run_onelayer,probe_RFs
+from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network,network_full_plastic,run_onelayer,probe_RFs
 from dev_ori_sel_RF.tools import misc,update_params_dict,analysis_tools
 
 def get_network_size(config_name):
@@ -43,6 +43,32 @@ def get_network_system(Version,config_name):
         net = network.Network(Version,config_dict,load_location=load_location,verbose=False)
     return net.system
 
+def get_network_system_ffrec(Version,config_name):
+    if Version == -1:
+        config_dict = misc.load_external_params("params_"+config_name,False)
+        config_dict.update({
+                        "RF_mode" : "initialize",
+                        "system" : "one_layer",
+                        "Version" : Version,
+                        })
+        net = network_full_plastic.Network(Version,config_dict,verbose=False)
+    else:
+        load_location = 'local'
+        load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
+        config_dict = pickle.load(open(load_path + "config_v{v}.npz.p".format(v=Version),"rb"))
+        config_dict.update({"config_name" : config_name})
+        config_dict["Wlgn_to4_params"].update({
+            "W_mode": "load_from_external",
+            "load_from_prev_run" : Version})
+        if "2pop" in config_dict["W4to4_params"]["Wrec_mode"]:
+            config_dict["W4to4_params"].update({
+                "Wrec_mode": "load_from_external2pop"})
+        else:
+            config_dict["W4to4_params"].update({
+                "Wrec_mode": "load_from_external"})
+        net = network_full_plastic.Network(Version,config_dict,load_location=load_location,verbose=False)
+    return net.system
+
 def get_network_weights(Version,config_name,N4pop,N4,Nlgn):
     if Version == -1:
         config_dict = misc.load_external_params("params_"+config_name,False)
@@ -58,6 +84,24 @@ def get_network_weights(Version,config_name,N4pop,N4,Nlgn):
         Wlgnto4 = np.load(load_path+'y_v{v}.npz'.format(v=Version))['W']
         Wlgnto4 = Wlgnto4.reshape(2*N4pop,N4**2,Nlgn**2)
     return Wlgnto4
+
+def get_network_weights_ffrec(Version,config_name,N4pop,N4,Nlgn):
+    if Version == -1:
+        config_dict = misc.load_external_params("params_"+config_name,False)
+        config_dict.update({
+                        "RF_mode" : "initialize",
+                        "system" : "one_layer",
+                        "Version" : Version,
+                        })
+        net = network_full_plastic.Network(Version,config_dict,verbose=False)
+        _,Wlgnto4,_,_,_,_,W4to4,_,_ = net.system
+    else:
+        load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
+        Wlgnto4 = np.load(load_path+'y_v{v}.npz'.format(v=Version))['W']
+        Wlgnto4 = Wlgnto4.reshape(2*N4pop,N4**2,Nlgn**2)
+        W4to4 = np.load(load_path+'y_v{v}.npz'.format(v=Version))['Wrec']
+        W4to4 = W4to4.reshape(N4pop*N4**2,N4pop*N4**2)
+    return Wlgnto4,W4to4
 
 def get_ori_sel(opm,calc_fft=True):
     N4 = opm.shape[0]
