@@ -11,7 +11,7 @@ Inp_params
 	input_type	white_noise_online
 	mean_width	0.3
 	ndim	25
-	Nsur	32
+	Nsur	128
 	off_bias_region_size	0.5
 	off_bias_strength	0.0
 	onoff_corr_factor	1.0
@@ -21,7 +21,7 @@ Inp_params
 	simulate_activity	dynamics
 	width	1.0
 integrator	Euler
-last_timestep	160000.0
+last_timestep	640000.0
 learning_rate_decay_const	160000.0
 maxew	[0.95]
 N23	1
@@ -36,7 +36,7 @@ plasticity_rule	activity_based
 q_dict	True
 random_seed	19
 RF_mode	initialize
-runtime	8000
+runtime	32000
 saving_stepsize	10
 system	one_layer
 tau	1.0
@@ -125,10 +125,10 @@ W4to23_params
 	Wlim	12
 	Wrec_mode	Gaussian2pop
 W4to4_params
-	aEE	11.4
-	aEI	10.0
-	aIE	11.5
-	aII	10.0
+	aEE	1.0
+	aEI	1.0
+	aIE	1.0
+	aII	1.0
 	ampl	1.0
 	ampl1	1.0
 	ampl2	1.0
