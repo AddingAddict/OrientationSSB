@@ -246,6 +246,43 @@ def homeostatic_normalization(W_clipped,H,running_l4_avg,l4_target,Wlim,dt):
 
     return W_new, H_new
 
+def convert_dW_to_pre(dW_post_dict,Nlgn,Nl4):
+    # dW_on_l4 = tf.reshape(dW_post_dict["dW_on_l4"],(2*Nl4,Nlgn))
+    # dW_off_l4 = tf.reshape(dW_post_dict["dW_off_l4"],(2*Nl4,Nlgn))
+    # dW_e_l4 = tf.reshape(dW_post_dict["dW_e_l4"],(2*Nl4,Nl4))
+    # dW_i_l4 = tf.reshape(dW_post_dict["dW_i_l4"],(2*Nl4,Nl4))
+    dW_on_l4 = dW_post_dict["dW_on_l4"]
+    dW_off_l4 = dW_post_dict["dW_off_l4"]
+    dW_e_l4 = dW_post_dict["dW_e_l4"]
+    dW_i_l4 = dW_post_dict["dW_i_l4"]
+
+    dW_pre_dict = {}
+    dW_pre_dict['dW_lgne_e'] = tf.concat([dW_on_l4[:Nl4,:], dW_off_l4[:Nl4,:],
+                                          dW_e_l4[:Nl4,:]], 1)
+    dW_pre_dict['dW_lgne_i'] = tf.concat([dW_on_l4[Nl4:,:], dW_off_l4[Nl4:,:],
+                                          dW_e_l4[Nl4:,:]], 1)
+    dW_pre_dict['dW_i_e'] = dW_i_l4[:Nl4,:]
+    dW_pre_dict["dW_i_i"] = dW_i_l4[Nl4:,:]
+
+    return dW_pre_dict
+
+def convert_dW_to_post(dW_pre_dict,Nlgn,Nl4):
+    # dW_lgne_e = tf.reshape(dW_pre_dict["dW_lgne_e"],(Nl4,2*Nlgn+Nl4))
+    # dW_lgne_i = tf.reshape(dW_pre_dict["dW_lgne_i"],(Nl4,2*Nlgn+Nl4))
+    # dW_i_e = tf.reshape(dW_pre_dict["dW_i_e"],(Nl4,Nl4))
+    # dW_i_i = tf.reshape(dW_pre_dict["dW_i_i"],(Nl4,Nl4))
+    dW_lgne_e = dW_pre_dict["dW_lgne_e"]
+    dW_lgne_i = dW_pre_dict["dW_lgne_i"]
+    dW_i_e = dW_pre_dict["dW_i_e"]
+    dW_i_i = dW_pre_dict["dW_i_i"]
+
+    dW_post_dict = {}
+    dW_post_dict['dW_on_l4'] = tf.concat([dW_lgne_e[:,:Nlgn], dW_lgne_i[:,:Nlgn]], 0)
+    dW_post_dict['dW_off_l4'] = tf.concat([dW_lgne_e[:,Nlgn:2*Nlgn], dW_lgne_i[:,Nlgn:2*Nlgn]], 0)
+    dW_post_dict['dW_e_l4'] = tf.concat([dW_lgne_e[:,2*Nlgn:], dW_lgne_i[:,2*Nlgn:]], 0)
+    dW_post_dict['dW_i_l4'] = tf.concat([dW_i_e,dW_i_i], 0)
+
+    return dW_post_dict
 
 
 class Plasticity:
@@ -325,6 +362,10 @@ class Plasticity:
         elif self.constraint_mode=="ffrec_post":
             self.constrain_update = \
              lambda dW,W_old,mask,A,c_orth,s_orth,dt: constrain_update_postx(dW*A,W_old,mask,A,dt)
+            
+        elif self.constraint_mode=="ffrec_pre":
+            self.constrain_update = \
+             lambda dW,W_old,mask,A,c_orth,s_orth,dt: constrain_update_prex(dW*A,W_old,mask,A,dt)
 
         elif self.constraint_mode=="None":
             self.constrain_update = lambda dW,W_old,mask,A,c_orth,s_orth,dt: dW*dt+W_old
@@ -396,11 +437,18 @@ class Plasticity:
              lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
                                                                     c_orth=self.c_orth,\
                                                                     axis=None)
+            
         elif self.multiplicative_normalisation=="ffrec_post":
             self.mult_normalization =\
               lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
                                                                     c_orth=None,axis=0)
+            
+        elif self.multiplicative_normalisation=="ffrec_pre":
+            self.mult_normalization =\
+              lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+                                                                    self.init_weights,\
+                                                                    c_orth=None,axis=1)
 
         elif self.multiplicative_normalisation=="homeostatic":
             self.mult_normalization =\
@@ -507,23 +555,23 @@ def unconstrained_plasticity_wrapper(p_dict, l4, l23, lgn, Wlgn_to_4, W4to4, W4t
 
     # ========= Q_dict options ==============
     # this is for all constraints equal to ffpostx
-    if p_dict["p_ON_l4"] is not None:
+    if p_dict["p_on_l4"] is not None:
         l4_e = l4[:tf.size(l4)//2]
         l4_i = l4[tf.size(l4)//2:]
-        dW = tf.concat([ p_dict["p_ON_l4"].unconstrained_update(t,l4_e,lgn[0,:],None,\
-                None,p_dict["p_ON_l4"].beta_P,None)   ,\
-                    p_dict["p_ON_l4"].unconstrained_update(t,l4_i,lgn[2,:],None,\
-                None,p_dict["p_ON_l4"].beta_P,None)], 0)
-        dW_dict["dW_ON_l4"] = tf.reshape(dW, [-1])
+        dW = tf.concat([ p_dict["p_on_l4"].unconstrained_update(t,l4_e,lgn[0,:],None,\
+                None,p_dict["p_on_l4"].beta_P,None)   ,\
+                    p_dict["p_on_l4"].unconstrained_update(t,l4_i,lgn[2,:],None,\
+                None,p_dict["p_on_l4"].beta_P,None)], 0)
+        dW_dict["dW_on_l4"] = tf.reshape(dW, [-1])
     
-    if p_dict["p_OFF_l4"] is not None:
+    if p_dict["p_off_l4"] is not None:
         l4_e = l4[:tf.size(l4)//2]
         l4_i = l4[tf.size(l4)//2:]
-        dW = tf.concat([ p_dict["p_OFF_l4"].unconstrained_update(t,l4_e,lgn[1,:],None,\
-                None,p_dict["p_OFF_l4"].beta_P,None)   ,\
-                    p_dict["p_OFF_l4"].unconstrained_update(t,l4_i,lgn[3,:],None,\
-                None,p_dict["p_OFF_l4"].beta_P,None)], 0)
-        dW_dict["dW_OFF_l4"] = tf.reshape(dW, [-1])
+        dW = tf.concat([ p_dict["p_off_l4"].unconstrained_update(t,l4_e,lgn[1,:],None,\
+                None,p_dict["p_off_l4"].beta_P,None)   ,\
+                    p_dict["p_off_l4"].unconstrained_update(t,l4_i,lgn[3,:],None,\
+                None,p_dict["p_off_l4"].beta_P,None)], 0)
+        dW_dict["dW_off_l4"] = tf.reshape(dW, [-1])
 
     if p_dict["p_e_l4"] is not None:
         pop_size = Wlgn_to_4.shape[1]        
@@ -541,14 +589,17 @@ def unconstrained_plasticity_wrapper(p_dict, l4, l23, lgn, Wlgn_to_4, W4to4, W4t
     # =======================================
     
     # ========== Q_dict cases for pre synpatic normalisation ================
-    #if p_dict["p_lgnE_E"] is not None:
+    #if p_dict["p_lgne_e"] is not None:
 
-    #if p_dict["p_lgnE_I"] is not None:
+    #if p_dict["p_lgne_i"] is not None:
 
-    #if p_dict["p_I_E"] is not None:
+    #if p_dict["p_i_e"] is not None:
 
-    #if p_dict["p_I_I"] is not None:    
+    #if p_dict["p_i_i"] is not None:    
     # =======================================================================
+
+    if p_dict["p_ffrec"] is not None:
+        return unconstrained_plasticity_wrapper(p_dict["p_ffrec"][0],l4,l23,lgn,Wlgn_to_4,W4to4,W4to23,W23to23,t)
 
     return dW_dict
 
@@ -716,35 +767,35 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         params_dict["W23to23"] = W23to23
 
     # ========== Q_dict cases for post synaptic normalisation ===============
-    if p_dict["p_ON_l4"] is not None:
-        WON_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
-        arbor_lgn_ON = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
+    if p_dict["p_on_l4"] is not None:
+        Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
+        arbor_lgn_on = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
 
-        dW = tf.reshape(dW_dict["dW_ON_l4"],WON_l4.shape)
-        if p_dict["p_ON_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(WON_l4>0, WON_l4< (p_dict["p_ON_l4"].Wlim*arbor_lgn_ON))
+        dW = tf.reshape(dW_dict["dW_on_l4"],Won_l4.shape)
+        if p_dict["p_on_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(Won_l4>0, Won_l4< (p_dict["p_on_l4"].Wlim*arbor_lgn_on))
         else:
-            notfrozen = tf.ones_like(WON_l4,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_lgn_ON>0 )
+            notfrozen = tf.ones_like(Won_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgn_on>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_ON_l4"].constrain_update(dW,WON_l4,mask_fl,arbor_lgn_ON,\
-                                        p_dict["p_ON_l4"].c_orth,p_dict["p_ON_l4"].s_orth,dt)
+        W_new = p_dict["p_on_l4"].constrain_update(dW,Won_l4,mask_fl,arbor_lgn_on,\
+                                        p_dict["p_on_l4"].c_orth,p_dict["p_on_l4"].s_orth,dt)
         Wlgn_to_4 = tf.concat([ W_new[None,:W_new.shape[0]//2,:], Wlgn_to_4[1:2,:,:],\
                                         W_new[None,W_new.shape[0]//2:,:], Wlgn_to_4[3:4,:,:] ], 0)
 
-    if p_dict["p_OFF_l4"] is not None:
-        WOFF_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
-        arbor_lgn_OFF = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
+    if p_dict["p_off_l4"] is not None:
+        Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
+        arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
 
-        dW = tf.reshape(dW_dict["dW_OFF_l4"],WOFF_l4.shape)
-        if p_dict["p_OFF_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(WOFF_l4>0, WOFF_l4< (p_dict["p_OFF_l4"].Wlim*arbor_lgn_OFF))
+        dW = tf.reshape(dW_dict["dW_off_l4"],Woff_l4.shape)
+        if p_dict["p_off_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(Woff_l4>0, Woff_l4< (p_dict["p_off_l4"].Wlim*arbor_lgn_off))
         else:
-            notfrozen = tf.ones_like(WOFF_l4,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_lgn_OFF>0 )
+            notfrozen = tf.ones_like(Woff_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgn_off>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_OFF_l4"].constrain_update(dW,WOFF_l4,mask_fl,arbor_lgn_OFF,\
-                                        p_dict["p_OFF_l4"].c_orth,p_dict["p_OFF_l4"].s_orth,dt)
+        W_new = p_dict["p_off_l4"].constrain_update(dW,Woff_l4,mask_fl,arbor_lgn_off,\
+                                        p_dict["p_off_l4"].c_orth,p_dict["p_off_l4"].s_orth,dt)
         Wlgn_to_4 = tf.concat([ Wlgn_to_4[0:1,:,:], W_new[None,:W_new.shape[0]//2,:],\
                                         Wlgn_to_4[2:3,:,:], W_new[None,W_new.shape[0]//2:,:] ], 0)
     
@@ -782,84 +833,213 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
     # =======================================================================
 
     # ========== Q_dict cases for prepost synpatic normalisation ================
-    if p_dict["p_lgnE_E"] is not None:
-        #assume dWpre["dW_lgnE_E"] 
+    if p_dict["p_lgne_e"] is not None:
+        #assume dWpre["dW_lgne_e"] 
         #(constrain_update_prex = constrain_update)
         Nl4 = W4to4.shape[0]//2
         Nlgn = Wlgn_to_4.shape[2]
-        WlgnE_to_E = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
-        arbor_lgnE_to_E = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
-        dW = tf.reshape(dW_dict["dW_lgnE_E"],WlgnE_to_E.shape)
-        if p_dict["p_lgnE_E"].freeze_weights:
-            notfrozen = tf.math.logical_and(WlgnE_to_E>0, WlgnE_to_E< (p_dict["p_lgnE_E"].Wlim*arbor_lgnE_to_E))
+        Wlgne_to_e = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
+        arbor_lgne_to_e = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
+        dW = tf.reshape(dW_dict["dW_lgne_e"],Wlgne_to_e.shape)
+        if p_dict["p_lgne_e"].freeze_weights:
+            notfrozen = tf.math.logical_and(Wlgne_to_e>0, Wlgne_to_e< (p_dict["p_lgne_e"].Wlim*arbor_lgne_to_e))
         else:
-            notfrozen = tf.ones_like(WlgnE_to_E,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_lgnE_to_E)
+            notfrozen = tf.ones_like(Wlgne_to_e,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgne_to_e>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_lgnE_E"].constrain_update(dW,WlgnE_to_E,mask_fl,arbor_lgnE_to_E,\
-                                        p_dict["p_lgnE_E"].c_orth,p_dict["p_lgnE_E"].s_orth,dt)
+        W_new = p_dict["p_lgne_e"].constrain_update(dW,Wlgne_to_e,mask_fl,arbor_lgne_to_e,\
+                                        p_dict["p_lgne_e"].c_orth,p_dict["p_lgne_e"].s_orth,dt)
         
         Wlgn_to_4 = tf.concat( [W_new[None,:,:Nlgn], W_new[None, :,Nlgn:2*Nlgn], \
                                             Wlgn_to_4[2:,:,:]], 0)
         W4to4 = tf.concat([tf.concat([W_new[:,2*Nlgn:], W4to4[Nl4:,:Nl4]],0),W4to4[:,Nl4:]],1)
         params_dict["W4to4"] = W4to4 
 
-    if p_dict["p_lgnE_I"] is not None:
+    if p_dict["p_lgne_i"] is not None:
 
         Nl4 = W4to4.shape[0]//2
         Nlgn = Wlgn_to_4.shape[2]
-        WlgnE_to_I = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[Nl4:,:Nl4]],1)
-        arbor_lgnE_to_I = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[Nl4:,:Nl4]],1)
-        dW = tf.reshape(dW_dict["dW_lgnE_I"],WlgnE_to_I.shape)
-        if p_dict["p_lgnE_I"].freeze_weights:
-            notfrozen = tf.math.logical_and(WlgnE_to_I>0, WlgnE_to_I< (p_dict["p_lgnE_I"].Wlim*arbor_lgnE_to_I))
+        Wlgne_to_i = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[Nl4:,:Nl4]],1)
+        arbor_lgne_to_i = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[Nl4:,:Nl4]],1)
+        dW = tf.reshape(dW_dict["dW_lgne_i"],Wlgne_to_i.shape)
+        if p_dict["p_lgne_i"].freeze_weights:
+            notfrozen = tf.math.logical_and(Wlgne_to_i>0, Wlgne_to_i< (p_dict["p_lgne_i"].Wlim*arbor_lgne_to_i))
         else:
-            notfrozen = tf.ones_like(WlgnE_to_I,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_lgnE_to_I)
+            notfrozen = tf.ones_like(Wlgne_to_i,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgne_to_i>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_lgnE_I"].constrain_update(dW,WlgnE_to_I,mask_fl,arbor_lgnE_to_I,\
-                                        p_dict["p_lgnE_I"].c_orth,p_dict["p_lgnE_I"].s_orth,dt)
+        W_new = p_dict["p_lgne_i"].constrain_update(dW,Wlgne_to_i,mask_fl,arbor_lgne_to_i,\
+                                        p_dict["p_lgne_i"].c_orth,p_dict["p_lgne_i"].s_orth,dt)
         
         Wlgn_to_4 = tf.concat( [ Wlgn_to_4[:2,:,:], \
                                         W_new[None,:,:Nlgn], W_new[None,:,Nlgn:2*Nlgn] ], 0)
         W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], W_new[:,2*Nlgn:]],0),W4to4[:,Nl4:]],1)
         params_dict["W4to4"] = W4to4 
 
-    if p_dict["p_I_E"] is not None:
+    if p_dict["p_i_e"] is not None:
         
         Nl4 = W4to4.shape[0]//2
         WI_to_E = W4to4[:Nl4,Nl4:]
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
-        dW = tf.reshape(dW_dict["dW_I_E"],WI_to_E.shape)
-        if p_dict["p_I_E"].freeze_weights:
-            notfrozen = tf.math.logical_and(WI_to_E>0, WI_to_E< (p_dict["p_I_E"].Wlim*arbor_I_to_E))
+        dW = tf.reshape(dW_dict["dW_i_e"],WI_to_E.shape)
+        if p_dict["p_i_e"].freeze_weights:
+            notfrozen = tf.math.logical_and(WI_to_E>0, WI_to_E< (p_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_I_to_E)
+        mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_I_E"].constrain_update(dW,WI_to_E,mask_fl,arbor_I_to_E,\
-                                        p_dict["p_I_E"].c_orth,p_dict["p_I_E"].s_orth,dt)
+        W_new = p_dict["p_i_e"].constrain_update(dW,WI_to_E,mask_fl,arbor_I_to_E,\
+                                        p_dict["p_i_e"].c_orth,p_dict["p_i_e"].s_orth,dt)
         W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], W_new],1),W4to4[Nl4:,:]],0)
         params_dict["W4to4"] = W4to4 
 
-    if p_dict["p_I_I"] is not None:   
+    if p_dict["p_i_i"] is not None:   
 
         Nl4 = W4to4.shape[0]//2
-        WI_to_E = W4to4[:Nl4,Nl4:]
-        arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
-        dW = tf.reshape(dW_dict["dW_I_E"],WI_to_E.shape)
-        if p_dict["p_I_E"].freeze_weights:
-            notfrozen = tf.math.logical_and(WI_to_E>0, WI_to_E< (p_dict["p_I_E"].Wlim*arbor_I_to_E))
+        WI_to_I = W4to4[Nl4:,Nl4:]
+        arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
+        dW = tf.reshape(dW_dict["dW_i_i"],WI_to_I.shape)
+        if p_dict["p_i_i"].freeze_weights:
+            notfrozen = tf.math.logical_and(WI_to_I>0, WI_to_I< (p_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
-            notfrozen = tf.ones_like(WI_to_E,dtype=bool)
-        mask = tf.math.logical_and( notfrozen, arbor_I_to_E)
+            notfrozen = tf.ones_like(WI_to_I,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
         mask_fl = tf.cast(mask,tf.float32)
-        W_new = p_dict["p_I_E"].constrain_update(dW,WI_to_E,mask_fl,arbor_I_to_E,\
-                                        p_dict["p_I_E"].c_orth,p_dict["p_I_E"].s_orth,dt)
+        W_new = p_dict["p_i_i"].constrain_update(dW,WI_to_I,mask_fl,arbor_I_to_I,\
+                                        p_dict["p_i_i"].c_orth,p_dict["p_i_i"].s_orth,dt)
         W4to4 = tf.concat([W4to4[:Nl4,:],tf.concat([W4to4[Nl4:,:Nl4],W_new],1)],0)        
         params_dict["W4to4"] = W4to4 
 
     # =======================================================================
+
+    if p_dict["p_ffrec"] is not None:
+        Nlgn = Wlgn_to_4.shape[2]
+        Nl4 = Wlgn_to_4.shape[1]
+
+        p_post_dict = p_dict["p_ffrec"][0]
+        p_pre_dict = p_dict["p_ffrec"][1]
+
+        dW_post_dict = {}
+        dW_post_dict['dW_on_l4'] = tf.reshape(dW_dict["dW_on_l4"],(2*Nl4,Nlgn))
+        dW_post_dict['dW_off_l4'] = tf.reshape(dW_dict["dW_off_l4"],(2*Nl4,Nlgn))
+        dW_post_dict['dW_e_l4'] = tf.reshape(dW_dict["dW_e_l4"],(2*Nl4,Nl4))
+        dW_post_dict['dW_i_l4'] = tf.reshape(dW_dict["dW_i_l4"],(2*Nl4,Nl4))
+
+        # extract post W and arbors
+        Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
+        Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
+        We_to_l4 = W4to4[:,:Nl4]
+        Wi_to_l4 = W4to4[:,Nl4:]
+        arbor_lgn_on = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
+        arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
+        arbor_e_to_l4 = arbor4to4[:,:Nl4]
+        arbor_i_to_l4 = arbor4to4[:,Nl4:]
+
+        # calculate post masks
+        if p_post_dict["p_on_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(Won_l4>0, Won_l4< (p_post_dict["p_on_l4"].Wlim*arbor_lgn_on))
+        else:
+            notfrozen = tf.ones_like(Won_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgn_on>0 )
+        mask_fl_on_l4 = tf.cast(mask,tf.float32)
+
+        if p_post_dict["p_off_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(Woff_l4>0, Woff_l4< (p_post_dict["p_off_l4"].Wlim*arbor_lgn_off))
+        else:
+            notfrozen = tf.ones_like(Woff_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgn_off>0 )
+        mask_fl_off_l4 = tf.cast(mask,tf.float32)
+
+        if p_post_dict["p_e_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(We_to_l4>0, We_to_l4<(p_post_dict["p_e_l4"].Wlim*arbor_e_to_l4))
+        else:
+            notfrozen = tf.ones_like(We_to_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_e_to_l4>0 )
+        mask_fl_e_l4 = tf.cast(mask,tf.float32)
+
+        if p_post_dict["p_i_l4"].freeze_weights:
+            notfrozen = tf.math.logical_and(Wi_to_l4>0, Wi_to_l4<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+        else:
+            notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
+        mask_fl_i_l4 = tf.cast(mask,tf.float32)
+
+        # extract pre W and arbors
+        Wlgne_to_e = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
+        Wlgne_to_i = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[Nl4:,:Nl4]],1)
+        WI_to_E = W4to4[:Nl4,Nl4:]
+        WI_to_I = W4to4[Nl4:,Nl4:]
+        arbor_lgne_to_e = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
+        arbor_lgne_to_i = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[Nl4:,:Nl4]],1)
+        arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
+        arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
+
+        # calculate pre masks
+        if p_pre_dict["p_lgne_e"].freeze_weights:
+            notfrozen = tf.math.logical_and(Wlgne_to_e>0, Wlgne_to_e< (p_pre_dict["p_lgne_e"].Wlim*arbor_lgne_to_e))
+        else:
+            notfrozen = tf.ones_like(Wlgne_to_e,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgne_to_e>0 )
+        mask_fl_lgne_e = tf.cast(mask,tf.float32)
+
+        if p_pre_dict["p_lgne_i"].freeze_weights:
+            notfrozen = tf.math.logical_and(Wlgne_to_i>0, Wlgne_to_i< (p_pre_dict["p_lgne_i"].Wlim*arbor_lgne_to_i))
+        else:
+            notfrozen = tf.ones_like(Wlgne_to_i,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_lgne_to_i>0 )
+        mask_fl_lgne_i = tf.cast(mask,tf.float32)
+
+        if p_pre_dict["p_i_e"].freeze_weights:
+            notfrozen = tf.math.logical_and(WI_to_E>0, WI_to_E< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
+        else:
+            notfrozen = tf.ones_like(WI_to_E,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
+        mask_fl_i_e = tf.cast(mask,tf.float32)
+
+        if p_pre_dict["p_i_i"].freeze_weights:
+            notfrozen = tf.math.logical_and(WI_to_I>0, WI_to_I< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
+        else:
+            notfrozen = tf.ones_like(WI_to_I,dtype=bool)
+        mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
+        mask_fl_i_i = tf.cast(mask,tf.float32)
+
+        for i in range(4):
+            # pre
+            dW_pre_dict = convert_dW_to_pre(dW_post_dict,Nlgn,Nl4)
+            dW_pre_dict['dW_lgne_e'] = p_pre_dict["p_lgne_e"].constrain_update(dW_pre_dict['dW_lgne_e'],
+                                            tf.zeros_like(Wlgne_to_e),mask_fl_lgne_e,arbor_lgne_to_e,\
+                                            p_pre_dict["p_lgne_e"].c_orth,p_pre_dict["p_lgne_e"].s_orth,1)
+            dW_pre_dict['dW_lgne_i'] = p_pre_dict["p_lgne_i"].constrain_update(dW_pre_dict['dW_lgne_i'],
+                                            tf.zeros_like(Wlgne_to_i),mask_fl_lgne_i,arbor_lgne_to_i,\
+                                            p_pre_dict["p_lgne_i"].c_orth,p_pre_dict["p_lgne_i"].s_orth,1)
+            dW_pre_dict['dW_i_e'] = p_pre_dict["p_i_e"].constrain_update(dW_pre_dict['dW_i_e'],
+                                            tf.zeros_like(WI_to_E),mask_fl_i_e,arbor_I_to_E,\
+                                            p_pre_dict["p_i_e"].c_orth,p_pre_dict["p_i_e"].s_orth,1)
+            dW_pre_dict['dW_i_i'] = p_pre_dict["p_i_i"].constrain_update(dW_pre_dict['dW_i_i'],
+                                            tf.zeros_like(WI_to_I),mask_fl_i_i,arbor_I_to_I,\
+                                            p_pre_dict["p_i_i"].c_orth,p_pre_dict["p_i_i"].s_orth,1)
+
+            # post
+            dW_post_dict = convert_dW_to_post(dW_pre_dict,Nlgn,Nl4)
+            dW_post_dict['dW_on_l4'] =  p_post_dict["p_on_l4"].constrain_update(dW_post_dict['dW_on_l4'],\
+                                            tf.zeros_like(Won_l4),mask_fl_on_l4,arbor_lgn_on,\
+                                            p_post_dict["p_on_l4"].c_orth,p_post_dict["p_on_l4"].s_orth,1)
+            dW_post_dict['dW_off_l4'] =  p_post_dict["p_off_l4"].constrain_update(dW_post_dict['dW_off_l4'],\
+                                            tf.zeros_like(Woff_l4),mask_fl_off_l4,arbor_lgn_off,\
+                                            p_post_dict["p_off_l4"].c_orth,p_post_dict["p_off_l4"].s_orth,1)
+            dW_post_dict['dW_e_l4'] =  p_post_dict["p_e_l4"].constrain_update(dW_post_dict['dW_e_l4'],\
+                                            tf.zeros_like(We_to_l4),mask_fl_e_l4,arbor_e_to_l4,\
+                                            p_post_dict["p_e_l4"].c_orth,p_post_dict["p_e_l4"].s_orth,1)
+            dW_post_dict['dW_i_l4'] =  p_post_dict["p_i_l4"].constrain_update(dW_post_dict['dW_i_l4'],\
+                                            tf.zeros_like(Wi_to_l4),mask_fl_i_l4,arbor_i_to_l4,\
+                                            p_post_dict["p_i_l4"].c_orth,p_post_dict["p_i_l4"].s_orth,1)
+            
+        # update weights
+        Wlgn_to_4 = Wlgn_to_4 + dt*tf.concat([dW_post_dict['dW_on_l4'][None,:Nl4,:],
+            dW_post_dict['dW_off_l4'][None,:Nl4,:],dW_post_dict['dW_on_l4'][None,Nl4:,:],
+            dW_post_dict['dW_off_l4'][None,Nl4:,:]], 0)
+        W4to4 = W4to4 + dt*tf.concat([dW_post_dict['dW_e_l4'],dW_post_dict['dW_i_l4']], 1)
+        params_dict["W4to4"] = W4to4 
 
     return Wlgn_to_4,W4to4,W4to23,W23to23
 
@@ -920,19 +1100,19 @@ def clip_weights_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         W4to4 = tf.concat([W4to4[:,:Nl4],tf.concat([W4to4[:Nl4,Nl4:],W4to4_ii],0)],1)
         params_dict["W4to4"] = W4to4
 
-    if (p_dict["p_ON_l4"] is not None and p_dict["p_ON_l4"].Wlim is not None):
-        WON_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
-        arbor_lgn_ON = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
-        WON_l4 = p_dict["p_ON_l4"].clip_weights(WON_l4,arbor_lgn_ON,p_dict["p_ON_l4"].Wlim)
-        Wlgn_to_4 = tf.concat([ WON_l4[None,:WON_l4.shape[0]//2,:], Wlgn_to_4[1:2,:,:],\
-                                        WON_l4[None,WON_l4.shape[0]//2:,:], Wlgn_to_4[3:4,:,:] ], 0)        
+    if (p_dict["p_on_l4"] is not None and p_dict["p_on_l4"].Wlim is not None):
+        Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
+        arbor_lgn_on = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
+        Won_l4 = p_dict["p_on_l4"].clip_weights(Won_l4,arbor_lgn_on,p_dict["p_on_l4"].Wlim)
+        Wlgn_to_4 = tf.concat([ Won_l4[None,:Won_l4.shape[0]//2,:], Wlgn_to_4[1:2,:,:],\
+                                        Won_l4[None,Won_l4.shape[0]//2:,:], Wlgn_to_4[3:4,:,:] ], 0)        
 
-    if (p_dict["p_OFF_l4"] is not None and p_dict["p_OFF_l4"].Wlim is not None):
-        WOFF_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
-        arbor_lgn_OFF = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
-        WOFF_l4 = p_dict["p_OFF_l4"].clip_weights(WOFF_l4,arbor_lgn_OFF,p_dict["p_OFF_l4"].Wlim)
-        Wlgn_to_4 = tf.concat([ Wlgn_to_4[0:1,:,:], WOFF_l4[None,:WOFF_l4.shape[0]//2,:],\
-                                        Wlgn_to_4[2:3,:,:], WOFF_l4[None,WOFF_l4.shape[0]//2:,:] ], 0)
+    if (p_dict["p_off_l4"] is not None and p_dict["p_off_l4"].Wlim is not None):
+        Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
+        arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
+        Woff_l4 = p_dict["p_off_l4"].clip_weights(Woff_l4,arbor_lgn_off,p_dict["p_off_l4"].Wlim)
+        Wlgn_to_4 = tf.concat([ Wlgn_to_4[0:1,:,:], Woff_l4[None,:Woff_l4.shape[0]//2,:],\
+                                        Wlgn_to_4[2:3,:,:], Woff_l4[None,Woff_l4.shape[0]//2:,:] ], 0)
     
     if (p_dict["p_e_l4"] is not None and p_dict["p_e_l4"].Wlim is not None):
         Nl4 = W4to4.shape[0]//2
@@ -949,6 +1129,10 @@ def clip_weights_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         Wi_to_l4 = -p_dict["p_i_l4"].clip_weights(-Wi_to_l4,arbor_i_to_l4,p_dict["p_i_l4"].Wlim)
         W4to4 = tf.concat([W4to4[:,:Nl4],Wi_to_l4],1)
         params_dict["W4to4"] = W4to4
+
+    if p_dict["p_ffrec"] is not None:
+        return clip_weights_wrapper(p_dict["p_ffrec"][0],Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
+            W4to23,arbor4to23,W23to23,arbor23to23,params_dict)
 
     return Wlgn_to_4,W4to4,W4to23,W23to23
 
@@ -1030,23 +1214,23 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         params_dict["W4to4"] = W4to4
     
     # =================== Q_dict pre ===================
-    if p_dict["p_ON_l4"] is not None:
-        WON_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
-        arbor_lgn_ON = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
-        WON_l4,H_new = p_dict["p_ON_l4"].mult_normalization(WON_l4,arbor_lgn_ON,H[0,:],\
+    if p_dict["p_on_l4"] is not None:
+        Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
+        arbor_lgn_on = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
+        Won_l4,H_new = p_dict["p_on_l4"].mult_normalization(Won_l4,arbor_lgn_on,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
-        Wlgn_to_4 = tf.concat([ WON_l4[None,:WON_l4.shape[0]//2,:], Wlgn_to_4[1:2,:,:],\
-                                        WON_l4[None,WON_l4.shape[0]//2:,:], Wlgn_to_4[3:4,:,:] ], 0)
+        Wlgn_to_4 = tf.concat([ Won_l4[None,:Won_l4.shape[0]//2,:], Wlgn_to_4[1:2,:,:],\
+                                        Won_l4[None,Won_l4.shape[0]//2:,:], Wlgn_to_4[3:4,:,:] ], 0)
         
-    if p_dict["p_OFF_l4"] is not None:
-        WOFF_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
-        arbor_lgn_OFF = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
-        WOFF_l4,H_new = p_dict["p_ON_l4"].mult_normalization(WOFF_l4,arbor_lgn_OFF,H[0,:],\
+    if p_dict["p_off_l4"] is not None:
+        Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
+        arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
+        Woff_l4,H_new = p_dict["p_on_l4"].mult_normalization(Woff_l4,arbor_lgn_off,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
-        Wlgn_to_4 = tf.concat([ Wlgn_to_4[0:1,:,:], WOFF_l4[None,:WOFF_l4.shape[0]//2,:],\
-                                        Wlgn_to_4[2:3,:,:], WOFF_l4[None,WOFF_l4.shape[0]//2:,:] ], 0)
+        Wlgn_to_4 = tf.concat([ Wlgn_to_4[0:1,:,:], Woff_l4[None,:Woff_l4.shape[0]//2,:],\
+                                        Wlgn_to_4[2:3,:,:], Woff_l4[None,Woff_l4.shape[0]//2:,:] ], 0)
     if p_dict["p_e_l4"] is not None:
         Nl4 = W4to4.shape[0]//2
         We_to_l4 = W4to4[:,:Nl4]
@@ -1069,12 +1253,12 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
     # ===================================================
     # ================= Q_dict post =====================
 
-    if p_dict["p_lgnE_E"] is not None:
+    if p_dict["p_lgne_e"] is not None:
         Nl4 = W4to4.shape[0]//2
         Nlgn = Wlgn_to_4.shape[2]
-        WlgnE_to_E = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
-        arbor_lgnE_to_E = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
-        W_new, H_new = p_dict["p_lgnE_E"].mult_normalization(WlgnE_to_E,arbor_lgnE_to_E,H[0,:],\
+        Wlgne_to_e = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
+        arbor_lgne_to_e = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
+        W_new, H_new = p_dict["p_lgne_e"].mult_normalization(Wlgne_to_e,arbor_lgne_to_e,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         
@@ -1083,12 +1267,12 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         W4to4 = tf.concat([tf.concat([W_new[:,2*Nlgn:], W4to4[Nl4:,:Nl4]],0),W4to4[:,Nl4:]],1)
         params_dict["W4to4"] = W4to4                                            
 
-    if p_dict["p_lgnE_I"] is not None:
+    if p_dict["p_lgne_i"] is not None:
         Nl4 = W4to4.shape[0]//2
         Nlgn = Wlgn_to_4.shape[2]
-        WlgnE_to_I = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[:Nl4,:Nl4]],1)
-        arbor_lgnE_to_I = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[:Nl4,:Nl4]],1)
-        W_new, H_new = p_dict["p_lgnE_I"].mult_normalization(WlgnE_to_I,arbor_lgnE_to_I,H[0,:],\
+        Wlgne_to_i = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[:Nl4,:Nl4]],1)
+        arbor_lgne_to_i = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[:Nl4,:Nl4]],1)
+        W_new, H_new = p_dict["p_lgne_i"].mult_normalization(Wlgne_to_i,arbor_lgne_to_i,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         Wlgn_to_4 = tf.concat( [ Wlgn_to_4[:2,:,:], \
@@ -1096,24 +1280,93 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], W_new[:,2*Nlgn:]],0),W4to4[:,Nl4:]],1)
         params_dict["W4to4"] = W4to4 
 
-    if p_dict["p_I_E"] is not None:
+    if p_dict["p_i_e"] is not None:
         Nl4 = W4to4.shape[0]//2
         WI_to_E = W4to4[:Nl4,Nl4:]
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
-        W_new, H_new = p_dict["p_I_E"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
+        WI_to_E, H_new = p_dict["p_i_e"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
-        W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], W_new],1),W4to4[Nl4:,:]],0)
+        W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], WI_to_E],1),W4to4[Nl4:,:]],0)
         params_dict["W4to4"] = W4to4 
 
-    if p_dict["p_I_I"] is not None:
+    if p_dict["p_i_i"] is not None:
         Nl4 = W4to4.shape[0]//2
-        WI_to_E = W4to4[:Nl4,Nl4:]
-        arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
-        W_new, H_new = p_dict["p_I_I"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
+        WI_to_I = W4to4[Nl4:,Nl4:]
+        arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
+        WI_to_I, H_new = p_dict["p_i_i"].mult_normalization(WI_to_I,arbor_I_to_I,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
-        W4to4 = tf.concat([W4to4[:Nl4,:],tf.concat([W4to4[Nl4:,:Nl4],W_new],1)],0)        
+        W4to4 = tf.concat([W4to4[:Nl4,:],tf.concat([W4to4[Nl4:,:Nl4],WI_to_I],1)],0)        
+        params_dict["W4to4"] = W4to4 
+
+    if p_dict["p_ffrec"] is not None:
+        Nlgn = Wlgn_to_4.shape[2]
+        Nl4 = Wlgn_to_4.shape[1]
+
+        p_post_dict = p_dict["p_ffrec"][0]
+        p_pre_dict = p_dict["p_ffrec"][1]
+
+        for i in range(4):
+            # extract pre W and arbors
+            Wlgne_to_e = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
+            Wlgne_to_i = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[Nl4:,:Nl4]],1)
+            WI_to_E = W4to4[:Nl4,Nl4:]
+            WI_to_I = W4to4[Nl4:,Nl4:]
+            arbor_lgne_to_e = tf.concat([arbor_lgn[0,:,:],arbor_lgn[1,:,:],arbor4to4[:Nl4,:Nl4]],1)
+            arbor_lgne_to_i = tf.concat([arbor_lgn[2,:,:],arbor_lgn[3,:,:],arbor4to4[Nl4:,:Nl4]],1)
+            arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
+            arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
+
+            # normalize pre weights
+            Wlgne_to_e_new,_ = p_pre_dict["p_lgne_e"].mult_normalization(Wlgne_to_e,arbor_lgne_to_e,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            Wlgne_to_i_new,_ = p_pre_dict["p_lgne_i"].mult_normalization(Wlgne_to_i,arbor_lgne_to_i,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            WI_to_E_new,_ = p_pre_dict["p_i_e"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            WI_to_I_new,_ = p_pre_dict["p_i_i"].mult_normalization(WI_to_I,arbor_I_to_I,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            
+            # update weights
+            Wlgn_to_4 = tf.concat([Wlgne_to_e_new[None,:,:Nlgn],Wlgne_to_e_new[None,:,Nlgn:2*Nlgn],
+                                   Wlgne_to_i_new[None,:,:Nlgn],Wlgne_to_i_new[None,:,Nlgn:2*Nlgn]], 0)
+            W4to4 = tf.concat([tf.concat([Wlgne_to_e_new[:,2*Nlgn:],Wlgne_to_i_new[:,2*Nlgn:]], 0),
+                               tf.concat([WI_to_E_new,WI_to_I_new], 0)], 1)
+
+            # extract post W and arbors
+            Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
+            Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
+            We_to_l4 = W4to4[:,:Nl4]
+            Wi_to_l4 = W4to4[:,Nl4:]
+            arbor_lgn_on = tf.concat([arbor_lgn[0,:,:],arbor_lgn[2,:,:]],0)
+            arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
+            arbor_e_to_l4 = arbor4to4[:,:Nl4]
+            arbor_i_to_l4 = arbor4to4[:,Nl4:]
+
+            # normalize post weights
+            Won_l4_new,_ = p_post_dict["p_on_l4"].mult_normalization(Won_l4,arbor_lgn_on,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            Woff_l4_new,_ = p_post_dict["p_on_l4"].mult_normalization(Woff_l4,arbor_lgn_off,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            We_to_l4_new,_ = p_post_dict["p_e_l4"].mult_normalization(We_to_l4,arbor_e_to_l4,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+            Wi_to_l4_new,_ = p_post_dict["p_i_l4"].mult_normalization(Wi_to_l4,arbor_i_to_l4,H[0,:],\
+                                                                    running_l4_avg[0,:],\
+                                                                    l4_target[0])
+
+            # update weights
+            Wlgn_to_4 = tf.concat([Won_l4_new[None,:Nl4,:],Woff_l4_new[None,:Nl4,:],
+                                   Won_l4_new[None,Nl4:,:],Woff_l4_new[None,Nl4:,:]], 0)
+            W4to4 = tf.concat([We_to_l4_new,Wi_to_l4_new], 1)
+
         params_dict["W4to4"] = W4to4 
 
     return Wlgn_to_4,W4to4,W4to23,W23to23,H
