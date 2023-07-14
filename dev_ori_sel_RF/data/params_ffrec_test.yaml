@@ -123,10 +123,10 @@ W4to4_params:
     sigma_IE:   0.15
     sigma_EI:   0.1125
     sigma_II:   0.0525
-    aEE:   11.4
-    aIE:   11.5
-    aEI:   10.
-    aII:   10.
+    # aEE:   11.4
+    # aIE:   11.5
+    # aEI:   10.
+    # aII:   10.
 
     # rA_EE:   0.2
     # rA_IE:   0.15

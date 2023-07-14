@@ -424,7 +424,7 @@ class Network:
             new_Wlgn_to_4 = Wlgn_to_4 * arbor2
             old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,None]
             new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,None]
-            Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm
+            Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm * self.config_dict["Wlgn_to4_params"].get("algn",1.0)
 
         return Wlgn_to_4,arbor_on,arbor_off,arbor2
 

@@ -122,10 +122,14 @@ W4to4_params:
     sigma_IE:   0.15
     sigma_EI:   0.1125
     sigma_II:   0.0525
-    aEE:   11.4
-    aIE:   11.5
-    aEI:   10.
-    aII:   10.
+    # aEE:   11.4
+    # aIE:   11.5
+    # aEI:   10.
+    # aII:   10.
+    aEE:   3.552
+    aIE:   3.552
+    aEI:   3.116
+    aII:   3.116
 
     # rA_EE:   0.2
     # rA_IE:   0.15
@@ -143,14 +147,14 @@ W4to4_params:
     # ampl_IE:   3.583
     # ampl_EI:   3.116
     # ampl_II:   3.116
-    ampl_EE:   3.552
-    ampl_IE:   3.552
-    ampl_EI:   3.116
-    ampl_II:   3.116
-    # ampl_EE:   1.
-    # ampl_IE:   1.
-    # ampl_EI:   1.
-    # ampl_II:   1.
+    # ampl_EE:   3.552
+    # ampl_IE:   3.552
+    # ampl_EI:   3.116
+    # ampl_II:   3.116
+    ampl_EE:   1.
+    ampl_IE:   1.
+    ampl_EI:   1.
+    ampl_II:   1.
     arbor_profile_EE:   "gaussian"
     arbor_profile_IE:   "gaussian"
     arbor_profile_EI:   "gaussian"
