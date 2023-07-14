@@ -17,15 +17,15 @@ inp_params, image_dir, data_dir
 
 
 def set_tf_loglevel(level):
-	if level >= logging.FATAL:
-		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-	if level >= logging.ERROR:
-		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-	if level >= logging.WARNING:
-		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-	else:
-		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
-	logging.getLogger('tensorflow').setLevel(level)
+    if level >= logging.FATAL:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    if level >= logging.ERROR:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    if level >= logging.WARNING:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+    else:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+    logging.getLogger('tensorflow').setLevel(level)
 
 set_tf_loglevel(logging.FATAL)
 
@@ -45,12 +45,12 @@ WIto23 = W.create_matrix(WIto23_params)
 # print("EW",ew[np.argsort(np.real(ew))[-10:]])
 
 W23to23_params = {
-				"rng" : np.random.RandomState(10200128),
-				"sigma1" : 0.06,
-				"sigma2" : 0.09,
-				"ampl1" : 1.0,
-				"ampl2" : 1.0
-				}
+                "rng" : np.random.RandomState(10200128),
+                "sigma1" : 0.06,
+                "sigma2" : 0.09,
+                "ampl1" : 1.0,
+                "ampl2" : 1.0
+                }
 W = connectivity.Connectivity((N23,N23), (N23,N23), "zmodel")
 W23to23 = W.create_matrix(W23to23_params)
 ew,ev = np.linalg.eig(W23to23)
@@ -59,25 +59,25 @@ ev_norm = (ev-np.nanmean(ev,axis=0)[None,:])/np.nanstd(ev,axis=0)[None,:]
 print("EW",ew[id_ew[:10]])
 
 if False:
-	N = 10
-	fig = plt.figure(figsize=(30,30))
-	for i in range(N):
-		for j in range(N):
-			if (i+j*N)<ev.shape[1]:
-				ax = fig.add_subplot(N,N,i+1+j*N)
-				ax.set_title("Id {}".format(i+j*N),fontsize=8)
-				ax.imshow(np.real(ev[:,id_ew[i+j*N]]).reshape(N23,N23),\
-					interpolation="nearest",cmap="binary")
-	fig.savefig(image_dir + "ev.pdf")
-	plt.close(fig)
+    N = 10
+    fig = plt.figure(figsize=(30,30))
+    for i in range(N):
+        for j in range(N):
+            if (i+j*N)<ev.shape[1]:
+                ax = fig.add_subplot(N,N,i+1+j*N)
+                ax.set_title("Id {}".format(i+j*N),fontsize=8)
+                ax.imshow(np.real(ev[:,id_ew[i+j*N]]).reshape(N23,N23),\
+                    interpolation="nearest",cmap="binary")
+    fig.savefig(image_dir + "ev.pdf")
+    plt.close(fig)
 
-	fig = plt.figure()
-	ax = fig.add_subplot(111)
-	ax.plot(np.real(ew[id_ew]),np.imag(ew[id_ew]),"ok")
-	# ax.plot(,"-om")
-	fig.savefig(image_dir + "ew.pdf")
-	plt.close(fig)
-	sys.exit()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(np.real(ew[id_ew]),np.imag(ew[id_ew]),"ok")
+    # ax.plot(,"-om")
+    fig.savefig(image_dir + "ew.pdf")
+    plt.close(fig)
+    sys.exit()
 
 ## inputs
 I,I_stim,stim_idx = inputs.Inputs((Ninp,Ninp), "GRF", Version).create_matrix(inp_params)
@@ -103,16 +103,16 @@ print("check",I.shape,u0.shape,W23to23.shape,WIto23.shape)
 
 ## run network
 params_dict = {"Ninp" : tf.convert_to_tensor(Ninp, name='Ninp', dtype=tf.int32),
-				"N23" : tf.convert_to_tensor(N23, name='N23', dtype=tf.int32),
-				"inp" : tf.convert_to_tensor(I, name='I', dtype=tf.float32),
-				"W_rec_23" : tf.convert_to_tensor(W23to23, name='W23to23', dtype=tf.float32),
-				# "WIto23" : tf.convert_to_tensor(WIto23, name='WIto23'),
-				"gamma_FF" : tf.constant(1.0, dtype=tf.float32),
-				"gamma_23" : tf.constant(.6, dtype=tf.float32),
-				"beta_P" : tf.constant(0.01, dtype=tf.float32),
-				"beta_post" : tf.constant(0.01,dtype=tf.float32),
-				"tau" : tf.constant(1.0, dtype=tf.float32),
-				"pattern_duration" : T_pd}
+                "N23" : tf.convert_to_tensor(N23, name='N23', dtype=tf.int32),
+                "inp" : tf.convert_to_tensor(I, name='I', dtype=tf.float32),
+                "W_rec_23" : tf.convert_to_tensor(W23to23, name='W23to23', dtype=tf.float32),
+                # "WIto23" : tf.convert_to_tensor(WIto23, name='WIto23'),
+                "gamma_FF" : tf.constant(1.0, dtype=tf.float32),
+                "gamma_23" : tf.constant(.6, dtype=tf.float32),
+                "beta_P" : tf.constant(0.01, dtype=tf.float32),
+                "beta_post" : tf.constant(0.01,dtype=tf.float32),
+                "tau" : tf.constant(1.0, dtype=tf.float32),
+                "pattern_duration" : T_pd}
 
 s = N23*N23*Ninp*Ninp
 y0 = tf.concat([WIto23.reshape(s), u0], axis=0)
@@ -227,8 +227,8 @@ ax.plot(overlap.T,"-")
 stim_idx_per_timestep = np.array([0])
 print("stim_idx",stim_idx)
 for iidx in stim_idx:
-	idx_ar = np.array([iidx]*T_pd)
-	stim_idx_per_timestep = np.concatenate([stim_idx_per_timestep, idx_ar])
+    idx_ar = np.array([iidx]*T_pd)
+    stim_idx_per_timestep = np.concatenate([stim_idx_per_timestep, idx_ar])
 stim_idx_per_timestep = stim_idx_per_timestep[:len(t)]
 stim_idx_per_timestep = stim_idx_per_timestep[::T_pd]
 ax.plot(stim_idx_per_timestep,"+k")
@@ -248,13 +248,13 @@ fig.savefig(image_dir + "overlap_test.pdf")
 ## define -2= 135, -1=90, 0=blank, 1=0, 2=45 deg
 stim_ori = [np.nan, 0, 45, 135, 90]
 stim_ori_dict = {"1" : 0,
-				"2" : 45,
-				"-1" : 90,
-				"-2" : 135}
+                "2" : 45,
+                "-1" : 90,
+                "-2" : 135}
 opm = 0
 for istim in [-2,-1,1,2]:
-	opm += np.exp(1j*2*stim_ori_dict[str(int(istim))]/180.*np.pi) *\
-	 np.nanmean(l23[stim_idx_per_timestep==istim,:],axis=0)
+    opm += np.exp(1j*2*stim_ori_dict[str(int(istim))]/180.*np.pi) *\
+     np.nanmean(l23[stim_idx_per_timestep==istim,:],axis=0)
 grid = np.linspace(0,1,N23,endpoint=False)
 x,y = np.meshgrid(grid,grid)
 ecp,_ = connectivity.gen_ecp(x, y, W23to23_params)
@@ -270,37 +270,37 @@ fig.savefig(image_dir + "opm_test.pdf")
 
 fig = plt.figure()
 for i,iidx in enumerate([-2,-1,1,2]):
-	resps = l23[stim_idx_per_timestep==iidx,:]
-	for j in range(10):
-		if j<resps.shape[0]:
-			ax = fig.add_subplot(10,4,i+1+j*4)
-			if j==0:
-				ax.set_title("Ori {}, Trial {}".format(stim_ori_dict[str(iidx)],j))
-			im=ax.imshow(resps[j,:].reshape((N23,N23)),interpolation="nearest",cmap="binary")
-			plt.colorbar(im, ax=ax)
-fig.savefig(image_dir + "trial_resp_test.pdf")		
+    resps = l23[stim_idx_per_timestep==iidx,:]
+    for j in range(10):
+        if j<resps.shape[0]:
+            ax = fig.add_subplot(10,4,i+1+j*4)
+            if j==0:
+                ax.set_title("Ori {}, Trial {}".format(stim_ori_dict[str(iidx)],j))
+            im=ax.imshow(resps[j,:].reshape((N23,N23)),interpolation="nearest",cmap="binary")
+            plt.colorbar(im, ax=ax)
+fig.savefig(image_dir + "trial_resp_test.pdf")
 
 fig = plt.figure()
 for i in range(6):
-	for j in range(6):
-		if (i+j*6+1)<l23.shape[0]:
-			ax = fig.add_subplot(6,6,i+1+j*6)
-			if j==0:
-				ax.set_title("Ori {}, Trial {}".format(stim_ori_dict[str(int(stim_idx_per_timestep[i+j*6+1]))],i+j*6+1))
-			resp = l23[i+j*6+1,:]
-			im=ax.imshow(resp.reshape((N23,N23)),interpolation="nearest",cmap="binary")
-			plt.colorbar(im, ax=ax)
+    for j in range(6):
+        if (i+j*6+1)<l23.shape[0]:
+            ax = fig.add_subplot(6,6,i+1+j*6)
+            if j==0:
+                ax.set_title("Ori {}, Trial {}".format(stim_ori_dict[str(int(stim_idx_per_timestep[i+j*6+1]))],i+j*6+1))
+            resp = l23[i+j*6+1,:]
+            im=ax.imshow(resp.reshape((N23,N23)),interpolation="nearest",cmap="binary")
+            plt.colorbar(im, ax=ax)
 fig.savefig(image_dir + "time_ordered_resp_test.pdf")
 
 
 if True:
-	fig = plt.figure(figsize=(12,6))
-	ax = fig.add_subplot(211)
-	overlap = np.dot(inp_stim_norm,ev_norm[:,:50])/inp_stim_norm.shape[1]
-	ax.plot(np.real(overlap).T,"-")
-	ax = fig.add_subplot(212)
-	ax.plot(np.imag(overlap).T,"-")
-	fig.savefig(image_dir + "ev_inp_overlap.pdf")
-	# plt.close(fig)
+    fig = plt.figure(figsize=(12,6))
+    ax = fig.add_subplot(211)
+    overlap = np.dot(inp_stim_norm,ev_norm[:,:50])/inp_stim_norm.shape[1]
+    ax.plot(np.real(overlap).T,"-")
+    ax = fig.add_subplot(212)
+    ax.plot(np.imag(overlap).T,"-")
+    fig.savefig(image_dir + "ev_inp_overlap.pdf")
+    # plt.close(fig)
 
 plt.show()

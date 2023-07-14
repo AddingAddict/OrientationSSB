@@ -22,16 +22,16 @@ Version = 19
 
 
 Wret_to_lgn = connectivity.Connectivity((Nret,Nret),(Nlgn,Nlgn),\
-		random_seed=config_dict["random_seed"]).create_matrix(\
-	Wret_to_lgn_params,"Gaussian") * Wret_to_lgn_params["gamma_ret"]
+        random_seed=config_dict["random_seed"]).create_matrix(\
+    Wret_to_lgn_params,"Gaussian") * Wret_to_lgn_params["gamma_ret"]
 
 lgn = []
 for i in range(1):
-	rng_seed = config_dict["random_seed"]*1000 #+ i*Inp_params["avg_no_inp"]-1
-	# ilgn = inputs.Inputs_lgn((Nret,Nret),Version,rng_seed).create_lgn_input(\
-	# 	Inp_params, "white_noise_online", Wret_to_lgn)
-	ilgn = 1. + np.random.randn(2,Nret*Nret)
-	lgn.append( ilgn )
+    rng_seed = config_dict["random_seed"]*1000 #+ i*Inp_params["avg_no_inp"]-1
+    # ilgn = inputs.Inputs_lgn((Nret,Nret),Version,rng_seed).create_lgn_input(\
+    # 	Inp_params, "white_noise_online", Wret_to_lgn)
+    ilgn = 1. + np.random.randn(2,Nret*Nret)
+    lgn.append( ilgn )
 lgn = np.swapaxes(np.swapaxes(np.array(lgn),0,1),1,2)
 
 
@@ -41,9 +41,9 @@ Wlgn4 = connectivity.Connectivity((Nlgn,Nlgn), (N4,N4),\
 arbor_profile = "heaviside"
 arbor = Wlgn4.create_arbor(radius=Wlgn_to4_params["r_A"],profile=arbor_profile)
 Won_to_4 = Wlgn4.create_matrix(Wlgn_to4_params, "random_delta",\
-	r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
+    r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
 Wof_to_4 = Wlgn4.create_matrix(Wlgn_to4_params, "random_delta",\
-	r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
+    r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
 Wlgn_to_4 = np.stack([Won_to_4,Wof_to_4])
 
 ## Layer 4
@@ -56,28 +56,28 @@ W4 = connectivity.Connectivity((N4,N4), (N4,N4),random_seed=config_dict["random_
 deltax = 1./N4
 factor = 0.8#2*np.pi#*deltax**2
 W4to4_params = {
-				"sigma"		:	0.4,
-				"ampl"		:	1.0,
-				"noise"		:	0.0,
+                "sigma"		:	0.4,
+                "ampl"		:	1.0,
+                "noise"		:	0.0,
 
-				"sigma_EE"	:	0.2 * factor,
-				"sigma_IE"	:	0.25 * factor,
-				"sigma_EI"	:	0.15 * factor,
-				"sigma_II"	:	0.15 * factor,
-				"aEE"		:	11.5,#11.4,
-				"aIE"		:	10.8,#11.,
-				"aEI"		:	11.,#10.9,
-				"aII"		:	10.3,#10.,
+                "sigma_EE"	:	0.2 * factor,
+                "sigma_IE"	:	0.25 * factor,
+                "sigma_EI"	:	0.15 * factor,
+                "sigma_II"	:	0.15 * factor,
+                "aEE"		:	11.5,#11.4,
+                "aIE"		:	10.8,#11.,
+                "aEI"		:	11.,#10.9,
+                "aII"		:	10.3,#10.,
 
-				## dina paper parameters
-				# "sigma_EE"	:	3.75*deltax,#3*deltax,
-				# "sigma_IE"	:	6*deltax,
-				# "sigma_EI"	:	2*deltax,
-				# "sigma_II"	:	2*deltax,
-				# "aEE"		:	0.072 * factor*3**2,#11.4,
-				# "aIE"		:	0.06 * factor*6**2,#11.,
-				# "aEI"		:	0.0528 * factor*2**2,#10.9,
-				# "aII"		:	0.0288 * factor*2**2,#10.,
+                ## dina paper parameters
+                # "sigma_EE"	:	3.75*deltax,#3*deltax,
+                # "sigma_IE"	:	6*deltax,
+                # "sigma_EI"	:	2*deltax,
+                # "sigma_II"	:	2*deltax,
+                # "aEE"		:	0.072 * factor*3**2,#11.4,
+                # "aIE"		:	0.06 * factor*6**2,#11.,
+                # "aEI"		:	0.0528 * factor*2**2,#10.9,
+                # "aII"		:	0.0288 * factor*2**2,#10.,
 
 
 

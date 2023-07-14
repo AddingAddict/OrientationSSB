@@ -5,7 +5,7 @@ import os
 from dev_ori_sel_RF import connectivity, inputs, data_dir
 
 class Network:
-    
+
     def __init__(self, Version, config_dict, **kwargs):
         self.Version = Version
         self.config_dict = config_dict
@@ -21,7 +21,7 @@ class Network:
         self.N23 = config_dict["N23"]
         self.Nvert = config_dict["Nvert"]
         self._init_connectivity()
-    
+
 
     def _init_connectivity(self):
         ## retina to lgn connectivity
@@ -31,7 +31,7 @@ class Network:
                           self.config_dict["Wret_to_lgn_params"],\
                           self.config_dict["Wret_to_lgn_params"]["profile"])
         self.Wret_to_lgn *= self.config_dict["Wret_to_lgn_params"]["gamma_ret"]
-        
+
         if self.config_dict["Wret_to_lgn_params"]["profile"]=="Gaussian_broadOFF":
             Wret_to_lgn_OFF,_ = connectivity.Connectivity((self.Nret,self.Nret),\
                                 (self.Nlgn,self.Nlgn),\
@@ -78,9 +78,9 @@ class Network:
             self.arbor4to4 = np.block([[arbor4to4_EE,arbor4to4_EI],[arbor4to4_IE,arbor4to4_II]])
         else:
             self.W4to4,self.arbor4to4 = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"],W4=W4,
-                                          conn_type="E",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type="EI_all",system_mode=self.config_dict["system"],**self.kwargs)
         if self.config_dict["Wlgn_to4_params"]["connectivity_type"]=="EI":
-            num_pops = 2 
+            num_pops = 2
         else:
             num_pops = 1
 
@@ -95,7 +95,7 @@ class Network:
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
             self.init_weights = None ## create in script, needs orth norm vectors
         # == ff and rec plasticity
-        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":            
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":
             self.init_weights = np.stack( \
                 ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
                   np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    )
@@ -137,18 +137,18 @@ class Network:
             self.init_weights_4to4 = np.array([]) ## not needed
         elif self.config_dict["W4to4_params"]["mult_norm"]=="divisive":
             self.init_weights_4to4 = np.array([]) ## not needed
-        # === ff and rec platicity 
+        # === ff and rec platicity
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_post":
             self.init_weights_4to4 = np.reshape(np.sum(self.W4to4,axis=0),(2,-1))
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_pre":
-            self.init_weights_4to4 = np.reshape(np.sum(self.W4to4[:,N:],axis=1),(2,-1)) #[0,:] I to E and [1,:] I to I 
+            self.init_weights_4to4 = np.reshape(np.sum(self.W4to4[:,N:],axis=1),(2,-1)) #[0,:] I to E and [1,:] I to I
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_postpre_approx":
             self.init_weights_4to4 = [np.reshape(np.sum(self.W4to4,axis=0),(2,-1)),
                                       np.reshape(np.sum(self.W4to4[:,N:],axis=1),(2,-1))]
         # =======================
         elif self.config_dict["W4to4_params"]["mult_norm"]=="None":
             self.init_weights_4to4 = np.array([]) ## not needed
-        
+
         if self.config_dict["system"]=="one_layer":
             self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2,self.init_weights,
                 self.W4to4,self.arbor4to4,self.init_weights_4to4)
@@ -178,7 +178,7 @@ class Network:
                 self.W4to23 = self.load_W4to23(**self.kwargs)
             else:
                 self.W4to23,_ = W4.create_matrix_2pop(self.config_dict["W4to23_params"],Wrec_mode)
-                
+
             # arbor for L4 to L23
             arbor_profile = self.config_dict["W4to23_params"]["arbor_profile"]
             r_A = self.config_dict["W4to23_params"]["r_A"]
@@ -206,7 +206,7 @@ class Network:
         kwargs : for moving_grating_online:
                     num_freq, num_oris, Nsur, spat_frequencies, orientations
                 for white_nosie_online:
-                    full_lgn_output, last_timestep, 
+                    full_lgn_output, last_timestep,
         """
         Version = self.Version
         Wret_to_lgn = self.Wret_to_lgn
@@ -225,7 +225,7 @@ class Network:
                 for orientation in orientations:
                     self.config_dict["Inp_params"]["spat_frequency"] = spat_frequency # vary between 60 and 120 (3 steps?)
                     self.config_dict["Inp_params"]["Nsur"] = Nsur
-                    self.config_dict["Inp_params"]["orientation"] = orientation # vary in 8 steps 
+                    self.config_dict["Inp_params"]["orientation"] = orientation # vary in 8 steps
                     on_inp = inputs.Inputs_lgn((self.Nret,self.Nret),1,2020).create_lgn_input(\
                                                 self.config_dict["Inp_params"],\
                                                 "moving_grating_online", Wret_to_lgn)
@@ -256,7 +256,7 @@ class Network:
                 rnd_seed_I_diff = 10000 * (1-kwargs["same_EI_input"])
                 for istep in range(num_plasticity_steps):
                     for jinput in range(avg_no_inp):
-                        
+
                         rng_seed = self.config_dict["random_seed"]*1000 + jinput + istep*avg_no_inp
                         inp = inputs.Inputs_lgn((self.Nret,self.Nret),Version,rng_seed)
                         ilgn = inp.create_lgn_input(self.config_dict["Inp_params"],\
@@ -301,15 +301,15 @@ class Network:
             conn_params = {"rng" : np.random.RandomState(20200205)}
             ecp,sigma = conn.gen_ecp(xto, yto, conn_params)
             opm = np.angle(ecp,deg=False)*0.5
-            
+
             ## smooth phases generation
             grid = np.linspace(0,1,self.N4,endpoint=False)
             xto,yto = np.meshgrid(grid,grid)
             conn_params = {"rng" : np.random.RandomState(20200205), "kc" : 2., "n" : 1}
             ecp,sigma = conn.gen_ecp(xto, yto, conn_params)
             pref_phase = np.angle(ecp,deg=False)
-            
-            
+
+
 
             if "ampl_het" in kwargs.keys():
                 ampl_het = kwargs["ampl_het"]
@@ -320,7 +320,7 @@ class Network:
                 spatial_freq_het = kwargs["spatial_freq_het"]
             else:
                 spatial_freq_het = None
-            
+
 
             conn_params = {"sigma" : 0.2,
                             "ampl" : 1.,
@@ -346,52 +346,102 @@ class Network:
                 print("Load ff connection from version {}".format(Version))
                 print(" ")
             if kwargs["system_mode"]=="two_layer":
-            
+
                 if kwargs["load_location"] in ("","local"):
-                    yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
                     Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-            
+
                 elif kwargs["load_location"]=="habanero":
                     if os.environ["USER"]=="bh2757":
-                        yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+                        if self.config_dict.get("config_name",False):
+                            yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                        else:
+                            yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
                     else:
-                        yfile = np.load(\
-                            "/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
-                            "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                        if self.config_dict.get("config_name",False):
+                            yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+                                "data/two_layer/habanero/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                        else:
+                            yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+                                "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
                     Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                     # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    #   Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
-            
+                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+
                 elif kwargs["load_location"]=="aws":
-                    yfile = np.load(\
-                        "/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+                        "ori_dev_model/data/two_layer/aws/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
                         "ori_dev_model/data/two_layer/aws/v{v}/y_v{v}.npz".format(v=Version))
                     Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 
             elif kwargs["system_mode"]=="one_layer":
-            
-                try:
-                    if os.environ["USER"]=="bh2757":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-                    elif os.environ["USER"]=="tuannguyen":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-                    elif os.environ["USER"]=="thn2112":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+
+                if os.environ["USER"]=="bh2757":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
                     else:
-                        yfile = np.load(data_dir + "layer4/habanero/y_files/y_v{v}.npz".format(\
-                                        v=Version))
-                        Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-                
-                except Exception as e:
-                    yfile = np.load(\
-                        "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
-                        "data/layer4/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
                     Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
-                    # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    #   Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                elif os.environ["USER"]=="tuannguyen":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                elif os.environ["USER"]=="thn2112":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                elif os.environ["USER"]=="alex":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                elif os.environ["USER"]=="ah3913":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                elif kwargs["load_location"]=="habanero":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/habanero/y_files/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+
+                else:
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(\
+                            "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+                            "data/ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(\
+                            "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+                            "data/ffrec/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    # with np.load(data_dir + "ffrec/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
+                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
         arbor_params = {}
         if self.config_dict["Wlgn_to4_params"].get("ret_scatter",False):
@@ -440,15 +490,15 @@ class Network:
             # conn_params = {"rng" : np.random.RandomState(20200205)}
             # ecp,sigma = conn.gen_ecp(xto, yto, conn_params)
             # opm = np.angle(ecp,deg=False)*0.5
-            
+
             # ## smooth phases generation
             # grid = np.linspace(0,1,self.N4,endpoint=False)
             # xto,yto = np.meshgrid(grid,grid)
             # conn_params = {"rng" : np.random.RandomState(20200205), "kc" : 2., "n" : 1}
             # ecp,sigma = conn.gen_ecp(xto, yto, conn_params)
             # pref_phase = np.angle(ecp,deg=False)
-            
-            
+
+
 
             # if "ampl_het" in kwargs.keys():
             #     ampl_het = kwargs["ampl_het"]
@@ -459,7 +509,7 @@ class Network:
             #     spatial_freq_het = kwargs["spatial_freq_het"]
             # else:
             #     spatial_freq_het = None
-            
+
 
             # conn_params = {"sigma" : 0.2,
             #                 "ampl" : 1.,
@@ -481,7 +531,7 @@ class Network:
         elif mode=="load_from_external":
             Version = self.config_dict["Wlgn_to4_params"]["load_from_prev_run"]
             if self.config_dict["Wlgn_to4_params"]["connectivity_type"]=="EI":
-                num_pops = 2 
+                num_pops = 2
             else:
                 num_pops = 1
             if self.verbose:
@@ -489,62 +539,136 @@ class Network:
                 print("Load ff connection from version {}".format(Version))
                 print(" ")
             if kwargs["system_mode"]=="two_layer":
-            
+
                 if kwargs["load_location"] in ("","local"):
-                    yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
-            
+
                 elif kwargs["load_location"]=="habanero":
                     if os.environ["USER"]=="bh2757":
-                        yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
+                        if self.config_dict.get("config_name",False):
+                            yfile = np.load(data_dir + "two_layer/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                        else:
+                            yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
                     else:
-                        yfile = np.load(\
-                            "/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
-                            "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                        if self.config_dict.get("config_name",False):
+                            yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+                                "data/two_layer/habanero/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                        else:
+                            yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
+                                "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                     # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    #   W4to4 = yt["Wrect"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
-            
+                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+
                 elif kwargs["load_location"]=="aws":
-                    yfile = np.load(\
-                        "/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
+                        "ori_dev_model/data/two_layer/aws/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
                         "ori_dev_model/data/two_layer/aws/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
 
             elif kwargs["system_mode"]=="one_layer":
-            
-                try:
-                    if os.environ["USER"]=="bh2757":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
-                    elif os.environ["USER"]=="tuannguyen":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
-                    elif os.environ["USER"]=="thn2112":
-                        yfile = np.load(data_dir + "layer4/v{v}/y_v{v}.npz".format(v=Version))
-                        W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+
+                if os.environ["USER"]=="bh2757":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
                     else:
-                        yfile = np.load(data_dir + "layer4/habanero/y_files/y_v{v}.npz".format(\
-                                        v=Version))
-                        W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
-                
-                except Exception as e:
-                    yfile = np.load(\
-                        "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
-                        "data/layer4/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
-                    # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    #   W4to4 = yt["Wrect"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                elif os.environ["USER"]=="tuannguyen":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                elif os.environ["USER"]=="thn2112":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                elif os.environ["USER"]=="alex":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                elif os.environ["USER"]=="ah3913":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                elif kwargs["load_location"]=="habanero":
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(data_dir + "ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
+                            s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(data_dir + "ffrec/habanero/y_files/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+
+                else:
+                    if self.config_dict.get("config_name",False):
+                        yfile = np.load(\
+                            "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+                            "data/ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
+                                s=self.config_dict["config_name"],v=Version))
+                    else:
+                        yfile = np.load(\
+                            "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
+                            "data/ffrec/habanero/v{v}/y_v{v}.npz".format(v=Version))
+                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    # with np.load(data_dir + "ffrec/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
+                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
         arbor_params = {}
         if self.config_dict["W4to4_params"].get("ret_scatter",False):
             arbor_params = {"ret_scatter" : self.config_dict["W4to4_params"]["ret_scatter"]}
         if self.config_dict["W4to4_params"].get("r_lim",False):
             arbor_params = {"r_lim" : self.config_dict["W4to4_params"]["r_lim"]}
-        arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+conn_type],\
-                        profile=self.config_dict["W4to4_params"]["arbor_profile_"+conn_type],\
-                        arbor_params=arbor_params)
-        arbor *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
+            
+        if conn_type=="EI_all":
+            arbor_EE = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"EE"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"EE"],\
+                            arbor_params=arbor_params)
+            arbor_EE *= self.config_dict["W4to4_params"]["ampl_"+"EE"]
+            
+            arbor_EI = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"EI"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"EI"],\
+                            arbor_params=arbor_params)
+            arbor_EI *= self.config_dict["W4to4_params"]["ampl_"+"EI"]
+
+            arbor_IE = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"IE"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"IE"],\
+                            arbor_params=arbor_params)
+            arbor_IE *= self.config_dict["W4to4_params"]["ampl_"+"IE"]
+
+            arbor_II = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"II"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"II"],\
+                            arbor_params=arbor_params)
+            arbor_II *= self.config_dict["W4to4_params"]["ampl_"+"II"]
+
+            arbor = np.block([[arbor_EE,arbor_EI],[arbor_IE,arbor_II]])
+        else:
+            arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+conn_type],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+conn_type],\
+                            arbor_params=arbor_params)
+            arbor *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
 
         if mode=="initializegauss":
             new_W4to4 = W4to4 * arbor

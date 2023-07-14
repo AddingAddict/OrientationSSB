@@ -44,7 +44,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     T_exp = inp_params["expanse_time"]
     inp_params.update({"Nsur" : int(np.ceil(1.*t.size/T_pd/(T_exp+1) ))})
     print("# of stimuli: {}".format(inp_params["Nsur"]))
-    
+
     print("sigma_cc={}, sigma_rec={}, r_A={}".format(sigma_cc,sigma_rec,r_A));sys.stdout.flush()
 
     Version = 0#misc.get_version(data_dir + "layer4/",version=None)
@@ -522,7 +522,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
             PF[2,j*DA:(j+1)*DA,i*DA:(i+1)*DA] = \
              sof_ij[N4//2-DA//2:N4//2+DA//2+DA%2, N4//2-DA//2:N4//2+DA//2+DA%2]
             # print(i,j,np.sum(PF[1,j*DA:(j+1)*DA,i*DA:(i+1)*DA]),np.sum(PF[2,j*DA:(j+1)*DA,i*DA:(i+1)*DA]))
-            
+
 
     fig = plt.figure(figsize=(18,10))
     ## receptive field
@@ -594,12 +594,12 @@ if __name__=="__main__":
         r_A = args.rA
     else:
         r_A = Wlgn_to4_params["r_A"]
-    
+
     if args.sI is not None:
         sigma_rec_list = np.array([args.sI,]) * r_A
     else:
         sigma_rec_list = np.array([2.5]) * r_A
-    
+
     if args.rC is not None:
         sigma_cc_list = np.array([args.rC,]) * r_A
     else:

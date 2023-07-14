@@ -54,14 +54,14 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
     T_exp = config_dict["Inp_params"]["expanse_time"]
     config_dict["Inp_params"].update({"Nsur" : int(np.ceil(1.*last_timestep/T_pd/(T_exp+1) ))})
     print("# of stimuli: {}".format(config_dict["Inp_params"]["Nsur"]));sys.stdout.flush()
-    
+
     config_dict.update({
                     "last_timestep" : last_timestep,
                     "RF_mode" : "initialize",
                     "system" : "one_layer",
                     "Version" : Version,
                     })
-    
+
     # =================== Network system ===============================================
     n = network_full_plastic.Network(Version,config_dict)
     Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,init_weights_4to4 = n.system
@@ -123,11 +123,11 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                     "Nret" : tf.constant(Nret, dtype=tf.int32),
                     "Nvert" : tf.constant(Nvert, dtype=tf.int32),
                     "invert_rec" : True,
-                    
+
                     "init_weights" : [tf.convert_to_tensor(init_weights[0],dtype=tf.float32),
-							tf.convert_to_tensor(init_weights[1],dtype=tf.float32)] 
-						if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
-						else tf.convert_to_tensor(init_weights,dtype=tf.float32),
+                            tf.convert_to_tensor(init_weights[1],dtype=tf.float32)]
+                        if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
+                        else tf.convert_to_tensor(init_weights,dtype=tf.float32),
                     "Wret_to_lgn" : tf.convert_to_tensor(Wret_to_lgn,dtype=tf.float32),
                     "W4to4" : tf.convert_to_tensor(W4to4, dtype=tf.float32),
                     "W23to23" : tf.convert_to_tensor(np.array([]), dtype=tf.float32),
@@ -135,10 +135,10 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                     "W23to4" : tf.convert_to_tensor(np.array([]), dtype=tf.float32),
                     "init_weights_4to23" : None,
                     "init_weights_4to4" : [tf.convert_to_tensor(init_weights_4to4[0],dtype=tf.float32),
-							tf.convert_to_tensor(init_weights_4to4[1],dtype=tf.float32)] 
-						if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
-						else tf.convert_to_tensor(init_weights_4to4,dtype=tf.float32),
-                    
+                            tf.convert_to_tensor(init_weights_4to4[1],dtype=tf.float32)]
+                        if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
+                        else tf.convert_to_tensor(init_weights_4to4,dtype=tf.float32),
+
                     "arbor_on" : tf.convert_to_tensor(arbor_on,dtype=tf.float32),
                     "arbor_off" : tf.convert_to_tensor(arbor_off,dtype=tf.float32),
                     "arbor2" : tf.convert_to_tensor(arbor2,dtype=tf.float32),
@@ -161,7 +161,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                     "s_orth_4to23" : tf.convert_to_tensor(np.array([]),dtype=tf.float32),
 
                     "Corr" : tf.convert_to_tensor(np.array([]),dtype=tf.float32),
-                    
+
                     "integrator" : config_dict["integrator"],
                     "config_dict" : config_dict,
                     }
@@ -171,7 +171,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
     print("Starting simulation. This might take a while...")
     print("...")
 
-    
+
     sys.stdout.flush()
     if config_dict["Inp_params"]["simulate_activity"]:
         if True:
@@ -215,7 +215,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
         l4t = np.array(time_dep_dict["l4t"])[:,:2*N4**2*Nvert]
         y = yt[-1,:]
         l4 = l4t[-1,:]
-        W4to4 = time_dep_dict["W4to4t"][-1]    
+        W4to4 = time_dep_dict["W4to4t"][-1]
     #################################################################################
     ############################# SAVE PARAMS AND DATA ##############################
     try:
@@ -299,7 +299,7 @@ if __name__=="__main__":
     else:
         Version = misc.get_version(data_dir + "ffrec/",version=None,readonly=False)
 
-    
+
 
     print("Version",Version)
     print(" ")
