@@ -53,6 +53,8 @@ def load_external_params(filename,verbose=True):
         file_path = os.path.join("/burg/theory/users/thn2112/",data_dir,filename+".yaml")
     elif os.environ["USER"]=="alex":
         file_path = os.path.join(current_dir,data_dir,filename+".yaml")
+    elif os.environ["USER"]=="ah3913":
+        file_path = os.path.join("/burg/theory/users/ah3913/",data_dir,filename+".yaml")
     else:
         raise Exception("User not found. Can't load parameter file.")
 
