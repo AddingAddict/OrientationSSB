@@ -218,13 +218,13 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
         W4to4 = time_dep_dict["W4to4t"][-1]
     #################################################################################
     ############################# SAVE PARAMS AND DATA ##############################
-    try:
+    if config_dict.get("config_name",False):
         if not os.path.exists(data_dir + "ffrec/{s}".format(s=config_dict["config_name"])):
             os.makedirs(data_dir + "ffrec/{s}".format(s=config_dict["config_name"]))
         if not os.path.exists(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=Version)):
             os.makedirs(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=Version))
         filename = "ffrec/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    except:
+    else:
         if not os.path.exists(data_dir + "ffrec/v{v}".format(v=Version)):
             os.makedirs(data_dir + "ffrec/v{v}".format(v=Version))
         filename = "ffrec/v{v}/yt_v{v}.npz".format(v=Version)
@@ -252,16 +252,16 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
         misc.save_data(Version, filename, data_dict_time)
 
     ## save ff connections and activity of last timestep separately
-    try:
+    if config_dict.get("config_name",False):
         filename = "ffrec/{s}/v{v}/y_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    except:
+    else:
         filename = "ffrec/v{v}/y_v{v}.npz".format(v=Version)
     misc.save_data(Version, filename, data_dict)
 
     ## save parameter settings
-    try:
-        filename = "ffrec/{s}/v{v}/config_v{v}.npz".format(s=config_dict["config_name"],v=Version)
-    except:
+    if config_dict.get("config_name",False):
+        filename = "ffrec/{s}/v{v}/config_v{v}".format(s=config_dict["config_name"],v=Version)
+    else:
         filename = "ffrec/v{v}/config_v{v}".format(v=Version)
     config_dict.update({
                 "maxew"     : np.array([max_ew])\
