@@ -65,7 +65,7 @@ class Network:
         W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
                                         random_seed=self.config_dict["random_seed"],Nvert=self.Nvert,verbose=self.verbose)
         if ("2pop" in self.config_dict["W4to4_params"]["Wrec_mode"] and\
-            self.config_dict["W4to4_params"]["Wrec_mode"]!="load_from_external"):
+            "load_from_external" not in self.config_dict["W4to4_params"]["Wrec_mode"]):
             W4to4_EE,arbor4to4_EE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
                                           conn_type="EE",system_mode=self.config_dict["system"],**self.kwargs)
             W4to4_IE,arbor4to4_IE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
@@ -471,10 +471,12 @@ class Network:
         """
         generate or load pre-computed recurrent connectivity in L4
         """
+        if "2pop" in mode:
+            mode = mode[:-4]
         W4 = kwargs["W4"]
         if self.verbose: print("mode in get_RFs",mode)
         if mode in ("initialize","initialize2","initializegauss"):
-            W_mode = self.config_dict["W4to4_params"].get("W_mode","random_delta")
+            W_mode = self.config_dict["W4to4_params"].get("Wrec_mode","random_delta")
             if mode=="initializegauss":
                 W_mode = "initialize"
             W4to4,_ = W4.create_matrix(self.config_dict["W4to4_params"], W_mode,\
@@ -546,7 +548,7 @@ class Network:
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
 
                 elif kwargs["load_location"]=="habanero":
                     if os.environ["USER"]=="bh2757":
@@ -563,7 +565,7 @@ class Network:
                         else:
                             yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
                                 "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                     # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
                     # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
@@ -575,7 +577,7 @@ class Network:
                     else:
                         yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
                         "ori_dev_model/data/two_layer/aws/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
 
             elif kwargs["system_mode"]=="one_layer":
 
@@ -585,42 +587,42 @@ class Network:
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                 elif os.environ["USER"]=="tuannguyen":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                 elif os.environ["USER"]=="thn2112":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                 elif os.environ["USER"]=="alex":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                 elif os.environ["USER"]=="ah3913":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                 elif kwargs["load_location"]=="habanero":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/habanero/y_files/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
 
                 else:
                     if self.config_dict.get("config_name",False):
@@ -632,7 +634,7 @@ class Network:
                         yfile = np.load(\
                             "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
                             "data/ffrec/habanero/v{v}/y_v{v}.npz".format(v=Version))
-                    W4to4 = yfile["Wrec"].reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
+                    W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                     # with np.load(data_dir + "ffrec/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
                     # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
@@ -641,7 +643,7 @@ class Network:
             arbor_params = {"ret_scatter" : self.config_dict["W4to4_params"]["ret_scatter"]}
         if self.config_dict["W4to4_params"].get("r_lim",False):
             arbor_params = {"r_lim" : self.config_dict["W4to4_params"]["r_lim"]}
-            
+
         if conn_type=="EI_all":
             arbor_EE = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"EE"],\
                             profile=self.config_dict["W4to4_params"]["arbor_profile_"+"EE"],\

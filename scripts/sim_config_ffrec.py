@@ -42,6 +42,10 @@ for i in range(nrep):
         config_dict["Wlgn_to4_params"].update({
             "W_mode": "load_from_external",
             "load_from_prev_run" : Version-1})
+    if "2pop" in config_dict["W4to4_params"]["Wrec_mode"]:
+        config_dict["W4to4_params"].update({
+            "Wrec_mode": "load_from_external2pop"})
+    else:
         config_dict["W4to4_params"].update({
             "Wrec_mode": "load_from_external"})
 
