@@ -92,11 +92,11 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     ##================================= initialization ====================================
     tf.random.set_seed(config_dict["random_seed"]*113)
     if "2pop" in Wrec_mode:
-        #l40 = tf.random.uniform([N4*N4*2*Nvert], minval=0, maxval=1, dtype=tf.float32)
-        l4r = tf.sparse.SparseTensor(Wlgn_to_4.indices,\
-            tf.random.uniform([Wlgn_to_4.values.numpy().size], minval=0, maxval=1, dtype=tf.float64),Wlgn_to_4.dense_shape)
-        l40 = tf.sparse.reshape(l4r,[tf.size(l4r)])
-        print(l40.dense_shape)
+        l40 = tf.random.uniform([N4*N4*2*Nvert], minval=0, maxval=1, dtype=tf.float32)
+        # l4r = tf.sparse.SparseTensor(Wlgn_to_4.indices,\
+        #     tf.random.uniform([Wlgn_to_4.values.numpy().size], minval=0, maxval=1, dtype=tf.float64),Wlgn_to_4.dense_shape)
+        # l40 = tf.sparse.reshape(l4r,[tf.size(l4r)])
+        # print(l40.dense_shape)
     else:
         l40 = tf.random.uniform([N4*N4*Nvert], minval=0, maxval=1, dtype=tf.float32)
     if config_dict["tau"]!=1:
@@ -153,8 +153,8 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     sys.stdout.flush()
     if config_dict["Inp_params"]["simulate_activity"]:
         if True: #not kwargs["not_saving_temp"]:
-            #y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
-            y0 = tf.sparse.concat(0,[tf.sparse.reshape(Wlgn_to_4,[tf.size(Wlgn_to_4).numpy()]),tf.cast(l40,tf.float64)])
+            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+            # y0 = tf.sparse.concat(0,[tf.sparse.reshape(Wlgn_to_4,[tf.size(Wlgn_to_4).numpy()]),tf.cast(l40,tf.float64)])
             if config_dict["test_lowDsubset"]:
                 yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
                                                  y0, t, dt, params_dict, mode="dynamic")

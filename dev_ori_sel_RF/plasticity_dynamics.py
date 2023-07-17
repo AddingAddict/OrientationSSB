@@ -919,12 +919,6 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         p_post_dict = p_dict["p_ffrec"][0]
         p_pre_dict = p_dict["p_ffrec"][1]
 
-        dW_post_dict = {}
-        dW_post_dict['dW_on_l4'] = tf.reshape(dW_dict["dW_on_l4"],(2*Nl4,Nlgn))
-        dW_post_dict['dW_off_l4'] = tf.reshape(dW_dict["dW_off_l4"],(2*Nl4,Nlgn))
-        dW_post_dict['dW_e_l4'] = tf.reshape(dW_dict["dW_e_l4"],(2*Nl4,Nl4))
-        dW_post_dict['dW_i_l4'] = tf.reshape(dW_dict["dW_i_l4"],(2*Nl4,Nl4))
-
         # extract post W and arbors
         Won_l4 = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[2,:,:]],0)
         Woff_l4 = tf.concat([Wlgn_to_4[1,:,:],Wlgn_to_4[3,:,:]],0)
@@ -934,6 +928,16 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_lgn_off = tf.concat([arbor_lgn[1,:,:],arbor_lgn[3,:,:]],0)
         arbor_e_to_l4 = arbor4to4[:,:Nl4]
         arbor_i_to_l4 = arbor4to4[:,Nl4:]
+
+        # calculate post inverse arbors
+        invarb_lgn_on = tf.where(tf.equal(arbor_lgn_on, 0),
+                            tf.ones(tf.shape(arbor_lgn_on),dtype=tf.float32), tf.math.reciprocal(arbor_lgn_on))
+        invarb_lgn_off = tf.where(tf.equal(arbor_lgn_off, 0),
+                            tf.ones(tf.shape(arbor_lgn_off),dtype=tf.float32), tf.math.reciprocal(arbor_lgn_off))
+        invarb_e_to_l4 = tf.where(tf.equal(arbor_e_to_l4, 0),
+                            tf.ones(tf.shape(arbor_e_to_l4),dtype=tf.float32), tf.math.reciprocal(arbor_e_to_l4))
+        invarb_i_to_l4 = tf.where(tf.equal(arbor_i_to_l4, 0),
+                            tf.ones(tf.shape(arbor_i_to_l4),dtype=tf.float32), tf.math.reciprocal(arbor_i_to_l4))
 
         # calculate post masks
         if p_post_dict["p_on_l4"].freeze_weights:
@@ -974,6 +978,16 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
         arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
 
+        # calculate pre inverse arbors
+        invarb_lgne_to_e = tf.where(tf.equal(arbor_lgne_to_e, 0),
+                            tf.ones(tf.shape(arbor_lgne_to_e),dtype=tf.float32), tf.math.reciprocal(arbor_lgne_to_e))
+        invarb_lgne_to_i = tf.where(tf.equal(arbor_lgne_to_i, 0),
+                            tf.ones(tf.shape(arbor_lgne_to_i),dtype=tf.float32), tf.math.reciprocal(arbor_lgne_to_i))
+        invarb_I_to_E = tf.where(tf.equal(arbor_I_to_E, 0),
+                            tf.ones(tf.shape(arbor_I_to_E),dtype=tf.float32), tf.math.reciprocal(arbor_I_to_E))
+        invarb_I_to_I = tf.where(tf.equal(arbor_I_to_I, 0),
+                            tf.ones(tf.shape(arbor_I_to_I),dtype=tf.float32), tf.math.reciprocal(arbor_I_to_I))
+
         # calculate pre masks
         if p_pre_dict["p_lgne_e"].freeze_weights:
             notfrozen = tf.math.logical_and(Wlgne_to_e>0, Wlgne_to_e< (p_pre_dict["p_lgne_e"].Wlim*arbor_lgne_to_e))
@@ -1003,34 +1017,49 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
         mask_fl_i_i = tf.cast(mask,tf.float32)
 
-        for i in range(4):
+        # Extract unconstrained Hebbian weight changes
+        dW_post_dict = {}
+        dW_post_dict['dW_on_l4'] = tf.reshape(dW_dict["dW_on_l4"],(2*Nl4,Nlgn)) * arbor_lgn_on
+        dW_post_dict['dW_off_l4'] = tf.reshape(dW_dict["dW_off_l4"],(2*Nl4,Nlgn)) * arbor_lgn_off
+        dW_post_dict['dW_e_l4'] = tf.reshape(dW_dict["dW_e_l4"],(2*Nl4,Nl4)) * arbor_e_to_l4
+        dW_post_dict['dW_i_l4'] = tf.reshape(dW_dict["dW_i_l4"],(2*Nl4,Nl4)) * arbor_i_to_l4
+
+        for i in range(8):
             # pre
             dW_pre_dict = convert_dW_to_pre(dW_post_dict,Nlgn,Nl4)
-            dW_pre_dict['dW_lgne_e'] = p_pre_dict["p_lgne_e"].constrain_update(dW_pre_dict['dW_lgne_e'],
+            dW_pre_dict['dW_lgne_e'] = p_pre_dict["p_lgne_e"].constrain_update(
+                                            dW_pre_dict['dW_lgne_e']*invarb_lgne_to_e,\
                                             tf.zeros_like(Wlgne_to_e),mask_fl_lgne_e,arbor_lgne_to_e,\
                                             p_pre_dict["p_lgne_e"].c_orth,p_pre_dict["p_lgne_e"].s_orth,1)
-            dW_pre_dict['dW_lgne_i'] = p_pre_dict["p_lgne_i"].constrain_update(dW_pre_dict['dW_lgne_i'],
+            dW_pre_dict['dW_lgne_i'] = p_pre_dict["p_lgne_i"].constrain_update(
+                                            dW_pre_dict['dW_lgne_i']*invarb_lgne_to_i,\
                                             tf.zeros_like(Wlgne_to_i),mask_fl_lgne_i,arbor_lgne_to_i,\
                                             p_pre_dict["p_lgne_i"].c_orth,p_pre_dict["p_lgne_i"].s_orth,1)
-            dW_pre_dict['dW_i_e'] = p_pre_dict["p_i_e"].constrain_update(dW_pre_dict['dW_i_e'],
+            dW_pre_dict['dW_i_e'] = p_pre_dict["p_i_e"].constrain_update(
+                                            dW_pre_dict['dW_i_e']*invarb_I_to_E,\
                                             tf.zeros_like(WI_to_E),mask_fl_i_e,arbor_I_to_E,\
                                             p_pre_dict["p_i_e"].c_orth,p_pre_dict["p_i_e"].s_orth,1)
-            dW_pre_dict['dW_i_i'] = p_pre_dict["p_i_i"].constrain_update(dW_pre_dict['dW_i_i'],
+            dW_pre_dict['dW_i_i'] = p_pre_dict["p_i_i"].constrain_update(
+                                            dW_pre_dict['dW_i_i']*invarb_I_to_I,\
                                             tf.zeros_like(WI_to_I),mask_fl_i_i,arbor_I_to_I,\
                                             p_pre_dict["p_i_i"].c_orth,p_pre_dict["p_i_i"].s_orth,1)
 
             # post
             dW_post_dict = convert_dW_to_post(dW_pre_dict,Nlgn,Nl4)
-            dW_post_dict['dW_on_l4'] =  p_post_dict["p_on_l4"].constrain_update(dW_post_dict['dW_on_l4'],\
+            dW_post_dict['dW_on_l4'] =  p_post_dict["p_on_l4"].constrain_update(
+                                            dW_post_dict['dW_on_l4']*invarb_lgn_on,\
                                             tf.zeros_like(Won_l4),mask_fl_on_l4,arbor_lgn_on,\
                                             p_post_dict["p_on_l4"].c_orth,p_post_dict["p_on_l4"].s_orth,1)
-            dW_post_dict['dW_off_l4'] =  p_post_dict["p_off_l4"].constrain_update(dW_post_dict['dW_off_l4'],\
+            dW_post_dict['dW_off_l4'] =  p_post_dict["p_off_l4"].constrain_update(
+                                            dW_post_dict['dW_off_l4']*invarb_lgn_off,\
                                             tf.zeros_like(Woff_l4),mask_fl_off_l4,arbor_lgn_off,\
                                             p_post_dict["p_off_l4"].c_orth,p_post_dict["p_off_l4"].s_orth,1)
-            dW_post_dict['dW_e_l4'] =  p_post_dict["p_e_l4"].constrain_update(dW_post_dict['dW_e_l4'],\
+            dW_post_dict['dW_e_l4'] =  p_post_dict["p_e_l4"].constrain_update(
+                                            dW_post_dict['dW_e_l4']*invarb_e_to_l4,\
                                             tf.zeros_like(We_to_l4),mask_fl_e_l4,arbor_e_to_l4,\
                                             p_post_dict["p_e_l4"].c_orth,p_post_dict["p_e_l4"].s_orth,1)
-            dW_post_dict['dW_i_l4'] =  p_post_dict["p_i_l4"].constrain_update(dW_post_dict['dW_i_l4'],\
+            dW_post_dict['dW_i_l4'] =  p_post_dict["p_i_l4"].constrain_update(
+                                            dW_post_dict['dW_i_l4']*invarb_i_to_l4,\
                                             tf.zeros_like(Wi_to_l4),mask_fl_i_l4,arbor_i_to_l4,\
                                             p_post_dict["p_i_l4"].c_orth,p_post_dict["p_i_l4"].s_orth,1)
 
@@ -1307,7 +1336,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         p_post_dict = p_dict["p_ffrec"][0]
         p_pre_dict = p_dict["p_ffrec"][1]
 
-        for i in range(4):
+        for i in range(8):
             # extract pre W and arbors
             Wlgne_to_e = tf.concat([Wlgn_to_4[0,:,:],Wlgn_to_4[1,:,:],W4to4[:Nl4,:Nl4]],1)
             Wlgne_to_i = tf.concat([Wlgn_to_4[2,:,:],Wlgn_to_4[3,:,:],W4to4[Nl4:,:Nl4]],1)
