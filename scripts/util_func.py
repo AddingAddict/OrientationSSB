@@ -55,7 +55,7 @@ def get_network_system_ffrec(Version,config_name):
     else:
         load_location = 'local'
         load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
-        config_dict = pickle.load(open(load_path + "config_v{v}.npz.p".format(v=Version),"rb"))
+        config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
         config_dict.update({"config_name" : config_name})
         config_dict["Wlgn_to4_params"].update({
             "W_mode": "load_from_external",
