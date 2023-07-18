@@ -112,6 +112,15 @@ class Network:
                   np.stack( \
                 ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
                     np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )]
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_postpre_approx_sep":
+            N = self.W4to4.shape[1]//2
+            self.init_weights = [np.stack( \
+                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    ),
+                  np.stack( \
+                ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) , \
+                    np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2))  )    )]
+            
         # ========================
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
             self.init_weights = np.array([]) ## not needed
@@ -145,6 +154,12 @@ class Network:
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_postpre_approx":
             self.init_weights_4to4 = [np.reshape(np.sum(self.W4to4,axis=0),(2,-1)),
                                       np.reshape(np.sum(self.W4to4[:,N:],axis=1),(2,-1))]
+        elif self.config_dict["Wlgn_to4_params"]["mult_norm"] =="ffrec_postpre_approx_sep":
+            self.init_weights_4to4 = [np.reshape(np.sum(self.W4to4,axis=0),(2,-1)),
+                                      np.stack( ( np.sum(self.W4to4[:N,:N],axis=1), \
+                                                  np.sum(self.W4to4[:N,N:],axis=1), \
+                                                  np.sum(self.W4to4[N:,:N],axis=1), \
+                                                  np.sum(self.W4to4[N:,N:],axis=1) ) )  ] # EtoE, ItoE, EtoI, ItoI
         # =======================
         elif self.config_dict["W4to4_params"]["mult_norm"]=="None":
             self.init_weights_4to4 = np.array([]) ## not needed

@@ -355,6 +355,66 @@ class Tf_integrator_new:
 
                 q_dict['p_ffrec'] = (q_post_dict,q_pre_dict)
 
+            elif mult_norm in ("ffrec_postpre_approx_sep"):
+                q_post_dict = defaultdict(lambda:None)
+                q_pre_dict = defaultdict(lambda:None)
+
+                # Build q_post_dict
+                constraint_mode = "ffrec_post"
+                mult_norm = "ffrec_post"
+
+                init_weights = [ self.params_dict["init_weights"][0], \
+                                          self.params_dict["init_weights_4to4"][0] ]
+                freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
+
+                beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                q_post_dict["p_on_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[0][0,:],freeze_weights)
+                q_post_dict["p_off_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[0][1,:],freeze_weights)
+
+                beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"]
+                q_post_dict["p_e_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][0,:],freeze_weights)
+                q_post_dict["p_i_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][1,:],freeze_weights)
+
+                init_weights = [ self.params_dict["init_weights"][1], \
+                                          self.params_dict["init_weights_4to4"][1] ] #[  arr[lgne_e,lgn_i], arr[i_e,i_i]   ]
+                freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
+
+                # Build q_pre_dict
+                constraint_mode = "ffrec_pre"
+                mult_norm = "ffrec_pre"
+
+                ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                rec_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+
+                q_pre_dict["p_lgn_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[0][0,:],freeze_weights)
+                q_pre_dict["p_lgn_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[0][1,:],freeze_weights)
+                q_pre_dict["p_e_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][0,:],freeze_weights)
+                q_pre_dict["p_e_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][1,:],freeze_weights)
+                q_pre_dict["p_i_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][2,:],freeze_weights)
+                q_pre_dict["p_i_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
+                            Wlim,init_weights[1][3,:],freeze_weights)
+
+                q_dict['p_ffrec_sep'] = (q_post_dict,q_pre_dict)
+
             else:
                 raise("q_dict mult_norm not implemented")
 
