@@ -136,30 +136,30 @@ W4to4_params:
     # aEI:   3.116
     # aII:   3.116
 
-    # rA_EE:   0.2
-    # rA_IE:   0.15
-    # rA_EI:   0.1125
-    # rA_II:   0.0525
     rA_EE:   0.2
-    rA_IE:   0.2
+    rA_IE:   0.15
     rA_EI:   0.1125
-    rA_II:   0.1125
+    rA_II:   0.0525
+    # rA_EE:   0.2
+    # rA_IE:   0.2
+    # rA_EI:   0.1125
+    # rA_II:   0.1125
     # ampl_EE:   11.4
     # ampl_IE:   11.5
     # ampl_EI:   10.
     # ampl_II:   10.
-    # ampl_EE:   3.552
-    # ampl_IE:   3.583
-    # ampl_EI:   3.116
-    # ampl_II:   3.116
+    ampl_EE:   3.552
+    ampl_IE:   3.583
+    ampl_EI:   3.116
+    ampl_II:   3.116
     # ampl_EE:   3.552
     # ampl_IE:   3.552
     # ampl_EI:   3.116
     # ampl_II:   3.116
-    ampl_EE:   2.368
-    ampl_IE:   2.368
-    ampl_EI:   2.0773
-    ampl_II:   2.0773
+    # ampl_EE:   2.368
+    # ampl_IE:   2.368
+    # ampl_EI:   2.0773
+    # ampl_II:   2.0773
     # ampl_EE:   1.
     # ampl_IE:   1.
     # ampl_EI:   1.
