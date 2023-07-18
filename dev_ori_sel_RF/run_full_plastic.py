@@ -126,7 +126,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
 
                     "init_weights" : [tf.convert_to_tensor(init_weights[0],dtype=tf.float32),
                             tf.convert_to_tensor(init_weights[1],dtype=tf.float32)]
-                        if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
+                        if "ffrec_postpre_approx" in config_dict["Wlgn_to4_params"]["mult_norm"]
                         else tf.convert_to_tensor(init_weights,dtype=tf.float32),
                     "Wret_to_lgn" : tf.convert_to_tensor(Wret_to_lgn,dtype=tf.float32),
                     "W4to4" : tf.convert_to_tensor(W4to4, dtype=tf.float32),
@@ -136,7 +136,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                     "init_weights_4to23" : None,
                     "init_weights_4to4" : [tf.convert_to_tensor(init_weights_4to4[0],dtype=tf.float32),
                             tf.convert_to_tensor(init_weights_4to4[1],dtype=tf.float32)]
-                        if config_dict["Wlgn_to4_params"]["mult_norm"] == "ffrec_postpre_approx"
+                        if "ffrec_postpre_approx" in config_dict["Wlgn_to4_params"]["mult_norm"]
                         else tf.convert_to_tensor(init_weights_4to4,dtype=tf.float32),
 
                     "arbor_on" : tf.convert_to_tensor(arbor_on,dtype=tf.float32),

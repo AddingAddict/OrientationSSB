@@ -604,7 +604,8 @@ class Tf_integrator_new:
         time_dep_dict = defaultdict(list)
         time_dep_dict["l4t"].append(y0[num_lgn_paths*lim:num_lgn_paths*lim+crt_size])
         if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_on_l4"] is not None or\
-                self.p_dict["p_lgne_e"] is not None or self.p_dict["p_ffrec"] is not None:
+                self.p_dict["p_lgne_e"] is not None or self.p_dict["p_ffrec"] is not None or\
+                self.p_dict["p_ffrec_sep"] is not None:
             time_dep_dict["W4to4t"].append(self.params_dict["W4to4"].numpy())
         if self.p_dict["p_rec23_ii"] is not None:
             time_dep_dict["W23to23t"].append(self.params_dict["W4to4"].numpy())
@@ -807,7 +808,8 @@ class Tf_integrator_new:
                 if ((istep%self.saving_stepsize)==0 or istep==(self.num_plasticity_steps-1)):
                     yt = tf.concat([yt,[y]], 0)
                     if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_on_l4"] is not None or\
-                            self.p_dict["p_lgne_e"] is not None or self.p_dict["p_ffrec"] is not None:
+                            self.p_dict["p_lgne_e"] is not None or self.p_dict["p_ffrec"] is not None or\
+                            self.p_dict["p_ffrec_sep"] is not None:
                         time_dep_dict["W4to4t"].append(self.params_dict["W4to4"])
                     if self.p_dict["p_rec23_ii"] is not None:
                         time_dep_dict["W23to23t"].append(self.params_dict["W23to23"])
