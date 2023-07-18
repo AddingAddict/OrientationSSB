@@ -394,19 +394,19 @@ class Tf_integrator_new:
                 ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
                 rec_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
 
-                q_pre_dict["p_lgn_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
+                q_pre_dict["p_lgn_e_sep"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[0][0,:],freeze_weights)
-                q_pre_dict["p_lgn_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
+                q_pre_dict["p_lgn_i_sep"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,ff_beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[0][1,:],freeze_weights)
                 q_pre_dict["p_e_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[1][0,:],freeze_weights)
-                q_pre_dict["p_e_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                q_pre_dict["p_i_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[1][1,:],freeze_weights)
-                q_pre_dict["p_i_e"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
+                q_pre_dict["p_e_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[1][2,:],freeze_weights)
                 q_pre_dict["p_i_i"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,rec_beta_P,\
