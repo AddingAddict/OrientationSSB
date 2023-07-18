@@ -139,7 +139,7 @@ def clip_by_norm_arbor(W,A,Wlim):
 # multiplicative normlaisation
 def synaptic_normalization(W_clipped,H,arbor,Wlim,init_W,c_orth=None,axis=1,mode="xalpha"):
     if c_orth is None:
-        frozen = tf.math.logical_or(W_clipped>=(Wlim*arbor), W_clipped<=0)
+        frozen = tf.math.logical_or(tf.abs(W_clipped)>=(Wlim*arbor), tf.abs(W_clipped)<=0)
         frozen_fl = tf.cast(frozen,tf.float32)
         gamma = np.ones_like(W_clipped,dtype=np.float32)
         # ## norm over on/off and alpha
