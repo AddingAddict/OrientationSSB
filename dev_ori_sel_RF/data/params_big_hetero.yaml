@@ -1,7 +1,7 @@
 # General network settings
-Nret: 64
-Nlgn: 64
-N4: 64
+Nret: 60
+Nlgn: 60
+N4: 60
 N23: 1
 Nvert: 1
 
@@ -136,7 +136,7 @@ W4to4_params:
     r_lim:  1.0
 
     Wrec_mode:   "Gaussian2pop"
-    sigma_factor:   3.0
+    sigma_factor:   1.3333333333
     max_ew:   0.95
     ## params for clustered/sparse Connectivity
     density:   0.5
