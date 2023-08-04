@@ -446,13 +446,22 @@ class Connectivity:
             # 	conn_matrix[np.logical_not(arbor)] = 0.
 
         elif profile in ("random_delta","initialize","initialize2","initializegauss"):
-            s_noise = conn_params["s_noise"]
+            s_noise = conn_params.get("s_noise",0)
             if profile=="initialize2":
                 disc_gaussian = gaussian(xdelta,ydelta,0.2)
                 noise_field = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
                 conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
             else:
                 conn_matrix = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
+                conn_matrix = conn_matrix.reshape(xdelta.shape)
+
+            u_noise = conn_params.get("u_noise",0)
+            if profile=="initialize2":
+                disc_gaussian = gaussian(xdelta,ydelta,0.2)
+                noise_field = self.rng.uniform(0,u_noise,xdelta.size)
+                conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
+            else:
+                conn_matrix = self.rng.uniform(0,u_noise,xdelta.size)
                 conn_matrix = conn_matrix.reshape(xdelta.shape)
             
             if arbor is not None:
