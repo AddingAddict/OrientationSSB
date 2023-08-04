@@ -1,0 +1,314 @@
+# General network settings
+Nret: 96
+Nlgn: 96
+N4: 96
+N23: 1
+Nvert: 1
+
+runtime:   32000
+# runtime:   500
+dt:   0.05
+tau:   1.
+num_lgn_paths:   4
+
+gamma_lgn:   4.0
+gamma_4:   1.0
+gamma_23:   1.0
+learning_rate_decay_const:   160000.
+
+saving_stepsize:   10
+
+plasticity_rule:   "activity_based"
+
+random_seed:   19
+nonlinearity_l4:   "rectifier"
+nonlinearity_l23:   "rectifier"
+integrator:   "Euler"
+
+test_lowDsubset:   False
+
+developing_params: []
+
+q_dict:  True
+
+# External Input
+Inp_params:
+    ndim: 25
+    radius: 3. #number of wavelength in pattern
+    width: 1.
+
+    simulate_activity: "dynamics"
+    pattern_duration: 2500 #in units of dt
+    avg_no_inp: 1
+
+    expanse_time: 1
+    init_radius: 0.3
+    mean_width: 0.3
+    onoff_corr_factor: 1.0
+    onoff_rel_weight: 1.0
+    input_type: "white_noise_rect"
+
+    off_bias_strength: 0.0
+    off_bias_region_size: 0.5
+
+Wret_to_lgn_params:
+    sigma1:   0.037 #from Stevens et al, eq (3)
+    sigma2:   0.015
+    ampl1:   1.0 #vary with arbor radius, will be updated later in the code
+    ampl2:   1.0 
+    gamma_ret:   14.0
+    noise:   0.0   #this sets the lower limit for 1-noise < u < 1
+    stevensetal: True
+
+    sigma:   0.016875
+    ampl:   1.0
+    profile:   "Mexican-hat"
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.6
+    SD_eccentricity:   0.05
+    SD_size:   0.05
+    heterogeneity_type:   None ##"independent"#"smooth"
+
+Wlgn_to4_params:
+    sigma:   0.2
+    ampl:   1.0
+    noise:   0.0
+    s_noise:   0.01
+    Wlim:   2.
+    load_from_prev_run:   None
+    connectivity_type:   "EI"
+
+    ## arbor params
+    r_A_on:   0.15
+    arbor_profile_on:   "gaussian"
+    ampl_on:   1.
+    r_A_off:   0.15
+    arbor_profile_off:   "gaussian"
+    ampl_off:   1.
+    r_lim:      1.5
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   None
+    smoothness_width:   0.05
+
+    # plasticity params
+    beta_P:   0.005
+    learning_rate:   0.5
+    plasticity_rule:   "activity_based"
+    constraint_mode:   "ffrec_postpre_approx_sep"
+    mult_norm:   "ffrec_postpre_approx_sep"
+    freeze_weights: False
+    W_mode:            "initializegauss"
+    clip_weights:       True
+
+# Layer 4 
+W4to4_params:
+    ##Initialize
+    noise:   0.0
+    s_noise:   0.01
+    ## MH
+    sigma1:   0.16
+    sigma2:   0.3
+    ampl1:   1.0
+    ampl2:   1.0
+    ##Gaussian
+    sigma:   0.2
+    ampl:   1.0
+    noise:   0.0
+    ##Gaussian2pop
+    sigma_EE:   0.15
+    sigma_IE:   0.15
+    sigma_EI:   0.1125
+    sigma_II:   0.0525
+    # aEE:   11.4
+    # aIE:   11.5
+    # aEI:   10.
+    # aII:   10.
+    aEE:  1.
+    aIE:  1.
+    aEI:  1.
+    aII:  1.
+    # aEE:   3.552
+    # aIE:   3.583
+    # aEI:   3.116
+    # aII:   3.116
+
+    rA_EE:   0.2
+    rA_IE:   0.15
+    rA_EI:   0.1125
+    rA_II:   0.0525
+    # rA_EE:   0.2
+    # rA_IE:   0.2
+    # rA_EI:   0.1125
+    # rA_II:   0.1125
+    # ampl_EE:   11.4
+    # ampl_IE:   11.5
+    # ampl_EI:   10.
+    # ampl_II:   10.
+    ampl_EE:   3.552
+    ampl_IE:   3.583
+    ampl_EI:   3.116
+    ampl_II:   3.116
+    # ampl_EE:   3.552
+    # ampl_IE:   3.552
+    # ampl_EI:   3.116
+    # ampl_II:   3.116
+    # ampl_EE:   2.368
+    # ampl_IE:   2.368
+    # ampl_EI:   2.0773
+    # ampl_II:   2.0773
+    # ampl_EE:   1.
+    # ampl_IE:   1.
+    # ampl_EI:   1.
+    # ampl_II:   1.
+    arbor_profile_EE:   "gaussian"
+    arbor_profile_IE:   "gaussian"
+    arbor_profile_EI:   "gaussian"
+    arbor_profile_II:   "gaussian"
+    r_lim:  1.5
+
+    Wrec_mode:   "initializegauss2pop"
+    sigma_factor:   1.0
+    max_ew:   0.95
+    ## params for clustered/sparse Connectivity
+    density:   0.5
+    ncluster:   3
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   None
+    smoothness_width:   0.05
+
+    # plasticity params
+    nu_4:   3.
+    beta_P: 0.0005
+    Wlim: 2.
+    learning_rate:   0.5
+    plasticity_rule:   "activity_based"
+    constraint_mode:   "ffrec_postpre_approx_sep"
+    mult_norm:   "ffrec_postpre_approx_sep"
+    e_plasticity:      True
+    freeze_weights:    False
+    clip_weights:       True
+
+    firing_threshold:   "adaptive"
+    theta_4:   0.9
+    l4_avg:   0.0
+
+
+W23_params:
+    ##Gaussian2pop
+    sigma_EE:   0.2
+    sigma_IE:   0.2
+    sigma_EI:   0.15
+    sigma_II:   0.075
+    aEE:   11.4
+    aIE:   11.5
+    aEI:   10.
+    aII:   10.
+
+    rA_E:   0.3
+    rA_I:   0.3
+
+    Wrec_mode:   "Gaussian2pop"
+    sigma_factor:   0.2
+    max_ew:   "orig"
+    ## params for clustered/sparse Connectivity
+    density:   0.5
+    ncluster:   3
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   "seppendent"
+    smoothness_width:   0.05
+
+    # plasticity params
+    nu_23:   1.
+    beta_P: 0.0005
+    Wlim: 12
+    learning_rate:   0.2
+    plasticity_rule:   "None"
+    constraint_mode:   "None"
+    mult_norm:   "None"
+
+    firing_threshold: 0.0
+
+W4to23_params:   
+    ##Gaussian2pop
+    sigma_EE:   0.2
+    sigma_IE:   0.2
+    sigma_EI:   0.15
+    sigma_II:   0.075
+    aEE:   11.4
+    aIE:   11.5
+    aEI:   10.
+    aII:   10.
+
+    rA_E:   0.3
+    rA_I:   0.3
+
+    Wrec_mode:   "Gaussian2pop"
+    sigma_factor:   0.2
+    max_ew:   "orig"
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   None
+    smoothness_width:   0.05
+
+    arbor_profile:   "gaussian"
+    s_noise:   0.2
+    r_A:   0.3
+
+   # plasticity params
+    nu_4:   1.
+    beta_P: 0.1
+    learning_rate:   0.2
+    Wlim: 12
+    plasticity_rule:   "None"
+    constraint_mode:   "None"
+    mult_norm:   "None"
+
+
+W23to4_params:
+    ##Gaussian2pop
+    sigma_EE:   0.2
+    sigma_IE:   0.2
+    sigma_EI:   0.15
+    sigma_II:   0.075
+    aEE:   11.4
+    aIE:   11.5
+    aEI:   10.
+    aII:   10.
+
+    Wrec_mode:   "Gaussian2pop"
+    sigma_factor:   0.2
+    max_ew:   "orig"
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   None
+    smoothness_width:   0.05
+
+    # plasticity params
+    nu_23:   1.
+    beta_P: 0.1
+    Wlim: 12
+    learning_rate:   0.2
+    plasticity_rule:   "None"
+    constraint_mode:   "None"
+    mult_norm:   "None"
+
+

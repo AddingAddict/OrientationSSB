@@ -401,7 +401,14 @@ class Connectivity:
             if arbor is not None:
                 disc_gaussian2[np.logical_not(arbor)] = 0.
             disc_gaussian2 /= np.sum(disc_gaussian2,axis=(0,1))[None,None,:,:]
-            conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
+            
+            if conn_params.get("stevensetal",False):
+                ampl1 = 1/(np.sum(disc_gaussian1))
+                ampl2 = 1/(np.sum(disc_gaussian2))
+                conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
+                          ampl2 * noise_field2 * disc_gaussian2
+            else: 
+                conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
                           ampl2 * noise_field2 * disc_gaussian2
             
         elif profile=="zmodel":

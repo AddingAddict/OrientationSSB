@@ -148,10 +148,10 @@ W4to4_params:
     # ampl_IE:   11.5
     # ampl_EI:   10.
     # ampl_II:   10.
-    # ampl_EE:   3.552
-    # ampl_IE:   3.583
-    # ampl_EI:   3.116
-    # ampl_II:   3.116
+    #ampl_EE:   3.552
+    #ampl_IE:   3.583
+    #ampl_EI:   3.116
+    #ampl_II:   3.116
     # ampl_EE:   3.552
     # ampl_IE:   3.552
     # ampl_EI:   3.116
