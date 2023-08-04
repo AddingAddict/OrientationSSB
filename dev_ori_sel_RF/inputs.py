@@ -1,6 +1,6 @@
 #import tensorflow as tf
 import numpy as np
-from dev_ori_sel_RF import connectivity
+from dev_ori_sel_RF import connectivity, network_tools
 from dev_ori_sel_RF.tools import gen_gaussian_random_field as ggrf
 
 def distance(delta):
@@ -277,20 +277,8 @@ class Inputs_lgn(Inputs):
     def create_matrix(self, inp_params, profile, **kwargs):
         return super().create_matrix(inp_params, profile, **kwargs)
 
-    def _init_nonlinearity(self,nonlinearity_rule):
-        if nonlinearity_rule == 'rectifier':
-            tf_nonlinearity = network_tools.nl_rect
-        elif nonlinearity_rule == 'linear':
-            tf_nonlinearity = network_tools.nl_linear
-        elif nonlinearity_rule == "powerlaw":
-            tf_nonlinearity = network_tools.nl_powerlaw
-        else:
-            raise Exception('Unknown nonlinearity rule')
-        return tf_nonlinearity
-
     def create_lgn_input(self, inp_params, profile, Wret_to_lgn, **kwargs):
-        self.nonlinearity_rule_ret_to_lgn = inp_params["nonlinearity_ret_to_lgn"]
-        nl = _init_nonlinearity(self.nonlinearity_rule_ret_to_lgn)
+
         if "white_noise" in profile:
             inp_ret = self.create_matrix(inp_params, profile, **kwargs)
             lgn = np.dot(Wret_to_lgn,inp_ret)
@@ -340,7 +328,9 @@ class Inputs_lgn(Inputs):
         ## 'online' should only ever produce one input frame per call
         if ("rect" in profile):
             if ("white_noise" in profile):
-                lgn = nl(lgn)
+                nl = network_tools.nl_linear
+                gamma_ret = inp_params["gamma_ret"]
+                lgn = nl(gamma_ret*lgn)
 
         if ("online" in profile):
             if ("white_noise" in profile or "gaussian_noise" in profile):
