@@ -16,14 +16,14 @@ def hsluv_to_rgb_vec(H,S,V):
 hue_cmap = ListedColormap(hsluv_to_rgb_vec(np.linspace(0,1,100),np.ones(100),0.5*np.ones(100)))
 lit_cmap = ListedColormap(hsluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspace(1,0,100)))
 
-def imshowbar(fig,ax,A,cmap='RdBu',**kwargs):
+def imshowbar(fig,ax,A,cmap='RdBu_r',**kwargs):
     ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     plot = ax.imshow(A,cmap=cmap,**kwargs)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
 
-def doubimshbar(fig,ax,A1,A2,cmap='RdBu',**kwargs):
+def doubimshbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
     ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     cmap1 = mpl.cm.get_cmap(cmap, 24)
     cmap2 = mpl.cm.get_cmap(cmap, 24)
@@ -38,7 +38,7 @@ def doubimshbar(fig,ax,A1,A2,cmap='RdBu',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(plot1, cax=cax, orientation='vertical')
     
-def contourbar(fig,ax,A,cmap='RdBu',**kwargs):
+def contourbar(fig,ax,A,cmap='RdBu_r',**kwargs):
     ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()
@@ -47,7 +47,7 @@ def contourbar(fig,ax,A,cmap='RdBu',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
     
-def doubcontbar(fig,ax,A1,A2,cmap='RdBu',**kwargs):
+def doubcontbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
     ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()

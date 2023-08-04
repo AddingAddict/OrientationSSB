@@ -91,7 +91,7 @@ class Inputs:
             input_patterns = np.swapaxes(input_patterns.reshape(2,Nsur,N*N),1,2)
             return np.real(input_patterns)
 
-        if self.profile=="white_noise_online":
+        if self.profile=="white_noise_online" or self.profile=="white_noise_rect":
             N = self.size[0]
             expansion_timestep = kwargs["expansion_timestep"]
             factor = inp_params["onoff_corr_factor"]
