@@ -403,10 +403,12 @@ class Connectivity:
             disc_gaussian2 /= np.sum(disc_gaussian2,axis=(0,1))[None,None,:,:]
             
             if conn_params.get("stevensetal",False):
-                ampl1 = 1/(np.sum(disc_gaussian1))
-                ampl2 = 1/(np.sum(disc_gaussian2))
-                conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
-                          ampl2 * noise_field2 * disc_gaussian2
+                for i in range(disc_gaussian1.shape[2]):
+                    for j in range(disc_gaussian1.shape[3]):
+                        disc_gaussian1[:,:,i,j] *= 1/(np.sum(disc_gaussian1[:,:,i,j],axis=(0,1)))
+                        disc_gaussian2[:,:,i,j] *= 1/(np.sum(disc_gaussian2[:,:,i,j],axis=(0,1)))     
+                conn_matrix = noise_field1 * disc_gaussian1 -\
+                                noise_field2 * disc_gaussian2
             else: 
                 conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
                           ampl2 * noise_field2 * disc_gaussian2
