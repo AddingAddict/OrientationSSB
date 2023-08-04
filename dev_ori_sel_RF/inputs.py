@@ -328,9 +328,8 @@ class Inputs_lgn(Inputs):
         ## 'online' should only ever produce one input frame per call
         if ("rect" in profile):
             if ("white_noise" in profile):
-                nl = network_tools.nl_linear
-                gamma_ret = inp_params["gamma_ret"]
-                lgn = nl(gamma_ret*lgn)
+                nl = network_tools.nl_rect
+                lgn = nl(lgn)
 
         if ("online" in profile):
             if ("white_noise" in profile or "gaussian_noise" in profile):
