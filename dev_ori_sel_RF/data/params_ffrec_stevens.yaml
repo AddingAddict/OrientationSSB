@@ -50,13 +50,14 @@ Inp_params:
 
     off_bias_strength: 0.0
     off_bias_region_size: 0.5
+    gamma_ret:   14.0
 
 Wret_to_lgn_params:
     sigma1:   0.037 #from Stevens et al, eq (3)
     sigma2:   0.015
     ampl1:   1.0 #vary with arbor radius, will be updated later in the code
     ampl2:   1.0 
-    gamma_ret:   14.0
+
     noise:   0.0   #this sets the lower limit for 1-noise < u < 1
     stevensetal: True
 
