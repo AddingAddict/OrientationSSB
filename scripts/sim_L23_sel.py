@@ -64,10 +64,10 @@ W4 = connectivity.Connectivity_2pop((N4,N4),(N4,N4),\
 start = time.process_time()
 
 try:
-    W4to4 = np.load('./../notebooks/hetero_W4to4_N4={:d}.npy'.format(N4))
+    W4to4 = np.load('./../notebooks/hetero_W4to4_N4={:d}_seed={:d}.npy'.format(N4,seed))
 except:
     W4to4,_ = W4.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W4to4_N4={:d}'.format(N4),W4to4)
+    np.save('./../notebooks/hetero_W4to4_N4={:d}_seed={:d}'.format(N4,seed),W4to4)
 
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
@@ -162,8 +162,8 @@ for inp_idx in range(n_inp):
     for pop_idx in range(2):
         inps[inp_idx,pop_idx,:,:] = rng.gamma(shape=shape,scale=scale)
 
-res_dict['mean_inps'] = mean_inps
-res_dict['inps'] = inps
+# res_dict['mean_inps'] = mean_inps
+# res_dict['inps'] = inps
     
 print('Creating input patterns took',time.process_time() - start,'s\n')
 
@@ -193,7 +193,7 @@ for inp_idx in range(n_inp):
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
-res_dict['rates'] = rates
+# res_dict['rates'] = rates
 
 # Calculate z_fields from inputs and rates
 n_bins = 1
@@ -202,11 +202,13 @@ inp_binned = inps.reshape(-1,n_bins,2,N4,N4).mean((1,2))
 rate_binned = rates.reshape(-1,n_bins,2,N4,N4).mean((1,2))
 
 rate_r0 = np.mean(rate_binned,0)
+rate_rV = np.var(rate_binned,0)
 rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*rate_binned,0)
 rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*rate_binned,0)
 rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
 
 inp_r0 = np.mean(inp_binned,0)
+inp_rV = np.var(inp_binned,0)
 inp_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
 inp_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
 inp_r1 = np.sqrt(inp_rs**2 + inp_rc**2)
@@ -226,6 +228,13 @@ inp_ori_sel = inp_r1/inp_r0
 rate_z = rate_ori_sel * np.exp(1j*rate_pref_ori*2*np.pi/180)
 inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
 
+res_dict['rate_r0'] = rate_r0
+res_dict['rate_r1'] = rate_r1
+res_dict['rate_rV'] = rate_rV
+res_dict['inp_r0'] = inp_r0
+res_dict['inp_r1'] = inp_r1
+res_dict['inp_rV'] = inp_rV
+
 res_dict['rate_z'] = rate_z
 res_dict['inp_z'] = inp_z
 
@@ -235,7 +244,8 @@ res_dict['rate_OS'] = np.mean(rate_ori_sel)
 opm_mismatch = np.abs(inp_pref_ori - rate_pref_ori)
 opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 
-res_dict['opm_mismatch'] = np.mean(opm_mismatch)
+res_dict['mismatch'] = opm_mismatch
+res_dict['mean_mismatch'] = np.mean(opm_mismatch)
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
