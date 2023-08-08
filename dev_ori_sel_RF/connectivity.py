@@ -455,15 +455,24 @@ class Connectivity:
                 conn_matrix = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
                 conn_matrix = conn_matrix.reshape(xdelta.shape)
 
-            u_noise = conn_params.get("u_noise",0.0)
-            if profile=="initialize2":
-                disc_gaussian = gaussian(xdelta,ydelta,0.2)
-                noise_field = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
-                conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
-            else:
-                conn_matrix = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
-                conn_matrix = conn_matrix.reshape(xdelta.shape)
+            #u_noise = conn_params.get("u_noise",0.0)
+            #if profile=="initialize2":
+            #    disc_gaussian = gaussian(xdelta,ydelta,0.2)
+            #    noise_field = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
+            #    conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
+            #else:
+            #    conn_matrix = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
+            #    conn_matrix = conn_matrix.reshape(xdelta.shape)
             
+            if "u_noise" in conn_params.keys():
+                u_noise = conn_params["u_noise"]
+                sigma = conn_params["sigma_P"]
+                disc_gaussian = gaussian(xdelta,ydelta,sigma)
+                noise_field = self.rng.uniform(1-u_noise,1,xdelta.size)
+                conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
+                norm_factor = np.sum(conn_matrix,axis=(0,1))[None,None,:,:]
+                conn_matrix /= norm_factor
+
             if arbor is not None:
                 conn_matrix[np.logical_not(arbor)] = 0.
             if profile in ("initialize2","initialize"):

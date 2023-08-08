@@ -494,9 +494,17 @@ class Network:
             W_mode = self.config_dict["W4to4_params"].get("Wrec_mode","random_delta")
             if mode=="initializegauss":
                 W_mode = "initialize"
-            W4to4,_ = W4.create_matrix(self.config_dict["W4to4_params"], W_mode,\
-                        r_A=self.config_dict["W4to4_params"]["rA_"+conn_type],profile_A="heaviside")
-            W4to4 *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
+            aux_dict = self.config_dict["W4to4_params"].copy()
+            aux_dict.update({
+                "sigma_P": self.config_dict["W4to4_params"]["sigma_"+conn_type],
+                "s_noise": self.config_dict["W4to4_params"]["noise"],
+                "u_noise": self.config_dict["W4to4_params"]["u_noise_"+conn_type]
+            })
+            print("u_noise_"+conn_type, aux_dict["u_noise"])
+            print("sigma_P_"+conn_type,aux_dict["sigma_P"])
+            W4to4,_ = W4.create_matrix(aux_dict, W_mode,\
+                        r_A=aux_dict["rA_"+conn_type],profile_A="heaviside")
+            W4to4 *= aux_dict["ampl_"+conn_type]
         elif mode=="gabor":
             conn = connectivity.Connectivity((self.N4,self.N4),(self.N4,self.N4),\
                                             random_seed=12345, verbose=self.verbose)
