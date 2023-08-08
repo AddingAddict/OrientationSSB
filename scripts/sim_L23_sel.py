@@ -10,20 +10,12 @@ import argparse
 import time
 
 import numpy as np
-import tensorflow as tf
-from scipy import linalg
 from scipy.interpolate import interp1d
 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import plot_func as pf
 import util_func as uf
 
 import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
-from dev_ori_sel_RF.tools import gen_gaussian_random_field
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=1000)
