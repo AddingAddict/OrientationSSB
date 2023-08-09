@@ -199,12 +199,12 @@ print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 n_bins = 1
 ori_binned = oris.reshape(-1,n_bins).mean(1)
 inp_binned = inps.reshape(-1,n_bins,2,N4,N4).mean((1,2))
-rate_binned = rates.reshape(-1,n_bins,2,N4,N4).mean((1,2))
+rate_binned = rates.reshape(-1,n_bins,2,N4,N4).mean(1)
 
 rate_r0 = np.mean(rate_binned,0)
 rate_rV = np.var(rate_binned,0)
-rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*rate_binned,0)
-rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*rate_binned,0)
+rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
+rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
 rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
 
 inp_r0 = np.mean(inp_binned,0)
@@ -218,7 +218,7 @@ rate_pref_ori[rate_pref_ori > 90] -= 180
 rate_alt_pref_ori = ori_binned[rate_binned.argmax(0)]
 rate_alt_pref_ori[rate_alt_pref_ori > 90] -= 180
 rate_ori_sel = rate_r1/rate_r0
- 
+
 inp_pref_ori = np.arctan2(inp_rs,inp_rc)*180/(2*np.pi)
 inp_pref_ori[inp_pref_ori > 90] -= 180
 inp_alt_pref_ori = ori_binned[inp_binned.argmax(0)]
@@ -239,13 +239,15 @@ res_dict['rate_z'] = rate_z
 res_dict['inp_z'] = inp_z
 
 res_dict['inp_OS'] = np.mean(inp_ori_sel)
-res_dict['rate_OS'] = np.mean(rate_ori_sel)
+res_dict['E_rate_OS'] = np.mean(rate_ori_sel[0])
+res_dict['I_rate_OS'] = np.mean(rate_ori_sel[1])
 
 opm_mismatch = np.abs(inp_pref_ori - rate_pref_ori)
 opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 
-res_dict['mismatch'] = opm_mismatch
-res_dict['mean_mismatch'] = np.mean(opm_mismatch)
+res_dict['opm_mismatch'] = opm_mismatch
+res_dict['E_mismatch'] = np.mean(opm_mismatch[0])
+res_dict['I_mismatch'] = np.mean(opm_mismatch[1])
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
