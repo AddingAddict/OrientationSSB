@@ -14,17 +14,23 @@ def hsluv_to_rgb_vec(H,S,V):
     return RGB
 
 hue_cmap = ListedColormap(hsluv_to_rgb_vec(np.linspace(0,1,100),np.ones(100),0.5*np.ones(100)))
-lit_cmap = ListedColormap(hsluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspace(1,0,100)))
+lit_cmap = ListedColormap(hsluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspace(0,1,100)))
+    
+def ytitle(ax,text,xloc=-0.25,**kwargs):
+    ax.text(xloc,0.5,text,horizontalalignment='left',verticalalignment='center',
+        rotation='vertical',transform=ax.transAxes,**kwargs)
 
-def imshowbar(fig,ax,A,cmap='RdBu_r',**kwargs):
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     plot = ax.imshow(A,cmap=cmap,**kwargs)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
 
-def doubimshbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     cmap1 = mpl.cm.get_cmap(cmap, 24)
     cmap2 = mpl.cm.get_cmap(cmap, 24)
     cmap1._init()
@@ -38,8 +44,9 @@ def doubimshbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(plot1, cax=cax, orientation='vertical')
     
-def contourbar(fig,ax,A,cmap='RdBu_r',**kwargs):
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+def contourbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()
     plot = ax.contour(A,cmap=cmap,**kwargs)
@@ -47,8 +54,9 @@ def contourbar(fig,ax,A,cmap='RdBu_r',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
     
-def doubcontbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+def doubcontbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()
     plot1 = ax.contour(A1,cmap=cmap,**kwargs)
@@ -57,7 +65,7 @@ def doubcontbar(fig,ax,A1,A2,cmap='RdBu_r',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(plot1, cax=cax, orientation='vertical')
 
-def domcol(fig,ax,A,rlim=None,alim=None,**kwargs):
+def domcol(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
     H = np.angle(A)/(2*np.pi) + 0.5
     # r = np.log2(1. + np.abs(A))
     # S = 0.5 * (1. + np.abs(np.sin(2. * np.pi * r)))
@@ -80,10 +88,11 @@ def domcol(fig,ax,A,rlim=None,alim=None,**kwargs):
     V = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
     # rgb = hsv_to_rgb(np.dstack((H,S,V)))
     rgb = hsluv_to_rgb_vec(H,np.ones_like(H),1-r)#S,V)
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.imshow(rgb,**kwargs)
 
-def domcolbar(fig,ax,A,rlim=None,alim=None,**kwargs):
+def domcolbar(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
     H = np.angle(A)/(2*np.pi) + 0.5
     # r = np.log2(1. + np.abs(A))
     # S = 0.5 * (1. + np.abs(np.sin(2. * np.pi * r)))
@@ -102,11 +111,12 @@ def domcolbar(fig,ax,A,rlim=None,alim=None,**kwargs):
         alim[0] = -np.pi
         alim[1] = np.pi
     r = (r - rlim[0]) / (rlim[1] - rlim[0])
-    S = 0.05 + 0.9 * np.sin(0.5 * np.pi * r)
-    V = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
+    S = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
+    V = 0.05 + 0.9 * np.sin(0.5 * np.pi * r)
     # rgb = hsv_to_rgb(np.dstack((H,S,V)))
-    rgb = hsluv_to_rgb_vec(H,np.ones_like(H),1-r)#S,V)
-    ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+    rgb = hsluv_to_rgb_vec(H,np.ones_like(H),r)#S,V)
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     cbars = [None,None]
     plot = ax.imshow(np.angle(A),cmap=hue_cmap,vmin=alim[0],vmax=alim[1],**kwargs)
     divider = make_axes_locatable(ax)

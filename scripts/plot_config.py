@@ -5,19 +5,14 @@ sys.path.insert(0, './..')
 import argparse
 
 import numpy as np
-import tensorflow as tf
-import logging
-from scipy import linalg
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import plot_func as pf
 import util_func as uf
 
 import dev_ori_sel_RF
-from dev_ori_sel_RF.tools import misc,update_params_dict,analysis_tools
+from dev_ori_sel_RF.tools import analysis_tools
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--maxver', '-v', help='version',type=int, default=8)
