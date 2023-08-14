@@ -10,8 +10,8 @@ import dev_ori_sel_RF
 from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network,network_full_plastic,run_onelayer,probe_RFs
 from dev_ori_sel_RF.tools import misc,update_params_dict,analysis_tools
 
-def get_network_size(config_name):
-    config_dict = misc.load_external_params("params_"+config_name)
+def get_network_size(config_name,verbose=True):
+    config_dict = misc.load_external_params("params_"+config_name,verbose=verbose)
     config_dict.update({"config_name" : config_name})
 
     N4 = config_dict["N4"]

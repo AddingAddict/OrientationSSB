@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import ListedColormap,hsv_to_rgb
@@ -31,8 +30,8 @@ def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
 def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
-    cmap1 = mpl.cm.get_cmap(cmap, 24)
-    cmap2 = mpl.cm.get_cmap(cmap, 24)
+    cmap1 = plt.get_cmap(cmap, 24)
+    cmap2 = plt.get_cmap(cmap, 24)
     cmap1._init()
     cmap2._init()
     alpha = np.concatenate((np.linspace(0, 0.8, cmap2.N//2)[::-1],np.linspace(0, 0.8, cmap1.N//2),np.ones(3)))
