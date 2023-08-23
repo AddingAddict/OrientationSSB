@@ -111,15 +111,15 @@ def get_ori_sel(opm,calc_fft=True):
     ori *= 180/np.pi
     
     if calc_fft:
-        ori_fft = np.abs(np.fft.fftshift(np.fft.fft2(ori - np.nanmean(ori))))
-        ori_fps = np.zeros(int(np.ceil(N4//2*np.sqrt(2))))
+        opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(opm - np.nanmean(opm))))
+        opm_fps = np.zeros(int(np.ceil(N4//2*np.sqrt(2))))
 
         grid = np.arange(-N4//2,N4//2)
         x,y = np.meshgrid(grid,grid)
-        bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N4//2*np.sqrt(2)))+0.1)
+        bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N4//2*np.sqrt(2)))+0.5)
         for idx in range(0,int(np.ceil(N4//2*np.sqrt(2)))):
-            ori_fps[idx] = np.mean(ori_fft[bin_idxs == idx])
+            opm_fps[idx] = np.mean(opm_fft[bin_idxs == idx])
         
-        return ori,sel,ori_fft,ori_fps
+        return ori,sel,opm_fft,opm_fps
     else:
         return ori,sel

@@ -30,8 +30,8 @@ Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)
 
 oris = np.zeros((len(Vers),N4,N4))
 sels = np.zeros((len(Vers),N4,N4))
-ori_ffts = np.zeros((len(Vers),N4,N4))
-ori_fpss = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
+opm_ffts = np.zeros((len(Vers),N4,N4))
+opm_fpss = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
 seps = np.zeros((len(Vers),N4,N4))
 bals = np.zeros((len(Vers),N4,N4))
 
@@ -44,11 +44,11 @@ for idx,Version in enumerate(Vers):
     sd = sd.reshape((N4,N4,Nlgn,Nlgn))
     opm,Rn = analysis_tools.get_response(sd,DA)
     
-    oris[idx],sels[idx],ori_ffts[idx],ori_fpss[idx] = uf.get_ori_sel(opm)
+    oris[idx],sels[idx],opm_ffts[idx],opm_fpss[idx] = uf.get_ori_sel(opm)
     seps[idx] = np.abs(sd).sum((-2,-1))/ss.sum((-2,-1))
     bals[idx] = 1-np.abs(sd.sum((-2,-1)))/ss.sum((-2,-1))
 
-fig,axs = plt.subplots(10,len(Vers),figsize=(4*len(Vers),4*10),dpi=300,sharex='row',sharey='row')
+fig,axs = plt.subplots(9,len(Vers),figsize=(4*len(Vers),4*9),dpi=300,sharex='row',sharey='row')
 for i,Version in enumerate(Vers):
     pf.imshowbar(fig,axs[0,i],oris[i],cmap='twilight',vmin=0,vmax=180)
     pf.imshowbar(fig,axs[1,i],sels[i],cmap='binary',vmin=0,vmax=np.max(sels))
@@ -66,8 +66,8 @@ for i,Version in enumerate(Vers):
     axs[7,i].hist(bals[i].flatten(),bin_edges([0,1],nbin))
     axs[7,i].axvline(np.mean(bals[i].flatten()),color='k',ls='--')
     
-    pf.imshowbar(fig,axs[8,i],ori_ffts[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts))
-    axs[9,i].plot(np.arange(0,np.ceil(N4//2*np.sqrt(2))),ori_fpss[i])
+    pf.imshowbar(fig,axs[8,i],opm_ffts[i],cmap='binary',vmin=0,vmax=np.max(opm_ffts))
+    axs[8,i].plot(np.arange((N4//2,N4)),(N4//4)*opm_fpss[i][:N4//2-1]/np.nanmax(opm_fpss[i][:N4//2-1]))
     
     axs[0,i].set_title('Simulation Step {:d}'.format(Version+1))
     
@@ -80,7 +80,6 @@ axs[5,0].set_ylabel('Orientation Selectivity (Count)')
 axs[6,0].set_ylabel('Subregion Separation Index (Count)')
 axs[7,0].set_ylabel('Subregion Balance Index (Count)')
 axs[8,0].set_ylabel('Preferred Orientation (DFT)')
-axs[9,0].set_ylabel('Preferred Orientation (PFS)')
 
 plt.savefig("./../plots/Ori_Sel_Dev_FF_Plasticity_"+config_name+".pdf")
 
