@@ -296,7 +296,7 @@ def get_response(sd,DA,Nvert=1):
 
     ## Fourier transform SD
     fct = 1
-    delta_bins = 20
+    delta_bins = 15
     sdfft = np.abs(np.fft.fftshift(np.fft.fftn(sd,s=(fct*Nlgn,fct*Nlgn),axes=(2,3)),axes=(2,3)))
     h,w = sdfft.shape[2:]
 
@@ -304,8 +304,9 @@ def get_response(sd,DA,Nvert=1):
     kx,ky = np.meshgrid(np.arange(-w/2.,w/2.),np.arange(-h/2.+1,h/2.+1)[::-1])
     angles = np.arctan2(ky,kx)*180/np.pi + (np.arctan2(ky,kx)<0)*360
     frequency = np.sqrt((kx/w)**2 + (ky/h)**2).flatten()
-    angle_disc = np.arange(0,180,delta_bins)
+    angle_disc = np.arange(0,180+1,delta_bins)
     ori_bins = np.searchsorted(angle_disc,angles,side='right')
+    ori_bins[np.logical_and(kx==0,ky==0)] = -1
 
     half = h//2 + h%2
     sdfft_long = sdfft[:,:,:half,:].reshape(N4,N4*Nvert,-1)
@@ -321,7 +322,7 @@ def get_response(sd,DA,Nvert=1):
         maxk[ibin-1,:,:] = sd_maxk
 
     ## vector sum of best responses
-    phi = np.linspace(0,2*np.pi,num=180//delta_bins,endpoint=False) + delta_bins/2./180*np.pi
+    phi = np.linspace(0,2*np.pi,num=180//delta_bins,endpoint=False) + delta_bins/180*np.pi
     opm = np.sum(np.exp(1j*phi)[:,None,None]*Rn, axis=0)
     rms = np.sum(Rn,axis=0)
     opm = opm/rms
