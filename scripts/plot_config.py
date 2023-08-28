@@ -50,10 +50,10 @@ for idx,Version in enumerate(Vers):
 
 fig,axs = plt.subplots(9,len(Vers),figsize=(4*len(Vers),4*9),dpi=300,sharex='row',sharey='row')
 for i,Version in enumerate(Vers):
-    pf.imshowbar(fig,axs[0,i],oris[i],cmap='twilight',vmin=0,vmax=180)
-    pf.imshowbar(fig,axs[1,i],sels[i],cmap='binary',vmin=0,vmax=np.max(sels))
-    pf.imshowbar(fig,axs[2,i],seps[i],cmap='binary',vmin=0,vmax=1)
-    pf.imshowbar(fig,axs[3,i],bals[i],cmap='binary',vmin=0,vmax=1)
+    pf.imshowbar(fig,axs[0,i],oris[i],cmap='twilight',vmin=0,vmax=180,origin='lower')
+    pf.imshowbar(fig,axs[1,i],sels[i],cmap='binary',vmin=0,vmax=np.max(sels),origin='lower')
+    pf.imshowbar(fig,axs[2,i],seps[i],cmap='binary',vmin=0,vmax=1,origin='lower')
+    pf.imshowbar(fig,axs[3,i],bals[i],cmap='binary',vmin=0,vmax=1,origin='lower')
     nbin = 20
     def bin_edges(data,nbin):
         return np.linspace(np.min(data),np.max(data),nbin+1)
@@ -66,8 +66,8 @@ for i,Version in enumerate(Vers):
     axs[7,i].hist(bals[i].flatten(),bin_edges([0,1],nbin))
     axs[7,i].axvline(np.mean(bals[i].flatten()),color='k',ls='--')
     
-    pf.imshowbar(fig,axs[8,i],opm_ffts[i],cmap='binary',vmin=0,vmax=np.max(opm_ffts))
-    axs[8,i].plot(np.arange((N4//2,N4)),(N4//4)*opm_fpss[i][:N4//2-1]/np.nanmax(opm_fpss[i][:N4//2-1]))
+    pf.imshowbar(fig,axs[8,i],opm_ffts[i],cmap='binary',vmin=0,vmax=np.max(opm_ffts),origin='lower')
+    axs[8,i].plot(np.arange(N4//2,N4),(N4//4)*opm_fpss[i][:N4//2]/np.nanmax(opm_fpss[i][:N4//2-1]))
     
     axs[0,i].set_title('Simulation Step {:d}'.format(Version+1))
     
@@ -95,8 +95,8 @@ rf = wff[:,0]-wff[:,1]
 fig,axs = plt.subplots(1,2,figsize=(N4,0.5*N4),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
 pf.doubcontbar(fig,axs[0],wff[0,0],-wff[0,1],
-               cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8)
-pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])))
+               cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8,origin='lower')
+pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),origin='lower')
 
 fig.tight_layout()
 plt.savefig("./../plots/RFs/RFs_"+config_name+".pdf")
