@@ -171,7 +171,7 @@ class Connectivity:
             pairwise_distance = np.sqrt(xdelta**2 + ydelta**2)
             conn_matrix = pairwise_distance
         
-        elif profile in ("Gaussian","Gaussian_broadOFF"):
+        elif profile in ("Gaussian","Gaussian_norm","Gaussian_broadOFF"):
             sigma = conn_params["sigma"]
             ampl = conn_params["ampl"]
             noise_str = conn_params["noise"]
@@ -193,7 +193,10 @@ class Connectivity:
             if arbor is not None:
                 disc_gaussian[np.logical_not(arbor)] = 0.
                 if self.verbose: print("arbor",arbor.shape)
-            norm_factor = np.sum(disc_gaussian,axis=(2,3))[:,:,None,None]
+            if profile in ("Gaussian_norm"):
+                norm_factor = 2*np.pi*sigma**2
+            else:
+                norm_factor = np.sum(disc_gaussian,axis=(2,3))[:,:,None,None]
             conn_matrix = ampl * disc_gaussian / norm_factor
             
         elif profile in ("Exponential",):

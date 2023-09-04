@@ -18,7 +18,7 @@ import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=1000)
+parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=200)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
@@ -39,7 +39,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}/'.format(ksel,lker,grec)
+res_dir = res_dir + 'L23_sel_ssn_ksel={:.3f}_lker={:.3f}_grec={:.3f}/'.format(ksel,lker,grec)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -70,6 +70,27 @@ except:
     np.save('./../notebooks/hetero_W4to4_N4={:d}_seed={:d}'.format(N4,seed),W4to4)
 
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
+
+# Figure out gammas for SSN to match RELU results
+kE = 0.05
+kI = 0.05
+nE = 2
+nI = 3
+
+a = W4to4.sum(-1).mean(-1)
+k = np.array([kE,kI])
+n = np.array([nE,nI])
+
+I = 1*np.array([1,1])
+
+V = np.linalg.inv(np.eye(2)-grec * a/n[None,:])@I
+R = k*(V**n)
+
+print('I =',I)
+print('V =',V)
+print('R =',R)
+
+gam = 1/(k*n*V**(n-1))
 
 # Define functions to calculate effect of clipping on orientation selectivity
 def clip_r0(OSs):
@@ -173,17 +194,18 @@ print('Creating input patterns took',time.process_time() - start,'s\n')
 def fio_rect(x):
     return np.fmax(x,0)
 
-def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
-    arg = gamma_rec * np.dot(Wrec,y) + gamma_ff * inp_ff.flatten()
-    return 1./tau*( -y + fio_rect(arg))
+def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,k,n,tau):
+    argE = gamma_rec[0] * np.dot(Wrec[0,0],y[0]) + gamma_rec[1] * np.dot(Wrec[0,1],y[1]) + gamma_ff * inp_ff[0]
+    argI = gamma_rec[0] * np.dot(Wrec[1,0],y[0]) + gamma_rec[1] * np.dot(Wrec[1,1],y[1]) + gamma_ff * inp_ff[1]
+    return 1./tau*( -y + np.stack([k[0]*fio_rect(argE)**n[0],k[1]*fio_rect(argI)**n[1]]))
 
-def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
+def integrate(y0,inp,Wrec,gamma_rec,k,n,dt,Nt):
     y = y0
     for t_idx in range(Nt):
-        out = dynamics_system(y,inp,W4to4,gamma_rec,1.0,1.0)
+        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,1.0)
         dy = out
         y = y + dt*dy
-    return np.array([y[:N4**2].reshape((N4,N4)),y[N4**2:].reshape((N4,N4))])
+    return np.array([y[0].reshape((N,N)),y[1].reshape((N,N))])
 
 # Integrate to get firing rates
 rates = np.zeros_like(inps)
@@ -191,7 +213,7 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones(2*N4**2),inps[inp_idx].reshape((2,-1)),0.25,n_int,grec)
+    rates[inp_idx] = integrate(np.ones((2,N**2)),inps[inp_idx].reshape((2,-1)),W4to4,grec*gam,k,n,0.25,n_int)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
