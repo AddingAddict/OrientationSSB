@@ -20,9 +20,9 @@ from dev_ori_sel_RF import connectivity
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=200)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
-parser.add_argument('--H', '-H', help='connectivity heterogeneity level',type=float, default=0.5)
-parser.add_argument('--eta', '-e', help='input modulation level',type=float, default=0.0)
-parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=0.0)
+parser.add_argument('--H', '-H', help='connectivity heterogeneity level',type=float, default=0.7)
+parser.add_argument('--eta', '-e', help='input modulation level',type=float, default=1e-2)
+parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_inp = int(args['n_inp'])
@@ -64,7 +64,7 @@ try:
     W4to4 = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
 except:
     W4to4,_ = W4.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,seed),W4to4)
+    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),W4to4)
 
 W4to4 = W4to4.reshape((2,N**2,2,N**2)).transpose((0,2,1,3))
 
