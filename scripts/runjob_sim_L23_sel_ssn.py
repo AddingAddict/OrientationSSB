@@ -24,7 +24,7 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=1000)
+    parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=200)
     parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=20)
     
