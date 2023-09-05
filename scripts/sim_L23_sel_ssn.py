@@ -197,12 +197,13 @@ def fio_rect(x):
 def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,k,n,tau):
     argE = gamma_rec[0] * np.dot(Wrec[0,0],y[0]) + gamma_rec[1] * np.dot(Wrec[0,1],y[1]) + gamma_ff * inp_ff[0]
     argI = gamma_rec[0] * np.dot(Wrec[1,0],y[0]) + gamma_rec[1] * np.dot(Wrec[1,1],y[1]) + gamma_ff * inp_ff[1]
-    return 1./tau*( -y + np.stack([k[0]*fio_rect(argE)**n[0],k[1]*fio_rect(argI)**n[1]]))
+    return np.stack([(-y[0] + k[0]*fio_rect(argE)**n[0])/tau[0],
+                     (-y[1] + k[1]*fio_rect(argI)**n[1])/tau[1]])
 
 def integrate(y0,inp,Wrec,gamma_rec,k,n,dt,Nt):
     y = y0
     for t_idx in range(Nt):
-        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,1.0)
+        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,np.array([1.0,2.0]))
         dy = out
         y = y + dt*dy
     return np.array([y[0].reshape((N,N)),y[1].reshape((N,N))])
@@ -221,20 +222,20 @@ print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 # Calculate z_fields from inputs and rates
 n_bins = 1
-ori_binned = oris.reshape(-1,n_bins).mean(1)
-inp_binned = inps.reshape(-1,n_bins,2,N,N).mean((1,2))
-rate_binned = rates.reshape(-1,n_bins,2,N,N).mean(1)
+ori_binned = np.nanmean(np.ma.masked_invalid(oris.reshape(-1,n_bins)),1)
+inp_binned = np.nanmean(np.ma.masked_invalid(inps.reshape(-1,n_bins,2,N,N)),(1,2))
+rate_binned = np.nanmean(np.ma.masked_invalid(rates.reshape(-1,n_bins,2,N,N)),1)
 
-rate_r0 = np.mean(rate_binned,0)
-rate_rV = np.var(rate_binned,0)
-rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
-rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
+rate_r0 = np.nanmean(np.ma.masked_invalid(rate_binned),0)
+rate_rV = np.nanvar(np.ma.masked_invalid(rate_binned),0)
+rate_rs = np.nanmean(np.ma.masked_invalid(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned),0)
+rate_rc = np.nanmean(np.ma.masked_invalid(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned),0)
 rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
 
-inp_r0 = np.mean(inp_binned,0)
-inp_rV = np.var(inp_binned,0)
-inp_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
-inp_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
+inp_r0 = np.nanmean(np.ma.masked_invalid(inp_binned),0)
+inp_rV = np.nanvar(np.ma.masked_invalid(inp_binned),0)
+inp_rs = np.nanmean(np.ma.masked_invalid(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned),0)
+inp_rc = np.nanmean(np.ma.masked_invalid(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned),0)
 inp_r1 = np.sqrt(inp_rs**2 + inp_rc**2)
 
 rate_pref_ori = np.arctan2(rate_rs,rate_rc)*180/(2*np.pi)
@@ -262,16 +263,18 @@ res_dict['inp_rV'] = inp_rV
 res_dict['rate_z'] = rate_z
 res_dict['inp_z'] = inp_z
 
-res_dict['inp_OS'] = np.mean(inp_ori_sel)
-res_dict['E_rate_OS'] = np.mean(rate_ori_sel[0])
-res_dict['I_rate_OS'] = np.mean(rate_ori_sel[1])
+res_dict['inp_OS'] = np.nanmean(np.ma.masked_invalid(inp_ori_sel))
+res_dict['E_rate_OS'] = np.nanmean(np.ma.masked_invalid(rate_ori_sel[0]))
+res_dict['I_rate_OS'] = np.nanmean(np.ma.masked_invalid(rate_ori_sel[1]))
 
 opm_mismatch = np.abs(inp_pref_ori - rate_pref_ori)
 opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 
 res_dict['opm_mismatch'] = opm_mismatch
-res_dict['E_mismatch'] = np.mean(opm_mismatch[0])
-res_dict['I_mismatch'] = np.mean(opm_mismatch[1])
+res_dict['E_mismatch'] = np.nanmean(np.ma.masked_invalid(opm_mismatch[0]))
+res_dict['I_mismatch'] = np.nanmean(np.ma.masked_invalid(opm_mismatch[1]))
+
+print(res_dict)
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
