@@ -100,7 +100,7 @@ def runjobs():
                 #--------------------------------------------------------------------------
                 # Make SBTACH
                 inpath = currwd + "/sim_L23_corr_ssn.py"
-                c1 = "{:s} -s {:d} -ni {:d} -nt {:d} -H {:f} -e {:f} -g {:f} - b {:f}".format(
+                c1 = "{:s} -s {:d} -ni {:d} -nt {:d} -H {:f} -e {:f} -g {:f} -b {:f}".format(
                     inpath,seed,n_inp,n_int,H,eta,grec,betx)
                 
                 jobname="{:s}_H={:.1f}_eta={:.0e}_grec={:.3f}_betx={:.2f}_seed={:d}".format(
