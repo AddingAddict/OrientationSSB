@@ -54,20 +54,21 @@ avg_CV = 0.4
 # Create heterogeneous recurrent connectivity
 config_name = "big_hetero"
 Version = -1
-config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
+config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
 
-W4 = connectivity.Connectivity_2pop((N4,N4),(N4,N4),\
-                                    (N4,N4), (N4,N4),\
+conn = connectivity.Connectivity_2pop((N,N),(N,N),\
+                                    (N,N), (N,N),\
                                     random_seed=seed,\
                                     Nvert=1, verbose=True)
 
 start = time.process_time()
 
+H = 0.7
 try:
-    W4to4 = np.load('./../notebooks/hetero_W4to4_N4={:d}_seed={:d}.npy'.format(N4,seed))
+    Wrec = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
 except:
-    W4to4,_ = W4.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W4to4_N4={:d}_seed={:d}'.format(N4,seed),W4to4)
+    Wrec,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
+    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),Wrec)
 
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
@@ -110,8 +111,8 @@ start = time.process_time()
 def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
     rng = np.random.default_rng(seed)
     
-    z = np.exp(1j*2*np.pi*rng.random(size=(N4,N4)))
-    z *= rng.gamma(shape=shape,scale=r1/shape,size=(N4,N4))
+    z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
+    z *= rng.gamma(shape=shape,scale=r1/shape,size=(N,N))
     
     return z
 
@@ -120,7 +121,7 @@ snp_z = gen_sp_opm(avg_OS,ksel,seed)
 res_dict['snp_z'] = snp_z
 
 # Calculate distance from all pairs of grid points
-xs,ys = np.meshgrid(np.arange(N4)/N4,np.arange(N4)/N4)
+xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
 dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
 dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
@@ -150,8 +151,8 @@ print('Creating input orientation map took',time.process_time() - start,'s\n')
 start = time.process_time()
 
 oris = np.arange(n_inp)/n_inp * 180
-mean_inps = np.zeros((n_inp,N4,N4))
-inps = np.zeros((n_inp,2,N4,N4))
+mean_inps = np.zeros((n_inp,N,N))
+inps = np.zeros((n_inp,2,N,N))
 
 rng = np.random.default_rng(seed)
 for inp_idx in range(n_inp):
@@ -180,10 +181,10 @@ def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
 def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
     y = y0
     for t_idx in range(Nt):
-        out = dynamics_system(y,inp,W4to4,gamma_rec,1.0,1.0)
+        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,1.0)
         dy = out
         y = y + dt*dy
-    return np.array([y[:N4**2].reshape((N4,N4)),y[N4**2:].reshape((N4,N4))])
+    return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
 
 # Integrate to get firing rates
 rates = np.zeros_like(inps)
@@ -191,7 +192,7 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones(2*N4**2),inps[inp_idx].reshape((2,-1)),0.25,n_int,grec)
+    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1)),0.25,n_int,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
@@ -200,8 +201,8 @@ print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 # Calculate z_fields from inputs and rates
 n_bins = 1
 ori_binned = oris.reshape(-1,n_bins).mean(1)
-inp_binned = inps.reshape(-1,n_bins,2,N4,N4).mean((1,2))
-rate_binned = rates.reshape(-1,n_bins,2,N4,N4).mean(1)
+inp_binned = inps.reshape(-1,n_bins,2,N,N).mean((1,2))
+rate_binned = rates.reshape(-1,n_bins,2,N,N).mean(1)
 
 rate_r0 = np.mean(rate_binned,0)
 rate_rV = np.var(rate_binned,0)

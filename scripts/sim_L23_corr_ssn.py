@@ -23,6 +23,7 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps',type=in
 parser.add_argument('--H', '-H', help='connectivity heterogeneity level',type=float, default=0.7)
 parser.add_argument('--eta', '-e', help='input modulation level',type=float, default=1e-2)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
+parser.add_argument('--betx', '-b', help='Ratio of external input to inhibition vs excitation',type=float, default=1.)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_inp = int(args['n_inp'])
@@ -30,6 +31,7 @@ n_int= int(args['n_int'])
 H = args['H']
 eta = args['eta']
 grec = args['grec']
+betx = args['betx']
 seed = int(args['seed'])
 
 # Define where to save results
@@ -71,20 +73,17 @@ Wrec = Wrec.reshape((2,N**2,2,N**2)).transpose((0,2,1,3))
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
 # Figure out gammas for SSN to match RELU results
-kE = 0.05
-kI = 0.05
-nE = 2
-nI = 3
-
 a = Wrec.sum(-1).mean(-1)
-k = np.array([kE,kI])
-n = np.array([nE,nI])
+n = np.array([2,3])
 
-I = 1*np.array([1,1])
+I = np.array([1,betx])
+R = np.array([2,10])
 
 V = np.linalg.inv(np.eye(2)-grec * a/n[None,:])@I
-R = k*(V**n)
+k = R/(V**n)
 
+print('k =',k)
+print('n =',n)
 print('I =',I)
 print('V =',V)
 print('R =',R)
