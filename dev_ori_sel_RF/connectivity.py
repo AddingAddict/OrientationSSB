@@ -193,8 +193,8 @@ class Connectivity:
             if arbor is not None:
                 disc_gaussian[np.logical_not(arbor)] = 0.
                 if self.verbose: print("arbor",arbor.shape)
-            if profile in ("Gaussian_norm"):
-                norm_factor = 2*np.pi*sigma**2
+            if profile == "Gaussian_norm":
+                norm_factor = 2*np.pi*sigma**2*self.from_size[0]**2
             else:
                 norm_factor = np.sum(disc_gaussian,axis=(2,3))[:,:,None,None]
             conn_matrix = ampl * disc_gaussian / norm_factor
@@ -812,6 +812,8 @@ class Connectivity_2pop():
         Wrec[to_Ne_total:,from_Ne_total:] = -conn_II
 
         # normalise conn matrix if the maximal real eigenvalue is given
+        if max_ew is None:
+            pass
         if Wrec.shape[0]==Wrec.shape[1]:
             ew,_ = linalg.eig(Wrec,right=True)
             if self.verbose: print("orig max ew",np.nanmax(np.real(ew)),max_ew)

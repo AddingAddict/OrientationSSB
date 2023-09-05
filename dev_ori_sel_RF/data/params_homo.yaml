@@ -137,7 +137,7 @@ W4to4_params:
 
     Wrec_mode:   "Gaussian2pop"
     sigma_factor:   2.0
-    max_ew:   0.95
+    max_ew:   1.0
     ## params for clustered/sparse Connectivity
     density:   0.5
     ncluster:   3

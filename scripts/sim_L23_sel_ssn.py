@@ -24,6 +24,7 @@ parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
+parser.add_argument('--gff', '-f', help='L2/3 input strength',type=float, default=1.02)
 args = vars(parser.parse_args())
 n_inp = int(args['n_inp'])
 n_int= int(args['n_int'])
@@ -31,6 +32,7 @@ seed = int(args['seed'])
 ksel = args['ksel']
 lker = args['lker']
 grec = args['grec']
+gff = args['gff']
 
 lker2 = lker**2
 
@@ -81,7 +83,7 @@ a = W4to4.sum(-1).mean(-1)
 k = np.array([kE,kI])
 n = np.array([nE,nI])
 
-I = 1*np.array([1,1])
+I = gff*np.array([1,1])
 
 V = np.linalg.inv(np.eye(2)-grec * a/n[None,:])@I
 R = k*(V**n)
@@ -205,7 +207,7 @@ def integrate(y0,inp,Wrec,gamma_rec,k,n,dt,Nt):
         out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,1.0)
         dy = out
         y = y + dt*dy
-    return np.array([y[0].reshape((N,N)),y[1].reshape((N,N))])
+    return np.array([y[0].reshape((N4,N4)),y[1].reshape((N4,N4))])
 
 # Integrate to get firing rates
 rates = np.zeros_like(inps)
@@ -213,7 +215,7 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones((2,N**2)),inps[inp_idx].reshape((2,-1)),W4to4,grec*gam,k,n,0.25,n_int)
+    rates[inp_idx] = integrate(np.ones((2,N4**2)),inps[inp_idx].reshape((2,-1)),W4to4,grec*gam,k,n,0.25,n_int)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 

@@ -53,7 +53,7 @@ config_dict["W4to4_params"]["mean_eccentricity"] = H
 config_dict["W4to4_params"]["SD_eccentricity"] = 0.025*H
 config_dict["W4to4_params"]["SD_size"] = 0.003*H
 
-W4 = connectivity.Connectivity_2pop((N,N),(N,N),\
+conn = connectivity.Connectivity_2pop((N,N),(N,N),\
                                     (N,N), (N,N),\
                                     random_seed=seed,\
                                     Nvert=1, verbose=True)
@@ -61,10 +61,10 @@ W4 = connectivity.Connectivity_2pop((N,N),(N,N),\
 start = time.process_time()
 
 try:
-    W4to4 = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
+    Wrec = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
 except:
-    W4to4,_ = W4.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),W4to4)
+    Wrec,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
+    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),Wrec)
 
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
@@ -112,7 +112,7 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1)),W4to4,0.25,n_int,grec)
+    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1)),Wrec,0.25,n_int,grec)
 
 res_dict['rates'] = rates
 
