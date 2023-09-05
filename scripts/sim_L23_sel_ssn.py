@@ -18,7 +18,7 @@ import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=200)
+parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=1000)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
@@ -41,7 +41,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_sel_ssn_ksel={:.3f}_lker={:.3f}_grec={:.3f}/'.format(ksel,lker,grec)
+res_dir = res_dir + 'L23_sel_ssn_ksel={:.3f}_lker={:.3f}_grec={:.3f}_betx={:.2f}/'.format(ksel,lker,grec,betx)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -273,8 +273,6 @@ opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 res_dict['opm_mismatch'] = opm_mismatch
 res_dict['E_mismatch'] = np.nanmean(np.ma.masked_invalid(opm_mismatch[0]))
 res_dict['I_mismatch'] = np.nanmean(np.ma.masked_invalid(opm_mismatch[1]))
-
-print(res_dict)
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
