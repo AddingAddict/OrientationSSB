@@ -90,7 +90,7 @@ def runjobs():
     
     ksels = 10**np.linspace(-3,0,7)
     lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))
-    grecs = 1.02*np.linspace(0.95,1.05,5)
+    grecs = 1.02*np.linspace(0.95,1.05,5)[:2]
     betxs = np.linspace(0.5,1.5,5)
     seeds = range(1)
 

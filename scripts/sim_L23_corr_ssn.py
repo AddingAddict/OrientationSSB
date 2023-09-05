@@ -39,7 +39,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_corr_ssn_H={:.1f}_eta={:.0e}_grec={:.3f}/'.format(H,eta,grec)
+res_dir = res_dir + 'L23_corr_ssn_H={:.1f}_eta={:.0e}_grec={:.3f}_betx={:.2f}/'.format(H,eta,grec,betx)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
