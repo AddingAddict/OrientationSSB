@@ -7,7 +7,7 @@ from math import floor, ceil
 import numpy as np
 
 import dev_ori_sel_RF
-from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network,network_full_plastic,run_onelayer,probe_RFs
+from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network, network_ffrec,run_onelayer,probe_RFs
 from dev_ori_sel_RF.tools import misc,update_params_dict,analysis_tools
 
 def get_network_size(config_name,verbose=True):
@@ -51,7 +51,7 @@ def get_network_system_ffrec(Version,config_name):
                         "system" : "one_layer",
                         "Version" : Version,
                         })
-        net = network_full_plastic.Network(Version,config_dict,verbose=False)
+        net = network_ffrec.Network(Version,config_dict,verbose=False)
     else:
         load_location = 'local'
         load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
@@ -66,7 +66,7 @@ def get_network_system_ffrec(Version,config_name):
         else:
             config_dict["W4to4_params"].update({
                 "Wrec_mode": "load_from_external"})
-        net = network_full_plastic.Network(Version,config_dict,load_location=load_location,verbose=False)
+        net = network_ffrec.Network(Version,config_dict,load_location=load_location,verbose=False)
     return net.system
 
 def get_network_weights(Version,config_name,N4pop,N4,Nlgn):
@@ -93,7 +93,7 @@ def get_network_weights_ffrec(Version,config_name,N4pop,N4,Nlgn):
                         "system" : "one_layer",
                         "Version" : Version,
                         })
-        net = network_full_plastic.Network(Version,config_dict,verbose=False)
+        net = network_ffrec.Network(Version,config_dict,verbose=False)
         _,Wlgnto4,_,_,_,_,W4to4,_,_ = net.system
     else:
         load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)

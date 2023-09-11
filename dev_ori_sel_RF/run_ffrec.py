@@ -12,7 +12,7 @@ import logging
 from scipy import linalg
 
 from dev_ori_sel_RF import integrator_tf,\
-dynamics, data_dir, network_full_plastic
+dynamics, data_dir, network_ffrec
 from dev_ori_sel_RF.tools import misc
 
 
@@ -63,7 +63,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                     })
 
     # =================== Network system ===============================================
-    n = network_full_plastic.Network(Version,config_dict)
+    n = network_ffrec.Network(Version,config_dict)
     Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,init_weights_4to4 = n.system
     arbor_e = arbor4to4[:N4*N4*Nvert,:N4*N4*Nvert]
     arbor_i = arbor4to4[:N4*N4*Nvert,N4*N4*Nvert:]

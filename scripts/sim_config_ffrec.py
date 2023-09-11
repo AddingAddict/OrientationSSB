@@ -14,7 +14,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import dev_ori_sel_RF
-from dev_ori_sel_RF import integrator_tf,dynamics,network_full_plastic,run_full_plastic
+from dev_ori_sel_RF import integrator_tf,dynamics, network_ffrec,run_ffrec
 from dev_ori_sel_RF import data_dir
 from dev_ori_sel_RF.tools import misc,update_params_dict
 
@@ -49,6 +49,6 @@ for i in range(nrep):
             config_dict["W4to4_params"].update({
                 "Wrec_mode": "load_from_external"})
 
-    run_full_plastic.parameter_sweep_ffrec(Version,config_dict,not_saving_temp=True)
+    run_ffrec.parameter_sweep_ffrec(Version,config_dict,not_saving_temp=True)
 
     Version += 1
