@@ -64,21 +64,27 @@ class Network:
         # recurrent connectivity
         W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
                                         random_seed=self.config_dict["random_seed"],Nvert=self.Nvert,verbose=self.verbose)
-        if ("2pop" in self.config_dict["W4to4_params"]["Wrec_mode"] and\
-            "load_from_external" not in self.config_dict["W4to4_params"]["Wrec_mode"]):
-            W4to4_EE,arbor4to4_EE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="EE",system_mode=self.config_dict["system"],**self.kwargs)
-            W4to4_IE,arbor4to4_IE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="IE",system_mode=self.config_dict["system"],**self.kwargs)
-            W4to4_EI,arbor4to4_EI = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="EI",system_mode=self.config_dict["system"],**self.kwargs)
-            W4to4_II,arbor4to4_II = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),W4=W4,
-                                          conn_type="II",system_mode=self.config_dict["system"],**self.kwargs)
-            self.W4to4 = np.block([[W4to4_EE,-W4to4_EI],[W4to4_IE,-W4to4_II]])
-            self.arbor4to4 = np.block([[arbor4to4_EE,arbor4to4_EI],[arbor4to4_IE,arbor4to4_II]])
+        if "2pop" in self.config_dict["W4to4_params"]["Wrec_mode"]:
+            if "load_from_external" in self.config_dict["W4to4_params"]["Wrec_mode"]:
+                self.W4to4,self.arbor4to4 = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"],W4=W4,
+                                            conn_type="EI_all",system_mode=self.config_dict["system"],**self.kwargs)
+            else:
+                W4to4_EE,arbor4to4_EE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="EE",system_mode=self.config_dict["system"],**self.kwargs)
+                W4.rng = np.random.RandomState((self.config_dict["random_seed"]+1)*90)
+                W4to4_IE,arbor4to4_IE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="IE",system_mode=self.config_dict["system"],**self.kwargs)
+                W4.rng = np.random.RandomState((self.config_dict["random_seed"]+2)*90)
+                W4to4_EI,arbor4to4_EI = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="EI",system_mode=self.config_dict["system"],**self.kwargs)
+                W4.rng = np.random.RandomState((self.config_dict["random_seed"]+3)*90)
+                W4to4_II,arbor4to4_II = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="II",system_mode=self.config_dict["system"],**self.kwargs)
+                self.W4to4 = np.block([[W4to4_EE,-W4to4_EI],[W4to4_IE,-W4to4_II]])
+                self.arbor4to4 = np.block([[arbor4to4_EE,arbor4to4_EI],[arbor4to4_IE,arbor4to4_II]])
         else:
             self.W4to4,self.arbor4to4 = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"],W4=W4,
-                                          conn_type="EI_all",system_mode=self.config_dict["system"],**self.kwargs)
+                                          conn_type=None,system_mode=self.config_dict["system"],**self.kwargs)
         if self.config_dict["Wlgn_to4_params"]["connectivity_type"]=="EI":
             num_pops = 2
         else:
@@ -299,8 +305,6 @@ class Network:
         if self.verbose: print("mode in get_RFs",mode)
         if mode in ("initialize","initialize2","initializegauss"):
             W_mode = self.config_dict["Wlgn_to4_params"].get("W_mode","random_delta")
-            if mode=="initializegauss":
-                W_mode = "initialize"
             Won_to_4,_ = Wlgn4.create_matrix(self.config_dict["Wlgn_to4_params"], W_mode,\
                         r_A=self.config_dict["Wlgn_to4_params"]["r_A_on"],profile_A="heaviside")
             Wof_to_4,_ = Wlgn4.create_matrix(self.config_dict["Wlgn_to4_params"], W_mode,\
@@ -473,11 +477,11 @@ class Network:
         arbor_off *= self.config_dict["Wlgn_to4_params"]["ampl_off"]
         arbor2 = np.stack([arbor_on,arbor_off])
 
-        if mode=="initializegauss":
-            new_Wlgn_to_4 = Wlgn_to_4 * arbor2
-            old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,None]
-            new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,None]
-            Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm * self.config_dict["Wlgn_to4_params"].get("algn",1.0)
+        # if mode=="initializegauss":
+        #     new_Wlgn_to_4 = Wlgn_to_4 * arbor2
+        #     old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,None]
+        #     new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,None]
+        #     Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm * self.config_dict["Wlgn_to4_params"].get("algn",1.0)
 
         return Wlgn_to_4,arbor_on,arbor_off,arbor2
 
@@ -490,21 +494,20 @@ class Network:
             mode = mode[:-4]
         W4 = kwargs["W4"]
         if self.verbose: print("mode in get_RFs",mode)
+        aux_dict = self.config_dict["W4to4_params"].copy()
         if mode in ("initialize","initialize2","initializegauss"):
             W_mode = self.config_dict["W4to4_params"].get("Wrec_mode","random_delta")
-            if mode=="initializegauss":
-                W_mode = "initialize"
-            aux_dict = self.config_dict["W4to4_params"].copy()
+            if "2pop" in W_mode:
+                W_mode = W_mode[:-4]
             aux_dict.update({
-                "sigma_P": self.config_dict["W4to4_params"]["sigma_"+conn_type],
-                "s_noise": self.config_dict["W4to4_params"]["noise"],
-                "u_noise": self.config_dict["W4to4_params"]["u_noise_"+conn_type]
+                "sigma": self.config_dict["W4to4_params"]["sigma" if conn_type is None else "sigma_"+conn_type],
+                "ampl": self.config_dict["W4to4_params"]["a" if conn_type is None else "a"+conn_type],
+                "s_noise": self.config_dict["W4to4_params"]["s_noise" if conn_type is None else "s_noise_"+conn_type],
+                "u_noise": self.config_dict["W4to4_params"]["u_noise" if conn_type is None else "u_noise_"+conn_type]
             })
-            print("u_noise_"+conn_type, aux_dict["u_noise"])
-            print("sigma_P_"+conn_type,aux_dict["sigma_P"])
             W4to4,_ = W4.create_matrix(aux_dict, W_mode,\
-                        r_A=aux_dict["rA_"+conn_type],profile_A="heaviside")
-            W4to4 *= aux_dict["ampl_"+conn_type]
+                        r_A=self.config_dict["W4to4_params"]["rA" if conn_type is None else "rA_"+conn_type],
+                        profile_A="heaviside")
         elif mode=="gabor":
             conn = connectivity.Connectivity((self.N4,self.N4),(self.N4,self.N4),\
                                             random_seed=12345, verbose=self.verbose)
@@ -690,16 +693,19 @@ class Network:
 
             arbor = np.block([[arbor_EE,arbor_EI],[arbor_IE,arbor_II]])
         else:
-            arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+conn_type],\
-                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+conn_type],\
+            arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA" if conn_type is None\
+                                                                            else "rA_"+conn_type],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile" if conn_type is None \
+                                                                     else "arbor_profile_"+conn_type],\
                             arbor_params=arbor_params)
-            arbor *= self.config_dict["W4to4_params"]["ampl_"+conn_type]
+            arbor *= self.config_dict["W4to4_params"]["ampl" if conn_type is None\
+                                                      else "ampl_"+conn_type]
 
-        if mode=="initializegauss":
-            new_W4to4 = W4to4 * arbor
-            old_norm = np.sum(W4to4,axis=-1)[:,None]
-            new_norm = np.sum(new_W4to4,axis=-1)[:,None]
-            W4to4 = new_W4to4 * old_norm / new_norm * self.config_dict["W4to4_params"].get("a"+conn_type,1.0)
+        # if mode=="initializegauss":
+        #     new_W4to4 = W4to4 * arbor
+        #     old_norm = np.sum(W4to4,axis=-1)[:,None]
+        #     new_norm = np.sum(new_W4to4,axis=-1)[:,None]
+        #     W4to4 = new_W4to4 * old_norm / new_norm * self.config_dict["W4to4_params"].get("a"+conn_type,1.0)
 
         return W4to4,arbor
 

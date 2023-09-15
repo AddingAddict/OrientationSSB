@@ -67,7 +67,7 @@ Wret_to_lgn_params:
     mean_eccentricity:   0.6
     SD_eccentricity:   0.05
     SD_size:   0.05
-    heterogeneity_type:   None ##"independent"#"smooth"
+    heterogeneity_type:   null ##"independent"#"smooth"
 
 Wlgn_to4_params:
     sigma:   0.2
@@ -75,7 +75,7 @@ Wlgn_to4_params:
     noise:   0.0
     s_noise:   0.01
     Wlim:   2.
-    load_from_prev_run:   None
+    load_from_prev_run:   null
     connectivity_type:   "EI"
 
     ## arbor params
@@ -91,7 +91,7 @@ Wlgn_to4_params:
     mean_eccentricity:   0.
     SD_eccentricity:   0.
     SD_size:   0.
-    heterogeneity_type:   None
+    heterogeneity_type:   null
     smoothness_width:   0.05
 
     # plasticity params
@@ -177,7 +177,7 @@ W4to4_params:
     mean_eccentricity:   0.
     SD_eccentricity:   0.
     SD_size:   0.
-    heterogeneity_type:   None
+    heterogeneity_type:   null
     smoothness_width:   0.05
 
     # plasticity params
@@ -258,7 +258,7 @@ W4to23_params:
     mean_eccentricity:   0.
     SD_eccentricity:   0.
     SD_size:   0.
-    heterogeneity_type:   None
+    heterogeneity_type:   null
     smoothness_width:   0.05
 
     arbor_profile:   "gaussian"
@@ -294,7 +294,7 @@ W23to4_params:
     mean_eccentricity:   0.
     SD_eccentricity:   0.
     SD_size:   0.
-    heterogeneity_type:   None
+    heterogeneity_type:   null
     smoothness_width:   0.05
 
     # plasticity params

@@ -125,7 +125,7 @@ class Connectivity:
 
         ## Heterogeneously varying anisotropic Connectivity (incoming conn are elliptical)
         if "heterogeneity_type" in conn_params.keys():
-            if conn_params["heterogeneity_type"] is not None:
+            if conn_params["heterogeneity_type"] is not None or conn_params["heterogeneity_type"] != 'None':
                 ## draw spatially uncorrelated random fields
                 ecc_field = self.rng.randn(*xto.shape)
                 size_field_x = self.rng.randn(*xto.shape)
@@ -390,6 +390,11 @@ class Connectivity:
             ampl1 = conn_params["ampl1"]
             noise_str = conn_params["noise"]
             ampl2 = conn_params["ampl2"]
+
+            if conn_params.get("stevensetal",False):
+                ampl1 = 1
+                ampl2 = 1
+                
             if noise_str>0:
                 noise_field1 = self.rng.uniform(1-noise_str,1,xdelta.size).reshape(xdelta.shape)
                 noise_field2 = self.rng.uniform(1-noise_str,1,xdelta.size).reshape(xdelta.shape)
@@ -405,16 +410,8 @@ class Connectivity:
                 disc_gaussian2[np.logical_not(arbor)] = 0.
             disc_gaussian2 /= np.sum(disc_gaussian2,axis=(0,1))[None,None,:,:]
             
-            if conn_params.get("stevensetal",False):
-                for i in range(disc_gaussian1.shape[2]):
-                    for j in range(disc_gaussian1.shape[3]):
-                        disc_gaussian1[:,:,i,j] *= 1/(np.sum(disc_gaussian1[:,:,i,j],axis=(0,1)))
-                        disc_gaussian2[:,:,i,j] *= 1/(np.sum(disc_gaussian2[:,:,i,j],axis=(0,1)))     
-                conn_matrix = noise_field1 * disc_gaussian1 -\
-                                noise_field2 * disc_gaussian2
-            else: 
-                conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
-                          ampl2 * noise_field2 * disc_gaussian2
+            conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
+                        ampl2 * noise_field2 * disc_gaussian2
             
         elif profile=="zmodel":
             assert self.from_size==self.to_size, "choose same fromsize and tosize"
@@ -449,36 +446,24 @@ class Connectivity:
             # 	conn_matrix[np.logical_not(arbor)] = 0.
 
         elif profile in ("random_delta","initialize","initialize2","initializegauss"):
-            s_noise = conn_params.get("s_noise",0.0)
             if profile=="initialize2":
-                disc_gaussian = gaussian(xdelta,ydelta,0.2)
-                noise_field = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
-                conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
+                conn_matrix = gaussian(xdelta,ydelta,0.2)
+            elif profile == "initializegauss":
+                conn_matrix = gaussian(xdelta,ydelta,conn_params["sigma"])
             else:
-                conn_matrix = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
-                conn_matrix = conn_matrix.reshape(xdelta.shape)
+                conn_matrix = np.ones_like(xdelta)
 
-            #u_noise = conn_params.get("u_noise",0.0)
-            #if profile=="initialize2":
-            #    disc_gaussian = gaussian(xdelta,ydelta,0.2)
-            #    noise_field = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
-            #    conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
-            #else:
-            #    conn_matrix = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
-            #    conn_matrix = conn_matrix.reshape(xdelta.shape)
-            
-            if "u_noise" in conn_params.keys():
-                u_noise = conn_params["u_noise"]
-                sigma = conn_params["sigma_P"]
-                disc_gaussian = gaussian(xdelta,ydelta,sigma)
-                noise_field = self.rng.uniform(1-u_noise,1,xdelta.size)
-                conn_matrix = disc_gaussian * noise_field.reshape(disc_gaussian.shape)
-                norm_factor = np.sum(conn_matrix,axis=(0,1))[None,None,:,:]
-                conn_matrix /= norm_factor
+            s_noise = conn_params.get("s_noise",0.0)
+            noise_field = self.rng.uniform(1-s_noise,1+s_noise,xdelta.size)
+            conn_matrix = conn_matrix * noise_field.reshape(conn_matrix.shape)
+
+            u_noise = conn_params.get("u_noise",0.0)
+            noise_field = (1-u_noise) + self.rng.uniform(0,u_noise,xdelta.size)
+            conn_matrix = conn_matrix * noise_field.reshape(conn_matrix.shape)
 
             if arbor is not None:
                 conn_matrix[np.logical_not(arbor)] = 0.
-            if profile in ("initialize2","initialize"):
+            if profile in ("initialize2","initialize","initializegauss"):
                 norm_factor = np.sum(conn_matrix,axis=(2,3))[:,:,None,None]
                 conn_matrix /= norm_factor
             
@@ -812,7 +797,7 @@ class Connectivity_2pop():
         Wrec[to_Ne_total:,from_Ne_total:] = -conn_II
 
         # normalise conn matrix if the maximal real eigenvalue is given
-        if max_ew is None:
+        if not isinstance(max_ew,float):
             pass
         if Wrec.shape[0]==Wrec.shape[1]:
             ew,_ = linalg.eig(Wrec,right=True)
