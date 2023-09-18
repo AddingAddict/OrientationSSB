@@ -91,7 +91,7 @@ def runjobs():
     H = 0.7
     eta = 1e-2
     grecs = 1.02*np.linspace(0.95,1.05,5)
-    betxs = np.linspace(0.5,1.5,5)
+    betxs = np.linspace(0.8,1.2,5)
     seeds = range(1)
 
     for grec in grecs:
