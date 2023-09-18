@@ -74,7 +74,7 @@ print('Creating heterogeneous recurrent connectivity took',time.process_time() -
 
 # Figure out gammas for SSN to match RELU results
 a = Wrec.sum(-1).mean(-1)
-n = np.array([2,3])
+n = np.array([2,2])
 
 I = np.array([1,betx])
 R = np.array([2,10])

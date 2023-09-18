@@ -18,13 +18,14 @@ import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=1000)
+parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=500)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--betx', '-b', help='Ratio of external input to inhibition vs excitation',type=float, default=1.)
+parser.add_argument('--maxos', '-m', help='maximum input selectivity',type=float, default=1.02)
 args = vars(parser.parse_args())
 n_inp = int(args['n_inp'])
 n_int= int(args['n_int'])
@@ -33,6 +34,7 @@ ksel = args['ksel']
 lker = args['lker']
 grec = args['grec']
 betx = args['betx']
+maxos = args['maxos']
 
 lker2 = lker**2
 
@@ -41,7 +43,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_sel_ssn_ksel={:.3f}_lker={:.3f}_grec={:.3f}_betx={:.2f}/'.format(ksel,lker,grec,betx)
+res_dir = res_dir + 'L23_sel_ssn_ksel={:.3f}_lker={:.3f}_grec={:.3f}_betx={:.2f}_maxos={:.1f}/'.format(
+    ksel,lker,grec,betx,maxos)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -76,7 +79,7 @@ print('Creating heterogeneous recurrent connectivity took',time.process_time() -
 
 # Figure out gammas for SSN to match RELU results
 a = Wrec.sum(-1).mean(-1)
-n = np.array([2,3])
+n = np.array([2,2])
 
 I = np.array([1,betx])
 R = np.array([2,10])
@@ -107,6 +110,7 @@ def clip_OS(OSs):
     out = OSs.copy()
     out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/\
         (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))
+    out[out > maxos] = maxos
     return out
 
 # Precalculate and interpolate clipping effect
@@ -218,7 +222,7 @@ for inp_idx in range(n_inp):
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
-# res_dict['rates'] = rates
+res_dict['rates'] = rates
 
 # Calculate z_fields from inputs and rates
 n_bins = 1
