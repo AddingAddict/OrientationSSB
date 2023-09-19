@@ -116,7 +116,7 @@ def constrain_update_postprex(dW,W_old,mask,A,c_orth,s_orth,dt): ##TODO, not sur
     return dW_constraint*dt+W_old
 
 def constrain_update_divisive(dW,W_old,A,dt):
-    W_new = W_old + dW * A
+    W_new = W_old + dt*dW * A
     # print("W_new,W_old",np.nanmax(W_new),np.nanmax(W_old),np.nanmax(dW*A))
     if W_new.ndim==2:
         constraint = tf.reduce_sum(W_new,axis=-1,keepdims=True)
@@ -1517,7 +1517,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[:Nl4,:Nl4]
         W4to4_ee = W4to4[:Nl4,:Nl4]
-        W4to4_ee,_ = p_dict["p_rec4_ee"].mult_normalization(W4to4_ee,A,_,\
+        W4to4_ee,_ = p_dict["p_rec4_ee"].mult_normalization(W4to4_ee,A,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         W4to4 = tf.concat([tf.concat([W4to4_ee,W4to4[Nl4:,:Nl4]],0),W4to4[:,Nl4:]],1)
@@ -1530,7 +1530,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[Nl4:,:Nl4]
         W4to4_ie = W4to4[Nl4:,:Nl4]
-        W4to4_ie,_ = p_dict["p_rec4_ie"].mult_normalization(W4to4_ie,A,_,\
+        W4to4_ie,_ = p_dict["p_rec4_ie"].mult_normalization(W4to4_ie,A,H[0,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4],W4to4_ie],0),W4to4[:,Nl4:]],1)
@@ -1543,7 +1543,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[:Nl4,Nl4:]
         W4to4_ei = W4to4[:Nl4,Nl4:]
-        W4to4_ei,_ = p_dict["p_rec4_ei"].mult_normalization(W4to4_ei,A,_,\
+        W4to4_ei,_ = p_dict["p_rec4_ei"].mult_normalization(W4to4_ei,A,H[1,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         W4to4 = tf.concat([W4to4[:,:Nl4],tf.concat([W4to4_ei,W4to4[Nl4:,Nl4:]],0)],1)
@@ -1556,7 +1556,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         else:
             A = arbor4to4[Nl4:,Nl4:]
         W4to4_ii = W4to4[Nl4:,Nl4:]
-        W4to4_ii,_ = p_dict["p_rec4_ii"].mult_normalization(W4to4_ii,A,_,\
+        W4to4_ii,_ = p_dict["p_rec4_ii"].mult_normalization(W4to4_ii,A,H[1,:],\
                                                                 running_l4_avg[0,:],\
                                                                 l4_target[0])
         W4to4 = tf.concat([W4to4[:,:Nl4],tf.concat([W4to4[:Nl4,Nl4:],W4to4_ii],0)],1)

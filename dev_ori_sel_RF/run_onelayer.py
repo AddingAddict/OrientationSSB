@@ -67,6 +67,31 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     Wrec_mode = config_dict["W4to4_params"]["Wrec_mode"]
     max_ew = config_dict["W4to4_params"]["max_ew"]
 
+    adaptive = config_dict["Inp_params"]["simulate_activity"] in (
+            "dynamics_adaptive","stevens_etal","antolik_etal")
+    N4pop = config_dict["num_lgn_paths"] // 2
+    if adaptive:
+        if config_dict["Wlgn_to4_params"]["W_mode"]=="load_from_external":
+            if config_dict.get("config_name",False):
+                if not os.path.exists(data_dir + "layer4/{s}".format(s=config_dict["config_name"])):
+                    os.makedirs(data_dir + "layer4/{s}".format(s=config_dict["config_name"]))
+                if not os.path.exists(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version)):
+                    os.makedirs(data_dir + "layer4/{s}/v{v}".format(s=config_dict["config_name"],v=Version))
+                filename = "layer4/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=Version)
+            else:
+                if not os.path.exists(data_dir + "layer4/v{v}".format(v=Version)):
+                    os.makedirs(data_dir + "layer4/v{v}".format(v=Version))
+                filename = "layer4/v{v}/yt_v{v}.npz".format(v=Version)
+            data_dict = np.load(open(filename,"rb"))
+            l4_avg = data_dict["l4_avg"]
+            theta_4 = data_dict["theta_4"]
+        else:
+            l4_avg = config_dict["W4to4_params"].get("l4_avg",0) * np.ones(N4pop*N4**2*Nvert)
+            theta_4 = config_dict["W4to4_params"].get("theta_4",0) * np.ones(N4pop*N4**2*Nvert)
+    else:
+        l4_avg = np.zeros(N4pop*N4**2*Nvert)
+        theta_4 = np.zeros(N4pop*N4**2*Nvert)
+
     print("W4to4",W4to4.shape)
 
     # ================== Normalisation projector for ff connectivity =======================
@@ -123,6 +148,9 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                     "W23to4" : tf.convert_to_tensor(np.array([]), dtype=tf.float32),
                     "init_weights_4to23" : None,
 
+                    "l4_avg" : tf.convert_to_tensor(l4_avg,dtype=tf.float32),
+                    "theta_4" : tf.convert_to_tensor(theta_4,dtype=tf.float32),
+
                     "arbor_on" : tf.convert_to_tensor(arbor_on,dtype=tf.float32),
                     "arbor_off" : tf.convert_to_tensor(arbor_off,dtype=tf.float32),
                     "arbor2" : tf.convert_to_tensor(arbor2,dtype=tf.float32),
@@ -168,11 +196,17 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
             print("CHECK SHAOE",yt.shape,l4t.shape)
             y = yt[-1,:]
             l4 = l4t[-1,:]
-            try:
-                del params_dict["config_dict"]["W4to4_params"]['l4_avg']
-                del params_dict["config_dict"]["W4to4_params"]['theta_4']
-            except:
-                pass
+            if adaptive:
+                l4_avgt = time_dep_dict["l4_avgt"]
+                l4_avg = l4_avgt[-1]
+                theta_4t = time_dep_dict["theta_4t"]
+                theta_4 = theta_4t[-1]
+            else:
+                try:
+                    del params_dict["config_dict"]["W4to4_params"]['l4_avg']
+                    del params_dict["config_dict"]["W4to4_params"]['theta_4']
+                except:
+                    pass
 
         else:
             t = t[:-config_dict["Inp_params"]["pattern_duration"]]
@@ -192,6 +226,9 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
         l4t = np.array(time_dep_dict["l4t"])[:,:2*N4**2*Nvert]
         y = yt[-1,:]
         l4 = l4t[-1,:]
+        if adaptive:
+            l4_avg = time_dep_dict["l4_avgt"][-1]
+            theta_4 = time_dep_dict["theta_4t"][-1]
 
     #################################################################################
     ############################# SAVE PARAMS AND DATA ##############################
@@ -215,13 +252,26 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                 # "cct"		:	cct,\
                 "l4t"		:	l4t
             }
+            if adaptive:
+                data_dict_time.update({
+                    "l4_avgt"       :   l4_avgt,
+                    "theta_4t"       :   theta_4t
+                })
         data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "l4" : l4}
+        if adaptive:
+            data_dict.update({"l4_avg" : l4_avg, "theta_4" : theta_4})
     else:
         data_dict_time = {
                 "Wt"		:	yt[:,:config_dict["num_lgn_paths"]*s],\
                 "l4t"		:	l4t
         }
         data_dict = {"W" : y[:config_dict["num_lgn_paths"]*s], "l4" : l4}
+        if adaptive:
+            data_dict_time.update({
+                "l4_avgt"       :   l4_avgt,
+                "theta_4t"       :   theta_4t
+            })
+            data_dict.update({"l4_avg" : l4_avg, "theta_4" : theta_4})
     ## save time development of ff connections and activity
     if not kwargs["not_saving_temp"]:
         misc.save_data(Version, filename, data_dict_time)

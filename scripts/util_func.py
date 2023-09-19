@@ -43,6 +43,21 @@ def get_network_system(Version,config_name):
         net = network.Network(Version,config_dict,load_location=load_location,verbose=False)
     return net.system
 
+def get_adaptive_system(Version,config_name):
+    if Version == -1:
+        config_dict = misc.load_external_params("params_"+config_name,False)
+        N4 = config_dict["N4"]
+        Nvert = config_dict["Nvert"]
+        N4pop = config_dict["num_lgn_paths"] // 2
+        l4_avg = config_dict["W4to4_params"].get(l4_avg,0) * np.ones(N4pop*N4**2*Nvert)
+        theta_4 = config_dict["W4to4_params"].get(theta_4,0) * np.ones(N4pop*N4**2*Nvert)
+    else:
+        load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
+        data_dict = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))
+        l4_avg = data_dict["l4_avg"]
+        theta_4 = data_dict["theta_4"]
+    return l4_avg, theta_4
+
 def get_network_system_ffrec(Version,config_name):
     if Version == -1:
         config_dict = misc.load_external_params("params_"+config_name,False)
@@ -68,6 +83,21 @@ def get_network_system_ffrec(Version,config_name):
                 "Wrec_mode": "load_from_external"})
         net = network_ffrec.Network(Version,config_dict,load_location=load_location,verbose=False)
     return net.system
+
+def get_adaptive_system_ffrec(Version,config_name):
+    if Version == -1:
+        config_dict = misc.load_external_params("params_"+config_name,False)
+        N4 = config_dict["N4"]
+        Nvert = config_dict["Nvert"]
+        N4pop = config_dict["num_lgn_paths"] // 2
+        l4_avg = config_dict["W4to4_params"].get(l4_avg,0) * np.ones(N4pop*N4**2*Nvert)
+        theta_4 = config_dict["W4to4_params"].get(theta_4,0) * np.ones(N4pop*N4**2*Nvert)
+    else:
+        load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
+        data_dict = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))
+        l4_avg = data_dict["l4_avg"]
+        theta_4 = data_dict["theta_4"]
+    return l4_avg, theta_4
 
 def get_network_weights(Version,config_name,N4pop,N4,Nlgn):
     if Version == -1:

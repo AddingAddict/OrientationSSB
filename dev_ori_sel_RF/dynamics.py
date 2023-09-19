@@ -30,7 +30,7 @@ def dynamics_twolayer(scan_func, y, t, dt, params_dict, **kwargs):
     dt = params_dict["config_dict"]["dt"]
     nu_4 = params_dict["config_dict"]["W4to4_params"]["nu_4"]
     nu_23 = params_dict["config_dict"]["W23_params"]["nu_23"]
-    theta_4 = params_dict["config_dict"]["W4to4_params"]["theta_4"]
+    theta_4 = params_dict["theta_4"]
 
     s = num_lgn_paths * N4*N4*Nlgn*Nlgn*Nvert
     l4_size = N4**2*Nvert * 2
@@ -68,7 +68,7 @@ def dynamics_twolayer(scan_func, y, t, dt, params_dict, **kwargs):
         # epsilon_4 = tf.random.normal(l4.shape,mean=0.0,stddev=1.0,dtype=tf.dtypes.float32)
 
         lambd = 0.3
-        l4_avg = params_dict["config_dict"]["W4to4_params"]["l4_avg"]
+        l4_avg = params_dict["l4_avg"]
         for k in range(200):
             total_inp = tf.linalg.matvec(W4to4,l4) + lgn_inp + \
                         tf.linalg.matvec(W23to4,l23)
@@ -225,7 +225,10 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
     tau = params_dict["config_dict"]["tau"]
     gamma_4 = params_dict["config_dict"]["gamma_4"]
     nu_4 = params_dict["config_dict"]["W4to4_params"]["nu_4"]
-    theta_4 = params_dict["config_dict"]["W4to4_params"]["theta_4"]
+    l4_avg = params_dict["l4_avg"]
+    theta_4 = params_dict["theta_4"]
+    l4e_target = params_dict["config_dict"]["W4to4_params"]["l4e_target"]
+    l4i_target = params_dict["config_dict"]["W4to4_params"]["l4i_target"]
 
     s = num_lgn_paths * N4*N4*Nlgn*Nlgn*Nvert
     Wlgn_to_4 = y[:s]
@@ -240,6 +243,28 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
         for kt in t:
             l4 = scan_func(rhs_l4EI, l4, (kt,dt), N=N4*N4*Nvert, inp=lgn, gamma_FF=gamma_lgn,\
                           gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl)
+            
+    elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
+        beta = params_dict["config_dict"]["W4to4_params"]["l4_beta"]
+        lam = params_dict["config_dict"]["W4to4_params"]["l4_lam"]
+        for kt in t:
+            l4 = scan_func(rhs_l4EI, l4, (kt,dt), N=N4*N4*Nvert, inp=lgn, gamma_FF=gamma_lgn,\
+                          gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl, theta=theta_4)
+
+        l4_avg = l4*(1-beta) + l4_avg*beta
+        theta_4e = theta_4[:N4*N4*Nvert] + lam*(l4_avg[:N4*N4*Nvert]-l4e_target)
+        theta_4i = theta_4[N4*N4*Nvert:] + lam*(l4_avg[N4*N4*Nvert:]-l4i_target)
+        theta_4 = tf.concat([theta_4e,theta_4i], axis=0)
+            
+    elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="stevens_etal":
+        for kt in t:
+            l4 = scan_func(rhs_l4EI, l4, (kt,dt), N=N4*N4*Nvert, inp=lgn, gamma_FF=gamma_lgn,\
+                          gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl, theta=theta_4)
+
+        l4_avg = l4*0.009 + l4_avg*0.991
+        theta_4e = theta_4[:N4*N4*Nvert] + 0.01*(l4_avg[:N4*N4*Nvert]-l4e_target)
+        theta_4i = theta_4[N4*N4*Nvert:] + 0.01*(l4_avg[N4*N4*Nvert:]-l4i_target)
+        theta_4 = tf.concat([theta_4e,theta_4i], axis=0)
 
     elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="antolik_etal":
         lgn_inp = tf.linalg.matvec(Wlgn_to_4[0,:,:],lgn[0,:]) +\
@@ -250,7 +275,7 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
         total_inp = tf.linalg.matvec(W4to4,l4)*gamma_4 + lgn_inp*gamma_lgn
         epsilon = tf.random.normal(l4.shape,mean=0.0,stddev=1.0,dtype=tf.dtypes.float32)
 
-        l4_avg = total_inp*0.002 + params_dict["config_dict"]["W4to4_params"]["l4_avg"]*0.998
+        l4_avg = total_inp*0.002 + params_dict["l4_avg"]*0.998
         theta_4 = theta_4 + 0.02*(l4_avg-0.003)
 
         l4 = l4 * (1-lambd) + lambd*nl(nu_4*total_inp,theta_4) + 0.02 * epsilon
@@ -345,11 +370,11 @@ def rhs_l4(l_act,t,inp,gamma_FF,gamma_rec,Wff_to_l,W_rec,tau,nl):
 
     return 1./tau * (nl(arg) - l_act)
 
-def arg_l4_1pop(l_act,inp_on,inp_off,gamma_FF,gamma_rec,Won_to_l,Woff_to_l,W_rec,tau): #argument of non-linear function f
+def arg_l4_1pop(l_act,inp_on,inp_off,gamma_FF,gamma_rec,Won_to_l,Woff_to_l,W_rec,tau,theta=0): #argument of non-linear function f
     arg_ff = gamma_FF * tf.linalg.matvec(Won_to_l,inp_on) +\
              gamma_FF * tf.linalg.matvec(Woff_to_l,inp_off)
     arg_rec = gamma_rec * tf.linalg.matvec(W_rec, l_act)
-    return arg_ff + arg_rec
+    return arg_ff + arg_rec - theta
 
 def rhs_l4EI(l_act,t,**kwargs):
     '''
@@ -365,10 +390,16 @@ def rhs_l4EI(l_act,t,**kwargs):
     W_rec = kwargs["W_rec"]
     tau = kwargs["tau"]
     nl = kwargs["nl"]
+    theta_4 = kwargs.get("theta_4",None)
 
-    argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
-                        Wff_to_l[1,:,:],W_rec[:N,:],tau)
-    argI = gamma_rec * tf.linalg.matvec(W_rec[N:,:], l_act)
+    if theta_4 is None:
+        argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau)
+        argI = gamma_rec * tf.linalg.matvec(W_rec[N:,:], l_act)
+    else:
+        argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta_4[:N])
+        argI = gamma_rec * tf.linalg.matvec(W_rec[N:,:], l_act)
     # argE = gamma_FF * tf.linalg.matvec(Wff_to_l[0,:,:],inp[0,:]) +\
     # 	   gamma_FF * tf.linalg.matvec(Wff_to_l[1,:,:],inp[1,:]) +\
     # 	   gamma_rec * tf.linalg.matvec(W_rec[:N,:], l_act)
@@ -389,11 +420,18 @@ def rhs_l4EI_full_LGN_input(l_act,t,**kwargs):
     W_rec = kwargs["W_rec"]
     tau = kwargs["tau"]
     nl = kwargs["nl"]
+    theta_4 = kwargs.get("theta_4",None)
 
-    argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
-                        Wff_to_l[1,:,:],W_rec[:N,:],tau)
-    argI = arg_l4_1pop(l_act,inp[2,:],inp[3,:],gamma_FF,gamma_rec,Wff_to_l[2,:,:],\
-                        Wff_to_l[3,:,:],W_rec[N:,:],tau)
+    if theta_4 is None:
+        argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau)
+        argI = arg_l4_1pop(l_act,inp[2,:],inp[3,:],gamma_FF,gamma_rec,Wff_to_l[2,:,:],\
+                            Wff_to_l[3,:,:],W_rec[N:,:],tau)
+    else:
+        argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta_4[:N])
+        argI = arg_l4_1pop(l_act,inp[2,:],inp[3,:],gamma_FF,gamma_rec,Wff_to_l[2,:,:],\
+                            Wff_to_l[3,:,:],W_rec[N:,:],tau,theta=theta_4[N:])
     return 1./tau * (nl( tf.concat([argE,argI], axis=0) ) - l_act)
 
 def rhs_twolayer_l4EI(act,t,**kwargs):

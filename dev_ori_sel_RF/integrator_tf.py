@@ -53,7 +53,13 @@ class Tf_integrator_new:
         nl = self._init_nonlinearity(self.nonlinearity_rule_l23)
         self.params_dict.update({"nonlinearity_l23" : nl})
 
-        self.l4_target = None #for homeostatic
+        self.l4e_target = params_dict["config_dict"]["W4to4_params"].get("l4e_target",None)
+        self.l4i_target = params_dict["config_dict"]["W4to4_params"].get("l4i_target",None)
+        self.l4_target = [self.l4e_target,self.l4i_target]
+        self.adaptive = params_dict["config_dict"]["Inp_params"]["simulate_activity"] in (
+            "dynamics_adaptive","stevens_etal","antolik_etal")
+        self.l4_avg = params_dict["l4_avg"]
+        self.theta_4 = params_dict["theta_4"]
         self._init_cortical_layer_dynamics()
 
         tf.random.set_seed(self.params_dict["config_dict"]["random_seed"]*114)
@@ -241,7 +247,8 @@ class Tf_integrator_new:
 
 
     def _init_plasticity_dynamics(self): #p_dict here
-        if self.params_dict["config_dict"].get("q_dict",False):
+        if self.params_dict["config_dict"]["Wlgn_to4_params"]["mult_norm"] in (
+                "ffrec_post","ffrec_pre","ffrec_postpre_approx","ffrec_postpre_approx_sep"):
             # ======= Q_dict =================
             q_dict = defaultdict(lambda:None)
             dt = self.params_dict["config_dict"]["dt"]
@@ -257,13 +264,15 @@ class Tf_integrator_new:
             weight_strength = 1.
 
             init_weights = None
-            if mult_norm in ("ffrec_post"):
+            if mult_norm=="ffrec_post":
                 #ON_to_l4 and Off_to_l4 first and then l4e_to_l4 and l4i_to_l4)
                 init_weights = [ self.params_dict["init_weights"], \
                                           self.params_dict["init_weights_4to4"] ]
                 freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
 
                 beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 q_dict["p_on_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[0][0,:],freeze_weights,Wthresh)
@@ -272,6 +281,9 @@ class Tf_integrator_new:
                             Wlim,init_weights[0][1,:],freeze_weights,Wthresh)
 
                 beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                            tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 Wthresh = self.params_dict["config_dict"]["W4to4_params"].get("Wthresh",None)
                 q_dict["p_e_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
@@ -280,12 +292,14 @@ class Tf_integrator_new:
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[1][1,:],freeze_weights,Wthresh)
 
-            elif mult_norm in ("ffrec_pre"):
+            elif mult_norm=="ffrec_pre":
                 init_weights = [ self.params_dict["init_weights"], \
                                           self.params_dict["init_weights_4to4"] ] #[  arr[lgne_e,lgn_i], arr[i_e,i_i]   ]
                 freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
 
                 ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    ff_beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 rec_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
                 beta_P = [ff_beta_P,rec_beta_P]
 
@@ -302,7 +316,7 @@ class Tf_integrator_new:
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[1][1,:],freeze_weights)
 
-            elif mult_norm in ("ffrec_postpre_approx"):
+            elif mult_norm=="ffrec_postpre_approx":
                 q_post_dict = defaultdict(lambda:None)
                 q_pre_dict = defaultdict(lambda:None)
 
@@ -315,6 +329,8 @@ class Tf_integrator_new:
                 freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
 
                 beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 q_post_dict["p_on_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[0][0,:],freeze_weights)
@@ -339,6 +355,8 @@ class Tf_integrator_new:
                 mult_norm = "ffrec_pre"
 
                 ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    ff_beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 rec_beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"]
                 beta_P = [ff_beta_P,rec_beta_P]
 
@@ -357,7 +375,7 @@ class Tf_integrator_new:
 
                 q_dict['p_ffrec'] = (q_post_dict,q_pre_dict)
 
-            elif mult_norm in ("ffrec_postpre_approx_sep"):
+            elif mult_norm=="ffrec_postpre_approx_sep":
                 q_post_dict = defaultdict(lambda:None)
                 q_pre_dict = defaultdict(lambda:None)
 
@@ -370,6 +388,8 @@ class Tf_integrator_new:
                 freeze_weights = self.params_dict["config_dict"]["Wlgn_to4_params"].get("freeze_weights",True)
 
                 beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 q_post_dict["p_on_l4"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength,\
                             Wlim,init_weights[0][0,:],freeze_weights,Wthresh)
@@ -395,6 +415,8 @@ class Tf_integrator_new:
                 mult_norm = "ffrec_pre"
 
                 ff_beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+                if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                    ff_beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:,0,:])
                 rec_beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"]
                 ff_Wthresh = self.params_dict["config_dict"]["Wlgn_to4_params"].get("Wthresh",None)
                 rec_Wthresh = self.params_dict["config_dict"]["W4to4_params"].get("Wthresh",None)
@@ -434,13 +456,15 @@ class Tf_integrator_new:
             c_orth = self.params_dict["c_orth"]
             s_orth = self.params_dict["s_orth"]
             beta_P = self.params_dict["config_dict"]["Wlgn_to4_params"]["beta_P"]
+            if self.params_dict["config_dict"]["Wlgn_to4_params"].get("scale_beta",False):
+                beta_P /= tf.reduce_sum(self.params_dict["arbor2"][:2,0,:])
             Wlim = self.params_dict["config_dict"]["Wlgn_to4_params"]["Wlim"]
             Wthresh = self.params_dict["config_dict"]["Wlgn_to4_params"].get("Wthresh",None)
             plasticity_rule = self.params_dict["config_dict"]["Wlgn_to4_params"]["plasticity_rule"]
             constraint_mode = self.params_dict["config_dict"]["Wlgn_to4_params"]["constraint_mode"]
             mult_norm = self.params_dict["config_dict"]["Wlgn_to4_params"]["mult_norm"]
             clip_mode = self.params_dict["config_dict"]["Wlgn_to4_params"]["clip_weights"]
-            weight_strength = 1.
+            weight_strength = self.params_dict["config_dict"]["Wlgn_to4_params"]["ampl"]
             init_weights = None
 
             if mult_norm in ("x","alpha","xalpha"):
@@ -487,6 +511,7 @@ class Tf_integrator_new:
                                     weight_strength_i,Wlim,init_weights[N:],freeze_weights,Wthresh)
 
             if self.params_dict["config_dict"]["W4to4_params"]["plasticity_rule"]!="None":
+                Nl4 = tf.shape(self.params_dict["arbor4to4_full"])[0] // 2
                 c_orth = self.params_dict["c_orth_4to4"]
                 s_orth = self.params_dict["s_orth_4to4"]
                 beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"]
@@ -495,39 +520,48 @@ class Tf_integrator_new:
                 mult_norm = self.params_dict["config_dict"]["W4to4_params"]["mult_norm"]
                 clip_mode = self.params_dict["config_dict"]["W4to4_params"]["clip_weights"]
                 init_weights = None
-                if self.params_dict.get("init_weights_4to4",False):
+                if "init_weights_4to4" in self.params_dict:
                     if mult_norm in ("postx","prex","postprex"):
                         init_weights = self.params_dict["init_weights_4to4"]
                     init_weights_ee = init_weights[0]
                     init_weights_ie = init_weights[2]
                     init_weights_ei = init_weights[1]
                     init_weights_ii = init_weights[3]
-                    weight_strength_ee = init_weights[0]
-                    weight_strength_ie = init_weights[2]
-                    weight_strength_ei = init_weights[1]
-                    weight_strength_ii = init_weights[3]
-                else:
-                    weight_strength_ei = self.params_dict["config_dict"]["W4to4_params"]["aEI"]
-                    weight_strength_ii = self.params_dict["config_dict"]["W4to4_params"]["aII"]
+                weight_strength_ei = self.params_dict["config_dict"]["W4to4_params"]["aEI"]
+                weight_strength_ii = self.params_dict["config_dict"]["W4to4_params"]["aII"]
                 Wlim = self.params_dict["config_dict"]["W4to4_params"]["Wlim"]
                 Wthresh = self.params_dict["config_dict"]["W4to4_params"].get("Wthresh",None)
                 freeze_weights = self.params_dict["config_dict"]["W4to4_params"].get("freeze_weights",True)
+                if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                    beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                            tf.reduce_sum(self.params_dict["arbor4to4_full"][0,Nl4:])
                 p_dict["p_rec4_ei"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                             plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ei,\
                             Wlim,init_weights_ei,freeze_weights,Wthresh)
-                p_dict["p_rec4_ii"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
-                            plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ii,\
-                            Wlim,init_weights_ii,freeze_weights,Wthresh)
+
+                if self.connectivity_type=="EI":
+                    if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                        beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                                tf.reduce_sum(self.params_dict["arbor4to4_full"][Nl4,Nl4:])
+                    p_dict["p_rec4_ii"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                                plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ii,\
+                                Wlim,init_weights_ii,freeze_weights,Wthresh)
                 if self.params_dict["config_dict"]["W4to4_params"].get("e_plasticity",False):
-                    if not self.params_dict.get("init_weights_4to4",False):
-                        weight_strength_ee = self.params_dict["config_dict"]["W4to4_params"]["aEE"]
-                        weight_strength_ie = self.params_dict["config_dict"]["W4to4_params"]["aIE"]
+                    weight_strength_ee = self.params_dict["config_dict"]["W4to4_params"]["aEE"]
+                    weight_strength_ie = self.params_dict["config_dict"]["W4to4_params"]["aIE"]
+                    if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                        beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                                tf.reduce_sum(self.params_dict["arbor4to4_full"][0,:Nl4])
                     p_dict["p_rec4_ee"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
                                 plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ee,\
                                 Wlim,init_weights_ee,freeze_weights,Wthresh)
-                    p_dict["p_rec4_ie"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
-                                plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ie,\
-                                Wlim,init_weights_ie,freeze_weights,Wthresh)
+                    if self.connectivity_type=="EI":
+                        if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                            beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                                    tf.reduce_sum(self.params_dict["arbor4to4_full"][Nl4,:Nl4])
+                        p_dict["p_rec4_ie"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                                    plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ie,\
+                                    Wlim,init_weights_ie,freeze_weights,Wthresh)
 
             if self.params_dict["config_dict"]["W23_params"]["plasticity_rule"]!="None":
                 c_orth = None
@@ -626,7 +660,11 @@ class Tf_integrator_new:
                 self.p_dict["p_ffrec_sep"] is not None:
             time_dep_dict["W4to4t"].append(self.params_dict["W4to4"].numpy())
         if self.p_dict["p_rec23_ii"] is not None:
-            time_dep_dict["W23to23t"].append(self.params_dict["W4to4"].numpy())
+            time_dep_dict["W23to23t"].append(self.params_dict["W23to23"].numpy())
+        if self.adaptive:
+            time_dep_dict["l4_avgt"].append(self.params_dict["l4_avg"].numpy())
+            time_dep_dict["theta_4t"].append(self.params_dict["theta_4"].numpy())
+
         tf.random.set_seed(self.params_dict["config_dict"]["random_seed"]*113)
 
         print("Number of plasticity steps: {}".format(self.num_plasticity_steps))
@@ -680,16 +718,16 @@ class Tf_integrator_new:
                     y,l4_avg,theta_4 = l4_dynamics(scan_func,y,t,dt,self.params_dict,\
                                         rhs_l4=self.rhs_l4,rhs_l23=self.rhs_l23,\
                                         I_crt=self.I_crt,I_crt23=self.I_crt23)
-                    self.params_dict["config_dict"]["W4to4_params"]["theta_4"] = theta_4
-                    self.params_dict["config_dict"]["W4to4_params"]["l4_avg"] = l4_avg
+                    self.params_dict["theta_4"] = theta_4
+                    self.params_dict["l4_avg"] = l4_avg
                     l4 = y[lim*num_lgn_paths:num_lgn_paths*lim+crt_size]
                     if self.connectivity_type=="EI":
                         print("L4",istep,np.nanmin(l4[:crt_size//2]),np.nanmax(l4[:crt_size//2]),\
                             np.nanmin(l4[crt_size//2:]),np.nanmax(l4[crt_size//2:]),\
-                             np.nanmin(theta_4),np.nanmin(l4_avg))
+                             np.nanmin(theta_4),np.nanmax(theta_4),np.nanmin(l4_avg),np.nanmax(l4_avg))
                     else:
                         print("L4",istep,np.nanmin(l4),np.nanmax(l4),\
-                            np.nanmin(theta_4),np.nanmin(l4_avg))
+                             np.nanmin(theta_4),np.nanmax(theta_4),np.nanmin(l4_avg),np.nanmax(l4_avg))
 
                     # compute running average of l4 activity
                     self.running_avg(y[lim*num_lgn_paths:num_lgn_paths*lim+l4_size])
@@ -843,6 +881,9 @@ class Tf_integrator_new:
                         time_dep_dict["W4to4t"].append(self.params_dict["W4to4"])
                     if self.p_dict["p_rec23_ii"] is not None:
                         time_dep_dict["W23to23t"].append(self.params_dict["W23to23"])
+                    if self.adaptive:
+                        time_dep_dict["l4_avgt"].append(self.params_dict["l4_avg"].numpy())
+                        time_dep_dict["theta_4t"].append(self.params_dict["theta_4"].numpy())
 
         return yt,time_dep_dict
 

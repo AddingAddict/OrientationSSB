@@ -26,6 +26,7 @@ parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=flo
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--betx', '-b', help='Ratio of external input to inhibition vs excitation',type=float, default=1.)
 parser.add_argument('--maxos', '-m', help='maximum input selectivity',type=float, default=1.02)
+parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_inp = int(args['n_inp'])
 n_int= int(args['n_int'])
@@ -35,6 +36,7 @@ lker = args['lker']
 grec = args['grec']
 betx = args['betx']
 maxos = args['maxos']
+saverates = args['saverates']
 
 lker2 = lker**2
 
@@ -222,7 +224,8 @@ for inp_idx in range(n_inp):
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
-res_dict['rates'] = rates
+if saverates:
+    res_dict['rates'] = rates
 
 # Calculate z_fields from inputs and rates
 n_bins = 1
