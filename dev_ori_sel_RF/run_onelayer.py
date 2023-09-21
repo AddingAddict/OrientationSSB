@@ -74,15 +74,9 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
         if config_dict["Wlgn_to4_params"]["W_mode"]=="load_from_external":
             prev_vers = config_dict["Wlgn_to4_params"]["load_from_prev_run"]
             if config_dict.get("config_name",False):
-                if not os.path.exists(data_dir + "ffrec/{s}".format(s=config_dict["config_name"])):
-                    os.makedirs(data_dir + "ffrec/{s}".format(s=config_dict["config_name"]))
-                if not os.path.exists(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=prev_vers)):
-                    os.makedirs(data_dir + "ffrec/{s}/v{v}".format(s=config_dict["config_name"],v=prev_vers))
-                filename = "ffrec/{s}/v{v}/yt_v{v}.npz".format(s=config_dict["config_name"],v=prev_vers)
+                filename = "ffrec/{s}/v{v}/y_v{v}.npz".format(s=config_dict["config_name"],v=prev_vers)
             else:
-                if not os.path.exists(data_dir + "ffrec/v{v}".format(v=prev_vers)):
-                    os.makedirs(data_dir + "ffrec/v{v}".format(v=prev_vers))
-                filename = "ffrec/v{v}/yt_v{v}.npz".format(v=prev_vers)
+                filename = "ffrec/v{v}/y_v{v}.npz".format(v=prev_vers)
             data_dict = np.load(open(data_dir+filename,"rb"))
             l4_avg = data_dict["l4_avg"]
             theta_4 = data_dict["theta_4"]
