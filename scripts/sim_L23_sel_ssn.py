@@ -215,7 +215,7 @@ def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,k,n,tau):
 def integrate(y0,inp,Wrec,gamma_rec,k,n,dt,Nt):
     y = y0
     for t_idx in range(Nt):
-        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,np.array([1.0,2.0]))
+        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,k,n,np.array([1.0,0.1]))
         dy = out
         y = y + dt*dy
     return np.array([y[0].reshape((N,N)),y[1].reshape((N,N))])
