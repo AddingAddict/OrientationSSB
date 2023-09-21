@@ -97,6 +97,13 @@ print('R =',R)
 
 gam = 1/(k*n*V**(n-1))
 
+res_dict['k'] = k
+res_dict['n'] = n
+res_dict['I'] = I
+res_dict['V'] = V
+res_dict['R'] = R
+res_dict['gam'] = gam
+
 # Define functions to calculate effect of clipping on orientation selectivity
 def clip_r0(OSs):
     out = np.ones_like(OSs)

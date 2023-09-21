@@ -90,6 +90,13 @@ print('R =',R)
 
 gam = 1/(k*n*V**(n-1))
 
+res_dict['k'] = k
+res_dict['n'] = n
+res_dict['I'] = I
+res_dict['V'] = V
+res_dict['R'] = R
+res_dict['gam'] = gam
+
 # Create difference of Gaussians filter
 x,y = np.meshgrid(np.linspace(-N//2,N//2-1,N),np.linspace(-N//2,N//2-1,N))
 sig1 = 1.8
