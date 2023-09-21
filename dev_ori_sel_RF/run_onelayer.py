@@ -83,7 +83,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                 if not os.path.exists(data_dir + "ffrec/v{v}".format(v=prev_vers)):
                     os.makedirs(data_dir + "ffrec/v{v}".format(v=prev_vers))
                 filename = "ffrec/v{v}/yt_v{v}.npz".format(v=prev_vers)
-            data_dict = np.load(open(filename,"rb"))
+            data_dict = np.load(open(data_dir+filename,"rb"))
             l4_avg = data_dict["l4_avg"]
             theta_4 = data_dict["theta_4"]
         else:
