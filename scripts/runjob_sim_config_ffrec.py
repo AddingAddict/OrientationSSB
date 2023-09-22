@@ -93,7 +93,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_config_ffrec.py"
-    c1 = "{:s} -v {:d} -n {:d} -c {:s}".format(inpath,initver,nrep,config_name)
+    c1 = "{:s} -v {:d} -n {:d} -c {:s} -g {:d}".format(inpath,initver,nrep,config_name,gb)
     
     jobname="{:s}".format('ori_dev_sim_config_ffrec_'+config_name)
     
