@@ -82,6 +82,16 @@ class Network:
                                             W4=W4,conn_type="II",system_mode=self.config_dict["system"],**self.kwargs)
                 self.W4to4 = np.block([[W4to4_EE,-W4to4_EI],[W4to4_IE,-W4to4_II]])
                 self.arbor4to4 = np.block([[arbor4to4_EE,arbor4to4_EI],[arbor4to4_IE,arbor4to4_II]])
+        elif "EI1pop" in self.config_dict["W4to4_params"]["Wrec_mode"]:
+            if "load_from_external" in self.config_dict["W4to4_params"]["Wrec_mode"]:
+                self.W4to4,self.arbor4to4 = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"],W4=W4,
+                                            conn_type="EI1pop_all",system_mode=self.config_dict["system"],**self.kwargs)
+            else:
+                W4to4_EE,arbor4to4_EE = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="EE",system_mode=self.config_dict["system"],**self.kwargs)
+                W4.rng = np.random.RandomState((self.config_dict["random_seed"]+1)*90)
+                W4to4_EI,arbor4to4_EI = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"].replace("2pop",""),
+                                            W4=W4,conn_type="EI",system_mode=self.config_dict["system"],**self.kwargs)
         else:
             self.W4to4,self.arbor4to4 = self.get_Wrec4(self.config_dict["W4to4_params"]["Wrec_mode"],W4=W4,
                                           conn_type=None,system_mode=self.config_dict["system"],**self.kwargs)
@@ -692,6 +702,18 @@ class Network:
             arbor_II *= self.config_dict["W4to4_params"]["ampl_"+"II"]
 
             arbor = np.block([[arbor_EE,arbor_EI],[arbor_IE,arbor_II]])
+        elif conn_type=="EI1pop_all":
+            arbor_EE = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"EE"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"EE"],\
+                            arbor_params=arbor_params)
+            arbor_EE *= self.config_dict["W4to4_params"]["ampl_"+"EE"]
+            
+            arbor_EI = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA_"+"EI"],\
+                            profile=self.config_dict["W4to4_params"]["arbor_profile_"+"EI"],\
+                            arbor_params=arbor_params)
+            arbor_EI *= self.config_dict["W4to4_params"]["ampl_"+"EI"]
+
+            arbor = np.block([[arbor_EE,arbor_EI]])
         else:
             arbor = W4.create_arbor(radius=self.config_dict["W4to4_params"]["rA" if conn_type is None\
                                                                             else "rA_"+conn_type],\

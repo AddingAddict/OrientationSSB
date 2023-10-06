@@ -227,8 +227,8 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
     nu_4 = params_dict["config_dict"]["W4to4_params"]["nu_4"]
     l4_avg = params_dict["l4_avg"]
     theta_4 = params_dict["theta_4"]
-    l4e_target = params_dict["config_dict"]["W4to4_params"]["l4e_target"]
-    l4i_target = params_dict["config_dict"]["W4to4_params"]["l4i_target"]
+    l4e_target = params_dict["config_dict"]["W4to4_params"].get("l4e_target",0)
+    l4i_target = params_dict["config_dict"]["W4to4_params"].get("l4i_target",0)
 
     s = num_lgn_paths * N4*N4*Nlgn*Nlgn*Nvert
     Wlgn_to_4 = y[:s]
@@ -245,15 +245,15 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
                           gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl)
             
     elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
-        beta = params_dict["config_dict"]["W4to4_params"]["l4_beta"]
-        lam = params_dict["config_dict"]["W4to4_params"]["l4_lam"]
+        beta_thresh = params_dict["config_dict"]["W4to4_params"]["beta_thresh"]
+        beta_avg = params_dict["config_dict"]["W4to4_params"]["beta_avg"]
         for kt in t:
             l4 = scan_func(rhs_l4EI, l4, (kt,dt), N=N4*N4*Nvert, inp=lgn, gamma_FF=gamma_lgn,\
                           gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl, theta=theta_4)
 
-        l4_avg = l4*(1-beta) + l4_avg*beta
-        theta_4e = theta_4[:N4*N4*Nvert] + lam*(l4_avg[:N4*N4*Nvert]-l4e_target)
-        theta_4i = theta_4[N4*N4*Nvert:] + lam*(l4_avg[N4*N4*Nvert:]-l4i_target)
+        l4_avg = l4*beta_thresh*dt + l4_avg*(1-beta_thresh*dt)
+        theta_4e = theta_4[:N4*N4*Nvert] + beta_avg*dt*(l4_avg[:N4*N4*Nvert]-l4e_target)
+        theta_4i = theta_4[N4*N4*Nvert:] + beta_avg*dt*(l4_avg[N4*N4*Nvert:]-l4i_target)
         theta_4 = tf.concat([theta_4e,theta_4i], axis=0)
             
     elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="stevens_etal":
@@ -390,15 +390,15 @@ def rhs_l4EI(l_act,t,**kwargs):
     W_rec = kwargs["W_rec"]
     tau = kwargs["tau"]
     nl = kwargs["nl"]
-    theta_4 = kwargs.get("theta_4",None)
+    theta = kwargs.get("theta",None)
 
-    if theta_4 is None:
+    if theta is None:
         argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
                             Wff_to_l[1,:,:],W_rec[:N,:],tau)
         argI = gamma_rec * tf.linalg.matvec(W_rec[N:,:], l_act)
     else:
         argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
-                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta_4[:N])
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta[:N])
         argI = gamma_rec * tf.linalg.matvec(W_rec[N:,:], l_act)
     # argE = gamma_FF * tf.linalg.matvec(Wff_to_l[0,:,:],inp[0,:]) +\
     # 	   gamma_FF * tf.linalg.matvec(Wff_to_l[1,:,:],inp[1,:]) +\
@@ -420,18 +420,18 @@ def rhs_l4EI_full_LGN_input(l_act,t,**kwargs):
     W_rec = kwargs["W_rec"]
     tau = kwargs["tau"]
     nl = kwargs["nl"]
-    theta_4 = kwargs.get("theta_4",None)
+    theta = kwargs.get("theta",None)
 
-    if theta_4 is None:
+    if theta is None:
         argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
                             Wff_to_l[1,:,:],W_rec[:N,:],tau)
         argI = arg_l4_1pop(l_act,inp[2,:],inp[3,:],gamma_FF,gamma_rec,Wff_to_l[2,:,:],\
                             Wff_to_l[3,:,:],W_rec[N:,:],tau)
     else:
         argE = arg_l4_1pop(l_act,inp[0,:],inp[1,:],gamma_FF,gamma_rec,Wff_to_l[0,:,:],\
-                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta_4[:N])
+                            Wff_to_l[1,:,:],W_rec[:N,:],tau,theta=theta[:N])
         argI = arg_l4_1pop(l_act,inp[2,:],inp[3,:],gamma_FF,gamma_rec,Wff_to_l[2,:,:],\
-                            Wff_to_l[3,:,:],W_rec[N:,:],tau,theta=theta_4[N:])
+                            Wff_to_l[3,:,:],W_rec[N:,:],tau,theta=theta[N:])
     return 1./tau * (nl( tf.concat([argE,argI], axis=0) ) - l_act)
 
 def rhs_twolayer_l4EI(act,t,**kwargs):

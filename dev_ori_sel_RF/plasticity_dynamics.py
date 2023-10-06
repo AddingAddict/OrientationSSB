@@ -566,7 +566,7 @@ def unconstrained_plasticity_wrapper(p_dict, l4, l23, lgn, Wlgn_to_4, W4to4, W4t
         W4to4_ee = W4to4[:tf.size(l4)//2,:tf.size(l4)//2]
         dW = p_dict["p_rec4_ee"].unconstrained_update(t,l4_e,l4_e,None,W4to4_ee,\
              p_dict["p_rec4_ee"].beta_P,None)
-        print("dW p_rec4_ee",np.nanmax(dW),np.nanmin(dW))
+        # print("dW p_rec4_ee",np.nanmax(dW),np.nanmin(dW))
         dW_dict["dW_rec4_ee"] = tf.reshape(dW, [-1])
 
     if p_dict["p_rec4_ie"] is not None:
@@ -582,7 +582,7 @@ def unconstrained_plasticity_wrapper(p_dict, l4, l23, lgn, Wlgn_to_4, W4to4, W4t
         W4to4_ei = W4to4[:tf.size(l4)//2,tf.size(l4)//2:]
         dW = p_dict["p_rec4_ei"].unconstrained_update(t,l4_i,l4_e,None,W4to4_ei,\
              p_dict["p_rec4_ei"].beta_P,None)
-        print("dW p_rec4_ei",np.nanmax(dW),np.nanmin(dW))
+        # print("dW p_rec4_ei",np.nanmax(dW),np.nanmin(dW))
         dW_dict["dW_rec4_ei"] = -tf.reshape(dW, [-1])
 
     if p_dict["p_rec4_ii"] is not None:

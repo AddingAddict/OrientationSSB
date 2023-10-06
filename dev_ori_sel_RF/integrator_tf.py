@@ -724,7 +724,10 @@ class Tf_integrator_new:
                     if self.connectivity_type=="EI":
                         print("L4",istep,np.nanmin(l4[:crt_size//2]),np.nanmax(l4[:crt_size//2]),\
                             np.nanmin(l4[crt_size//2:]),np.nanmax(l4[crt_size//2:]),\
-                             np.nanmin(theta_4),np.nanmax(theta_4),np.nanmin(l4_avg),np.nanmax(l4_avg))
+                            np.nanmin(theta_4[:crt_size//2]),np.nanmax(theta_4[:crt_size//2]),\
+                            np.nanmin(theta_4[crt_size//2:]),np.nanmax(theta_4[crt_size//2:]),\
+                            np.nanmin(l4_avg[:crt_size//2]),np.nanmax(l4_avg[:crt_size//2]),\
+                            np.nanmin(l4_avg[crt_size//2:]),np.nanmax(l4_avg[crt_size//2:]))
                     else:
                         print("L4",istep,np.nanmin(l4),np.nanmax(l4),\
                              np.nanmin(theta_4),np.nanmax(theta_4),np.nanmin(l4_avg),np.nanmax(l4_avg))
