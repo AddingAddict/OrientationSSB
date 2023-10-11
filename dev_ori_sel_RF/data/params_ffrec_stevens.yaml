@@ -35,7 +35,7 @@ Inp_params:
     width: 1.
 
     simulate_activity: "dynamics_adaptive"
-    pattern_duration: 2000 #in units of dt
+    pattern_duration: 200 #in units of dt
     avg_no_inp: 1
 
     expanse_time: 1
