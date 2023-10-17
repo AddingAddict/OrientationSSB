@@ -17,10 +17,12 @@ from dev_ori_sel_RF.tools import analysis_tools
 parser = argparse.ArgumentParser()
 parser.add_argument('--maxver', '-v', help='version',type=int, default=8)
 parser.add_argument('--nload', '-n', help='version',type=int, default=8)
+parser.add_argument('--skip', '-s', help='how many RFs to skip for each plotted',type=int, default=0)
 parser.add_argument('--config', '-c', help='version',type=str, default="test")
 args = vars(parser.parse_args())
 maxver = int(args['maxver'])
 nload = int(args['nload'])
+skip = int(args["skip"])
 config_name = str(args['config'])
 
 config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
@@ -125,15 +127,16 @@ axs[19,0].set_ylabel('Preferred Orientation (PFS) (I)')
 plt.savefig("./../plots/Ori_Sel_Dev_FF_Plasticity_"+config_name+".pdf")
 
 dA = 2*rA+1
-wff = np.zeros((N4pop,Nlgnpop,N4*(dA+1)+1,N4*(dA+1)+1))
-for i in range(N4):
-    for j in range(N4):
-        this_wff = Wlgnto4.reshape(N4pop,Nlgnpop,N4,N4,Nlgn,Nlgn)[:,:,i,j,:,:]
+Nshow = N4//(1+skip)
+wff = np.zeros((N4pop,Nlgnpop,Nshow*(dA+1)+1,Nshow*(dA+1)+1))
+for i in range(Nshow):
+    for j in range(Nshow):
+        this_wff = Wlgnto4.reshape(N4pop,Nlgnpop,N4,N4,Nlgn,Nlgn)[:,:,i*(1+skip),j*(1+skip),:,:]
         wff[:,:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
-               np.roll(this_wff,(rA-i,rA-j),axis=(-2,-1))[:,:,:dA,:dA]
+               np.roll(this_wff,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:,:,:dA,:dA]
 rf = wff[:,0]-wff[:,1]
 
-fig,axs = plt.subplots(2,2,figsize=(N4,N4),dpi=300)
+fig,axs = plt.subplots(2,2,figsize=(Nshow,Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
 
 pf.doubcontbar(fig,axs[0,0],wff[0,0],-wff[0,1],
@@ -141,8 +144,8 @@ pf.doubcontbar(fig,axs[0,0],wff[0,0],-wff[0,1],
 pf.doubimshbar(fig,axs[0,1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])))
 
 pf.doubcontbar(fig,axs[1,0],wff[1,0],-wff[1,1],
-               cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8)
-pf.doubimshbar(fig,axs[1,1],wff[1,0],-wff[1,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])))
+               cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[1])),np.max(np.abs(wff[1])),13),linewidths=0.8)
+pf.doubimshbar(fig,axs[1,1],wff[1,0],-wff[1,1],cmap='RdBu',vmin=-np.max(np.abs(wff[1])),vmax=np.max(np.abs(wff[1])))
 
 fig.tight_layout()
 plt.savefig("./../plots/RFs/RFs_"+config_name+".pdf")
