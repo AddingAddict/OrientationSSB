@@ -36,8 +36,8 @@ sels_e = np.zeros((len(Vers),N4,N4))
 sels_i = np.zeros((len(Vers),N4,N4))
 ori_ffts_e = np.zeros((len(Vers),N4,N4))
 ori_ffts_i = np.zeros((len(Vers),N4,N4))
-ori_fpss_e = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
-ori_fpss_i = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
+opm_fpss_e = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
+opm_fpss_i = np.zeros((len(Vers),int(np.ceil(N4//2*np.sqrt(2)))))
 seps_e = np.zeros((len(Vers),N4,N4))
 seps_i = np.zeros((len(Vers),N4,N4))
 bals_e = np.zeros((len(Vers),N4,N4))
@@ -57,15 +57,15 @@ for idx,Version in enumerate(Vers):
     opm_e,Rn_e = analysis_tools.get_response(sd_e,DA)
     opm_i,Rn_i = analysis_tools.get_response(sd_i,DA)
     
-    oris_e[idx],sels_e[idx],ori_ffts_e[idx],ori_fpss_e[idx] = uf.get_ori_sel(opm_e)
+    oris_e[idx],sels_e[idx],ori_ffts_e[idx],opm_fpss_e[idx] = uf.get_ori_sel(opm_e)
     seps_e[idx] = np.abs(sd_e).sum((-2,-1))/ss_e.sum((-2,-1))
     bals_e[idx] = 1-np.abs(sd_e.sum((-2,-1)))/ss_e.sum((-2,-1))
 
-    oris_i[idx],sels_i[idx],ori_ffts_i[idx],ori_fpss_i[idx] = uf.get_ori_sel(opm_i)
+    oris_i[idx],sels_i[idx],ori_ffts_i[idx],opm_fpss_i[idx] = uf.get_ori_sel(opm_i)
     seps_i[idx] = np.abs(sd_i).sum((-2,-1))/ss_i.sum((-2,-1))
     bals_i[idx] = 1-np.abs(sd_i.sum((-2,-1)))/ss_i.sum((-2,-1))
 
-fig,axs = plt.subplots(2*10,len(Vers),figsize=(4*len(Vers),4*2*10),dpi=300,sharex='row',sharey='row')
+fig,axs = plt.subplots(2*9,len(Vers),figsize=(4*len(Vers),4*2*9),dpi=300,sharex='row',sharey='row')
 for i,Version in enumerate(Vers):
     pf.imshowbar(fig,axs[0,i],oris_e[i],cmap='twilight',vmin=0,vmax=180)
     pf.imshowbar(fig,axs[1,i],oris_i[i],cmap='twilight',vmin=0,vmax=180)    
@@ -98,8 +98,8 @@ for i,Version in enumerate(Vers):
     
     pf.imshowbar(fig,axs[16,i],ori_ffts_e[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_e))
     pf.imshowbar(fig,axs[17,i],ori_ffts_i[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_i))
-    axs[18,i].plot(np.arange(0,np.ceil(N4//2*np.sqrt(2))),ori_fpss_e[i])
-    axs[19,i].plot(np.arange(0,np.ceil(N4//2*np.sqrt(2))),ori_fpss_i[i])
+    axs[16,i].plot(np.arange(N4//2,N4),(N4//4)*opm_fpss_e[i][:N4//2]/np.nanmax(opm_fpss_e[i][:N4//2-1]))
+    axs[17,i].plot(np.arange(N4//2,N4),(N4//4)*opm_fpss_i[i][:N4//2]/np.nanmax(opm_fpss_i[i][:N4//2-1]))
 
     axs[0,i].set_title('Simulation Step {:d}'.format(Version+1))
     
@@ -121,8 +121,6 @@ axs[14,0].set_ylabel('Subregion Balance Index (Count) (E)')
 axs[15,0].set_ylabel('Subregion Balance Index (Count) (I)')
 axs[16,0].set_ylabel('Preferred Orientation (DFT) (E)')
 axs[17,0].set_ylabel('Preferred Orientation (DFT) (I)')
-axs[18,0].set_ylabel('Preferred Orientation (PFS) (E)')
-axs[19,0].set_ylabel('Preferred Orientation (PFS) (I)')
 
 plt.savefig("./../plots/Ori_Sel_Dev_FF_Plasticity_"+config_name+".pdf")
 
