@@ -52,7 +52,7 @@ for idx,Version in enumerate(Vers):
 
 fig,axs = plt.subplots(9,len(Vers),figsize=(4*len(Vers),4*9),dpi=300,sharex='row',sharey='row')
 for i,Version in enumerate(Vers):
-    pf.imshowbar(fig,axs[0,i],oris[i],cmap='twilight',vmin=0,vmax=180,origin='lower')
+    pf.imshowbar(fig,axs[0,i],oris[i],cmap=pf.hue_cmap,vmin=0,vmax=180,origin='lower')
     pf.imshowbar(fig,axs[1,i],sels[i],cmap='binary',vmin=0,vmax=np.max(sels),origin='lower')
     pf.imshowbar(fig,axs[2,i],seps[i],cmap='binary',vmin=0,vmax=1,origin='lower')
     pf.imshowbar(fig,axs[3,i],bals[i],cmap='binary',vmin=0,vmax=1,origin='lower')
@@ -83,7 +83,7 @@ axs[6,0].set_ylabel('Subregion Separation Index (Count)')
 axs[7,0].set_ylabel('Subregion Balance Index (Count)')
 axs[8,0].set_ylabel('Preferred Orientation (DFT)')
 
-plt.savefig("./../plots/Ori_Sel_Dev_FF_Plasticity_"+config_name+".pdf")
+plt.savefig("./../plots/OS_Dev_"+config_name+".pdf")
 
 dA = 2*rA+1
 Nshow = N4//(1+skip)

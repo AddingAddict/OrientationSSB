@@ -67,14 +67,14 @@ for idx,Version in enumerate(Vers):
 
 fig,axs = plt.subplots(2*9,len(Vers),figsize=(4*len(Vers),4*2*9),dpi=300,sharex='row',sharey='row')
 for i,Version in enumerate(Vers):
-    pf.imshowbar(fig,axs[0,i],oris_e[i],cmap='twilight',vmin=0,vmax=180)
-    pf.imshowbar(fig,axs[1,i],oris_i[i],cmap='twilight',vmin=0,vmax=180)    
-    pf.imshowbar(fig,axs[2,i],sels_e[i],cmap='binary',vmin=0,vmax=np.max(sels_e))
-    pf.imshowbar(fig,axs[3,i],sels_i[i],cmap='binary',vmin=0,vmax=np.max(sels_i))
-    pf.imshowbar(fig,axs[4,i],seps_e[i],cmap='binary',vmin=0,vmax=1)
-    pf.imshowbar(fig,axs[5,i],seps_i[i],cmap='binary',vmin=0,vmax=1)
-    pf.imshowbar(fig,axs[6,i],bals_e[i],cmap='binary',vmin=0,vmax=1)
-    pf.imshowbar(fig,axs[7,i],bals_i[i],cmap='binary',vmin=0,vmax=1)
+    pf.imshowbar(fig,axs[0,i],oris_e[i],cmap=pf.hue_cmap,vmin=0,vmax=180,origin='lower')
+    pf.imshowbar(fig,axs[1,i],oris_i[i],cmap=pf.hue_cmap,vmin=0,vmax=180,origin='lower')    
+    pf.imshowbar(fig,axs[2,i],sels_e[i],cmap='binary',vmin=0,vmax=np.max(sels_e),origin='lower')
+    pf.imshowbar(fig,axs[3,i],sels_i[i],cmap='binary',vmin=0,vmax=np.max(sels_i),origin='lower')
+    pf.imshowbar(fig,axs[4,i],seps_e[i],cmap='binary',vmin=0,vmax=1,origin='lower')
+    pf.imshowbar(fig,axs[5,i],seps_i[i],cmap='binary',vmin=0,vmax=1,origin='lower')
+    pf.imshowbar(fig,axs[6,i],bals_e[i],cmap='binary',vmin=0,vmax=1,origin='lower')
+    pf.imshowbar(fig,axs[7,i],bals_i[i],cmap='binary',vmin=0,vmax=1,origin='lower')
     nbin = 20
     def bin_edges(data,nbin):
         return np.linspace(np.min(data),np.max(data),nbin+1)
@@ -96,8 +96,8 @@ for i,Version in enumerate(Vers):
     axs[15,i].hist(bals_i[i].flatten(),bin_edges([0,1],nbin))
     axs[15,i].axvline(np.mean(bals_i[i].flatten()),color='k',ls='--')
     
-    pf.imshowbar(fig,axs[16,i],ori_ffts_e[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_e))
-    pf.imshowbar(fig,axs[17,i],ori_ffts_i[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_i))
+    pf.imshowbar(fig,axs[16,i],ori_ffts_e[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_e),origin='lower')
+    pf.imshowbar(fig,axs[17,i],ori_ffts_i[i],cmap='binary',vmin=0,vmax=np.max(ori_ffts_i),origin='lower')
     axs[16,i].plot(np.arange(N4//2,N4),(N4//4)*opm_fpss_e[i][:N4//2]/np.nanmax(opm_fpss_e[i][:N4//2-1]))
     axs[17,i].plot(np.arange(N4//2,N4),(N4//4)*opm_fpss_i[i][:N4//2]/np.nanmax(opm_fpss_i[i][:N4//2-1]))
 
@@ -122,7 +122,7 @@ axs[15,0].set_ylabel('Subregion Balance Index (Count) (I)')
 axs[16,0].set_ylabel('Preferred Orientation (DFT) (E)')
 axs[17,0].set_ylabel('Preferred Orientation (DFT) (I)')
 
-plt.savefig("./../plots/Ori_Sel_Dev_FF_Plasticity_"+config_name+".pdf")
+plt.savefig("./../plots/OS_Dev_"+config_name+".pdf")
 
 dA = 2*rA+1
 Nshow = N4//(1+skip)
