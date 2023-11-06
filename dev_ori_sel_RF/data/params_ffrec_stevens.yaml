@@ -5,8 +5,8 @@ N4: 96
 N23: 1
 Nvert: 1
 
-runtime:   50000
-dt:   0.25
+runtime:   100000
+dt:   0.5
 tau:   1.
 num_lgn_paths:   4
 
@@ -35,7 +35,7 @@ Inp_params:
     width: 1.
 
     simulate_activity: "dynamics_adaptive"
-    pattern_duration: 200 #in units of dt
+    pattern_duration: 50 #in units of dt
     avg_no_inp: 1
 
     expanse_time: 1

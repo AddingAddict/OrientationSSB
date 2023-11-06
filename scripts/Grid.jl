@@ -50,6 +50,17 @@ function kernvec(kernfun::Function,l::Float64,n::Int64,pt::Array{Int64,1}=[n÷2,
     return km
 end
 
+function wavemat(k::Array{Float64,1},l::Float64,n::Int64)
+    pts = [0:n-1;]*l/n
+    xs = flatten(pts' .* ones(n))
+    ys = flatten(ones(n)' .* pts)
+    
+    dxs = xs .- xs'
+    dys = ys .- ys'
+    
+    return exp.(1im*(k[1]*dxs+k[2]*dys))
+end
+
 function wavevec(k::Array{Float64,1},l::Float64,n::Int64,pt::Array{Int64,1}=[n÷2,n÷2])
     pts = [0:n-1;]*l/n
     xs = flatten((pts .- pt[1]*l/n)' .* ones(n))

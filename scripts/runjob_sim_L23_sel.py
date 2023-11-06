@@ -24,7 +24,8 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=500)
+    parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
+    parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
     parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=20)
     
@@ -32,7 +33,8 @@ def runjobs():
     args = vars(args2)
     
     cluster = str(args["cluster_"])
-    n_inp = int(args['n_inp'])
+    n_ori = int(args['n_ori'])
+    n_rpt = int(args['n_rpt'])
     n_int = int(args['n_int'])
     gb = int(args['gb'])
 
@@ -102,8 +104,8 @@ def runjobs():
                         #--------------------------------------------------------------------------
                         # Make SBTACH
                         inpath = currwd + "/sim_L23_sel.py"
-                        c1 = "{:s} -s {:d} -ni {:d} -nt {:d} -k {:f} -l {:f} -g {:f} -m {:f}".format(
-                            inpath,seed,n_inp,n_int,ksel,lker,grec,maxos)
+                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -k {:f} -l {:f} -g {:f} -m {:f}".format(
+                            inpath,seed,n_ori,n_rpt,n_int,ksel,lker,grec,maxos)
                         
                         jobname="{:s}_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}_seed={:d}".format(
                             'ori_dev_sim_L23_sel',ksel,lker,grec,maxos,seed)

@@ -11,6 +11,7 @@ import time
 
 import numpy as np
 from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
 
 import util_func as uf
 
@@ -18,7 +19,8 @@ import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_inp', '-ni', help='number of inputs',type=int, default=500)
+parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
+parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
@@ -27,7 +29,8 @@ parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=f
 parser.add_argument('--maxos', '-m', help='maximum input selectivity',type=float, default=1.0)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
-n_inp = int(args['n_inp'])
+n_ori = int(args['n_ori'])
+n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
 ksel = args['ksel']
@@ -35,6 +38,8 @@ lker = args['lker']
 grec = args['grec']
 maxos = args['maxos']
 saverates = args['saverates']
+
+n_inp = n_ori * n_rpt
 
 lker2 = lker**2
 
@@ -154,7 +159,7 @@ print('Creating input orientation map took',time.process_time() - start,'s\n')
 # Create inputs
 start = time.process_time()
 
-oris = np.arange(n_inp)/n_inp * 180
+oris = np.repeat(np.arange(n_ori)/n_ori * 180,n_rpt)
 mean_inps = np.zeros((n_inp,N,N))
 inps = np.zeros((n_inp,2,N,N))
 
@@ -204,22 +209,23 @@ if saverates:
     res_dict['rates'] = rates
 
 # Calculate z_fields from inputs and rates
-n_bins = 1
-ori_binned = oris.reshape(-1,n_bins).mean(1)
-inp_binned = inps.reshape(-1,n_bins,2,N,N).mean((1,2))
-rate_binned = rates.reshape(-1,n_bins,2,N,N).mean(1)
+ori_binned = oris.reshape(-1,n_rpt).mean(1)
+inp_binned = inps.reshape(-1,n_rpt,2,N,N).mean((1,2))
+rate_binned = rates.reshape(-1,n_rpt,2,N,N).mean(1)
 
 rate_r0 = np.mean(rate_binned,0)
-rate_rV = np.var(rate_binned,0)
 rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
 rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
 rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
+rate_rm = np.mean(np.mean(rates.reshape(-1,n_rpt,2,N,N),1),0)
+rate_rV = np.mean(np.var(rates.reshape(-1,n_rpt,2,N,N),1),0)
 
 inp_r0 = np.mean(inp_binned,0)
-inp_rV = np.var(inp_binned,0)
 inp_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
 inp_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
 inp_r1 = np.sqrt(inp_rs**2 + inp_rc**2)
+inp_rm = np.mean(np.mean(inps.reshape(-1,n_rpt,2,N,N),1),0)
+inp_rV = np.mean(np.var(inps.reshape(-1,n_rpt,2,N,N),1),0)
 
 rate_pref_ori = np.arctan2(rate_rs,rate_rc)*180/(2*np.pi)
 rate_pref_ori[rate_pref_ori > 90] -= 180
@@ -236,11 +242,86 @@ inp_ori_sel = inp_r1/inp_r0
 rate_z = rate_ori_sel * np.exp(1j*rate_pref_ori*2*np.pi/180)
 inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
 
+# Calculate hypercolumn size
+z_unit = rate_z[0] / rate_ori_sel[0]
+z_fft = np.abs(np.fft.fftshift(np.fft.fft2(rate_z[0] - np.nanmean(rate_z[0]))))
+z_unit_fft = np.abs(np.fft.fftshift(np.fft.fft2(z_unit - np.nanmean(z_unit))))
+
+z_fps = np.zeros(N//2)
+z_unit_fps = np.zeros(N//2)
+
+grid = np.arange(-N//2,N//2)
+x,y = np.meshgrid(grid,grid)
+bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N//2*np.sqrt(2)))+0.5)
+for idx in range(N//2):
+    z_fps[idx] = np.mean(z_fft[bin_idxs == idx])
+    z_unit_fps[idx] = np.mean(z_unit_fft[bin_idxs == idx])
+    
+freqs = np.arange(N//2)/N
+Lam = 1/freqs[np.argmax(z_fps)]
+
+# Calculate number of pinwheels
+def ccw(A,B,C):
+    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+def intersect(A,B,C,D):
+    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+
+def cross(A,B):
+    return A[0]*B[1] - A[1]*B[0]
+
+def intersectpt(A,B,C,D):
+    qmp = [C[0]-A[0],C[1]-A[1]]
+    r = [B[0]-A[0],B[1]-A[1]]
+    s = [D[0]-C[0],D[1]-C[1]]
+    rxs = cross(r,s)
+    
+    t = cross(qmp,s)/rxs
+#     u = cross(qmp,r)/rxs
+    
+    return [A[0]+t*r[0],A[1]+t*r[1]]
+
+def calc_pinwheels(A):
+    rcont = plt.contour(np.real(A),levels=[0],colors="C0")
+    icont = plt.contour(np.imag(A),levels=[0],colors="C1")
+
+    rsegpts = []
+    for pts in rcont.allsegs[0]:
+        for i in range(len(pts)-1):
+            rsegpts.append([pts[i],pts[i+1]])
+    rsegpts = np.array(rsegpts)
+
+    isegpts = []
+    for pts in icont.allsegs[0]:
+        for i in range(len(pts)-1):
+            isegpts.append([pts[i],pts[i+1]])
+    isegpts = np.array(isegpts)
+    
+    pwcnt = 0
+    pwpts = []
+
+    for rsegpt in rsegpts:
+        for isegpt in isegpts:
+            if intersect(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]):
+                pwcnt += 1
+                pwpts.append(intersectpt(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]))
+    pwpts = np.array(pwpts)
+    
+    return pwcnt,pwpts
+
+npws,pwpts = calc_pinwheels(rate_z[0])
+
 res_dict['rate_r0'] = rate_r0
 res_dict['rate_r1'] = rate_r1
+res_dict['rate_rs'] = rate_rs
+res_dict['rate_rc'] = rate_rc
+res_dict['rate_rm'] = rate_rm
 res_dict['rate_rV'] = rate_rV
 res_dict['inp_r0'] = inp_r0
 res_dict['inp_r1'] = inp_r1
+res_dict['inp_rs'] = inp_rs
+res_dict['inp_rc'] = inp_rc
+res_dict['inp_rm'] = inp_rm
 res_dict['inp_rV'] = inp_rV
 
 res_dict['rate_z'] = rate_z
@@ -256,6 +337,12 @@ opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 res_dict['opm_mismatch'] = opm_mismatch
 res_dict['E_mismatch'] = np.mean(opm_mismatch[0])
 res_dict['I_mismatch'] = np.mean(opm_mismatch[1])
+
+res_dict['z_fps'] = z_fps
+res_dict['z_unit_fps'] = z_unit_fps
+res_dict['Lam'] = Lam
+res_dict['npws'] = npws
+res_dict['pwpts'] = pwpts
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)

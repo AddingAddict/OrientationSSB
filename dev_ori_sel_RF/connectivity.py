@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import linalg
 from scipy.signal import convolve2d
+from scipy.sparse.linalg import eigs
 from copy import copy
 
 from dev_ori_sel_RF.tools import gen_gaussian_random_field as ggrf
@@ -800,7 +801,7 @@ class Connectivity_2pop():
         if not isinstance(max_ew,float):
             pass
         if Wrec.shape[0]==Wrec.shape[1]:
-            ew,_ = linalg.eig(Wrec,right=True)
+            ew,_ = eigs(Wrec,1,which='LR')
             if self.verbose: print("orig max ew",np.nanmax(np.real(ew)),max_ew)
             if isinstance(max_ew,float):
                 Wrec /= np.nanmax(np.real(ew)) / max_ew

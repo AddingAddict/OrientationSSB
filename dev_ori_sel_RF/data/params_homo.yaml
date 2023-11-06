@@ -131,8 +131,8 @@ W4to4_params:
     aEI:   21.6
     aII:   20.8
 
-    rA_E:   1.0
-    rA_I:   1.0
+    rA_E:   0.2
+    rA_I:   0.2
     r_lim:  1.0
 
     Wrec_mode:   "Gaussian2pop"
