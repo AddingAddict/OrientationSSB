@@ -666,6 +666,16 @@ class Tf_integrator_new:
             time_dep_dict["theta_4t"].append(self.params_dict["theta_4"].numpy())
 
         tf.random.set_seed(self.params_dict["config_dict"]["random_seed"]*113)
+        
+        gain_control = self.params_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
+        off_bias = "off_bias_strength" in self.params_dict["config_dict"]["Inp_params"] and\
+                self.params_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
+        print('Gain Control:',gain_control)
+        print('Off Bias:',off_bias)
+        
+        inp = inputs.Inputs_lgn((Nret,Nret),self.params_dict["Version"].numpy(),0,\
+                                self.params_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
+                                self.params_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
 
         print("Number of plasticity steps: {}".format(self.num_plasticity_steps))
         for istep in range(self.num_plasticity_steps):
@@ -684,15 +694,17 @@ class Tf_integrator_new:
                     ####### generate LGN input per L4 simulation #######
                     rng_seed = self.params_dict["config_dict"]["random_seed"]*1000 +\
                                kinput + istep*self.avg_no_inp
-                    inp = inputs.Inputs_lgn((Nret,Nret),self.params_dict["Version"].numpy(),\
-                            rng_seed)
+                    inp.set_seed(rng_seed)
                     lgn = inp.create_lgn_input(\
                           self.params_dict["config_dict"]["Inp_params"],\
                           self.params_dict["config_dict"]["Inp_params"]["input_type"],\
                           self.params_dict["Wret_to_lgn"].numpy(),\
                           expansion_timestep = jexp,
                           )
-                    lgn = inp.apply_ONOFF_bias(lgn,self.params_dict["config_dict"]["Inp_params"])
+                    if off_bias:
+                        lgn = inp.apply_ONOFF_bias(lgn,self.params_dict["config_dict"]["Inp_params"])
+                    if gain_control:
+                        lgn = inp.apply_gain_control(lgn)
                     ## use same inputs for E and I units
                     if num_lgn_paths==4:
                         lgn = np.concatenate([lgn,lgn])

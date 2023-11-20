@@ -11,6 +11,34 @@ def distance(delta):
 def gaussian(x,y,s):
     return np.exp(-(x**2+y**2)/2./s**2)#1./2.*np.pi/s**2*
 
+def stevens_gauss(n_grid,x,y,ori,size=0.088388,aspect_ratio=4.66667,grid_size=1.0):
+    pts = np.arange(n_grid)*grid_size/n_grid - grid_size/2
+    ysigma = size/2.0
+    xsigma = aspect_ratio*ysigma
+    
+    dx,dy = np.meshgrid(pts,pts)
+    
+    tmp = np.cos(ori)*dx - np.sin(ori)*dy
+    dy = np.sin(ori)*dx + np.cos(ori)*dy
+    dx = tmp
+    
+    dx = dx/xsigma
+    dy = dy/ysigma
+    
+    return np.roll(np.exp(-0.5*(dx**2+dy**2)),(x-n_grid//2,y-n_grid//2),(0,1))
+
+def fio_rect(x):
+    return np.fmax(x,0)
+
+def dynamics_system(y,inp_ff,Wrec,gam_o=14.0,gam_s=1.02,k=0.11):
+    return fio_rect(gam_o*inp_ff/(k+np.matmul(Wrec,y)))
+
+def integrate(y0,inp,Nt,Wrec,gam_o=14.0,gam_s=1.02,k=0.11):
+    y = y0
+    for t_idx in range(Nt):
+        out = dynamics_system(y,inp,Wrec,gam_o,gam_s,k)
+        y = out
+    return y
 
 class Inputs:
     '''
@@ -213,6 +241,14 @@ class Inputs:
                 ctrs.append(np.array([ctrx,ctry]))
 
             return inputs, np.array(ctrs)
+        
+        elif "stevens_bars" in self.profile:
+            N = self.size[0]
+            bar1 = stevens_gauss(N,self.rng.randint(N),self.rng.randint(N),np.pi*self.rng.random())
+            bar2 = stevens_gauss(N,self.rng.randint(N),self.rng.randint(N),np.pi*self.rng.random())
+            inputs = 0.25*np.fmax(bar1,bar2).flatten()
+
+            return inputs
 
         elif self.profile=="moving_grating":
             Nsur = inp_params["Nsur"]
@@ -271,9 +307,51 @@ class Inputs_lgn(Inputs):
     input to lgn which is inputs to retina convolved with connectivity
     from retina to lgn
     '''
-    def __init__(self, size, Version, random_seed):
+    def __init__(self, size, Version, random_seed, gain_control_params=None, cov_mat_params=None):
         super().__init__(size,Version,random_seed)
         self.rng = np.random.RandomState(self.random_seed*5101+2023)
+        if gain_control_params is not None:
+            self.init_gain_control(gain_control_params)
+        if cov_mat_params is not None:
+            self.init_cov_mat(cov_mat_params)
+            
+    def set_seed(self, random_seed):
+        self.random_seed = random_seed
+        self.rng = np.random.RandomState(self.random_seed*5101+2023)
+            
+    def init_gain_control(self,params):
+        N = self.size[0]
+        self.Wgc,_ = connectivity.Connectivity((N,N),(N,N),\
+                    random_seed=0).create_matrix(\
+                    params,params["profile"])
+                    
+    def init_cov_mat(self,params):
+        N = self.size[0]
+        
+        conn = connectivity.Connectivity((N,N),(N,N),0)
+        
+        n_cov,_ = conn.create_matrix(params["n_cov_params"],params["n_cov_params"]['profile'])
+        n_cov *= N**2
+        n_cov += params["n_cov_base"]
+
+        f_cov,_ = conn.create_matrix(params["f_cov_params"],params["f_cov_params"]['profile'])
+        f_cov *= N**2
+        f_cov += params["f_cov_base"]
+
+        o_cov,_ = conn.create_matrix(params["o_cov_params"],params["o_cov_params"]['profile'])
+        o_cov *= N**2
+        o_cov += params["o_cov_base"]
+        
+        # np.fill_diagonal(n_cov,params["n_var"])
+        # np.fill_diagonal(f_cov,params["f_var"])
+        
+        self.cov = np.block([[n_cov,o_cov],
+                             [o_cov,f_cov]])
+        evals,evecs = np.linalg.eigh(self.cov)
+        self.sqrt_cov = evecs @ np.diag(np.sqrt(np.fmax(0,evals)))
+        
+        self.means = np.array([params["n_mean"],params["f_mean"]])
+        
     def create_matrix(self, inp_params, profile, **kwargs):
         return super().create_matrix(inp_params, profile, **kwargs)
 
@@ -300,6 +378,12 @@ class Inputs_lgn(Inputs):
             lgn = np.dot(Wret_to_lgn,inp_ret)
             lgn = np.swapaxes(lgn,0,1)
 
+        elif "stevens_bars" in profile:
+            inp_ret = self.create_matrix(inp_params, "stevens_bars", **kwargs)
+            inp_ret = np.stack([inp_ret,-inp_ret])
+            lgn = np.matmul(Wret_to_lgn,inp_ret.T)
+            lgn = np.swapaxes(lgn,0,1)
+
         elif "moving_grating" in profile:
             inp_ret = self.create_matrix(inp_params, "moving_grating", **kwargs)
             lgn = np.dot(Wret_to_lgn,inp_ret)
@@ -313,6 +397,13 @@ class Inputs_lgn(Inputs):
         elif "gaussian_noise_online" in profile:
             inp_ret = self.create_matrix(inp_params, "gaussian_noise_online", **kwargs)
             lgn = np.swapaxes(inp_ret,0,1)
+            
+        elif "custom_stats" in profile:
+            N = self.size[0]
+            lgn = self.rng.randn(size=2*N**2)
+            lgn = self.sqrt_cov@lgn
+            lgn = lgn.reshape((2,N**2))
+            lgn += self.means[:,None]
 
         ## convolve input with Retina-to-LGN connections
         ## and swap axes such that lgn.shape = 2 x dimensions
@@ -327,9 +418,9 @@ class Inputs_lgn(Inputs):
         ## normalise lgn input to SD=1 and shift its mean to positive value
         ## 'online' should only ever produce one input frame per call
         if ("rect" in profile):
-            if ("white_noise" in profile):
-                nl = network_tools.nl_rect
-                lgn = nl(lgn)
+            # if ("white_noise" in profile):
+            nl = network_tools.nl_rect
+            lgn = nl(lgn)
 
         if ("online" in profile):
             if ("white_noise" in profile or "gaussian_noise" in profile):
@@ -432,6 +523,12 @@ class Inputs_lgn(Inputs):
 
         return np.stack([lgn[0,:]+exp_off_dominant_on*exp[0],\
                          lgn[1,:]+exp_off_dominant_of*exp[1]])
+        
+    def apply_gain_control(self,lgn,gam_o=1,gam_s=1.02,k=0.11):
+        N = self.size[0]
+        act_on = integrate(np.zeros(N**2),lgn[0],40,self.Wgc,gam_o,gam_s,k)
+        act_off = integrate(np.zeros(N**2),lgn[1],40,self.Wgc,gam_o,gam_s,k)
+        return np.stack([act_on,act_off])
 
 
 if __name__=="__main__":

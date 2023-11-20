@@ -405,11 +405,13 @@ class Connectivity:
             disc_gaussian1 = gaussian(xdelta,ydelta,sigma1) / np.prod(self.from_size) / self.Nvert[0]
             if arbor is not None:
                 disc_gaussian1[np.logical_not(arbor)] = 0.
-            disc_gaussian1 /= np.sum(disc_gaussian1,axis=(0,1))[None,None,:,:]
             disc_gaussian2 = gaussian(xdelta,ydelta,sigma2) / np.prod(self.from_size) / self.Nvert[0]
             if arbor is not None:
                 disc_gaussian2[np.logical_not(arbor)] = 0.
-            disc_gaussian2 /= np.sum(disc_gaussian2,axis=(0,1))[None,None,:,:]
+            
+            if not conn_params.get('nosumdiv',False):
+                disc_gaussian1 /= np.sum(disc_gaussian1,axis=(0,1))[None,None,:,:]
+                disc_gaussian2 /= np.sum(disc_gaussian2,axis=(0,1))[None,None,:,:]
             
             conn_matrix = ampl1 * noise_field1 * disc_gaussian1 -\
                         ampl2 * noise_field2 * disc_gaussian2
