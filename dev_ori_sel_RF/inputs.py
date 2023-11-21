@@ -330,7 +330,7 @@ class Inputs_lgn(Inputs):
                     params,params["profile"])
                     
     def init_cov_mat(self,params):
-        N = self.size[0]
+        N = int(self.size[0])
         
         try:
             self.sqrt_cov = np.load('./../notebooks/cov_{:s}_N={:d}.npy'.format(params.get("name",""),N))
@@ -339,19 +339,15 @@ class Inputs_lgn(Inputs):
             
             n_cov,_ = conn.create_matrix(params["n_cov_params"],params["n_cov_params"]['profile'])
             n_cov *= N**2
-            print(n_cov)
-            print(type(n_cov))
-            print(params["n_cov_base"])
-            print(type(params["n_cov_base"]))
-            n_cov += params["n_cov_base"].numpy()
+            n_cov += params["n_cov_base"]
 
             f_cov,_ = conn.create_matrix(params["f_cov_params"],params["f_cov_params"]['profile'])
             f_cov *= N**2
-            f_cov += params["f_cov_base"].numpy()
+            f_cov += params["f_cov_base"]
 
             o_cov,_ = conn.create_matrix(params["o_cov_params"],params["o_cov_params"]['profile'])
             o_cov *= N**2
-            o_cov += params["o_cov_base"].numpy()
+            o_cov += params["o_cov_base"]
             
             # np.fill_diagonal(n_cov,params["n_var"])
             # np.fill_diagonal(f_cov,params["f_var"])
