@@ -1,5 +1,9 @@
 #import tensorflow as tf
 import numpy as np
+try:
+    import pickle5 as pickle
+except:
+    import pickle
 from dev_ori_sel_RF import connectivity, network_tools
 from dev_ori_sel_RF.tools import gen_gaussian_random_field as ggrf
 
@@ -328,27 +332,32 @@ class Inputs_lgn(Inputs):
     def init_cov_mat(self,params):
         N = self.size[0]
         
-        conn = connectivity.Connectivity((N,N),(N,N),0)
-        
-        n_cov,_ = conn.create_matrix(params["n_cov_params"],params["n_cov_params"]['profile'])
-        n_cov *= N**2
-        n_cov += params["n_cov_base"]
+        try:
+            self.sqrt_cov = np.load('./../notebooks/cov_{:s}_N={:d}.npy'.format(params.get("name",""),N))
+        except:
+            conn = connectivity.Connectivity((N,N),(N,N),0)
+            
+            n_cov,_ = conn.create_matrix(params["n_cov_params"],params["n_cov_params"]['profile'])
+            n_cov *= N**2
+            n_cov += params["n_cov_base"]
 
-        f_cov,_ = conn.create_matrix(params["f_cov_params"],params["f_cov_params"]['profile'])
-        f_cov *= N**2
-        f_cov += params["f_cov_base"]
+            f_cov,_ = conn.create_matrix(params["f_cov_params"],params["f_cov_params"]['profile'])
+            f_cov *= N**2
+            f_cov += params["f_cov_base"]
 
-        o_cov,_ = conn.create_matrix(params["o_cov_params"],params["o_cov_params"]['profile'])
-        o_cov *= N**2
-        o_cov += params["o_cov_base"]
-        
-        # np.fill_diagonal(n_cov,params["n_var"])
-        # np.fill_diagonal(f_cov,params["f_var"])
-        
-        self.cov = np.block([[n_cov,o_cov],
-                             [o_cov,f_cov]])
-        evals,evecs = np.linalg.eigh(self.cov)
-        self.sqrt_cov = evecs @ np.diag(np.sqrt(np.fmax(0,evals)))
+            o_cov,_ = conn.create_matrix(params["o_cov_params"],params["o_cov_params"]['profile'])
+            o_cov *= N**2
+            o_cov += params["o_cov_base"]
+            
+            # np.fill_diagonal(n_cov,params["n_var"])
+            # np.fill_diagonal(f_cov,params["f_var"])
+            
+            self.cov = np.block([[n_cov,o_cov],
+                                [o_cov,f_cov]])
+            evals,evecs = np.linalg.eigh(self.cov)
+            self.sqrt_cov = evecs @ np.diag(np.sqrt(np.fmax(0,evals)))
+            
+            np.save('./../notebooks/cov_{:s}_N={:d}.npy'.format(params.get("name",""),N),self.sqrt_cov)
         
         self.means = np.array([params["n_mean"],params["f_mean"]])
         

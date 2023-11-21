@@ -48,12 +48,42 @@ Inp_params:
     off_bias_strength: 0.0
     off_bias_region_size: 0.5
 
-    gain_control_params:
-        sigma:  0.037
-        ampl:   1.0
-        noise:   0.0
-        profile: 'Gaussian'
-        stevensetal: True
+    cov_mat_params:
+        name: 'barstats'
+        
+        n_cov_params:
+            sigma1:  0.07343857
+            sigma2:  0.16119628
+            ampl1:   0.09809787
+            ampl2:   -0.03235812
+            noise:   0.0
+            profile: 'Mexican-hat'
+            nosumdiv: True
+
+        f_cov_params:
+            sigma1:  0.10819111
+            sigma2:  0.14820545
+            ampl1:   0.11992125
+            ampl2:   0.11992125
+            noise:   0.0
+            profile: 'Mexican-hat'
+            nosumdiv: True
+
+        o_cov_params:
+            sigma1:  0.09874045
+            sigma2:  0.21926803
+            ampl1:   -0.08525667
+            ampl2:   -0.0420941
+            noise:   0.0
+            profile: 'Mexican-hat'
+            nosumdiv: True
+        
+        n_cov_base: -0.00834099
+        f_cov_base: 0.00189555
+        o_cov_base: -0.00673917
+        
+        n_mean: 0.16991828770795417
+        f_mean: 0.2849416036708087
 
 Wret_to_lgn_params:
     sigma1:   0.037 #from Stevens et al, eq (3)
