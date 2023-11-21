@@ -146,7 +146,7 @@ def prune_by_norm_arbor(W,A,Wthresh):
 # multiplicative normlaisation
 def synaptic_normalization(W_clipped,H,arbor,Wlim,init_W,c_orth=None,axis=1,mode="xalpha"):
     if c_orth is None:
-        frozen = tf.math.logical_or(tf.abs(W_clipped)>=(Wlim*arbor), tf.abs(W_clipped)<=0)
+        frozen = tf.math.logical_or(tf.math.abs(W_clipped)>=(Wlim*arbor), tf.math.abs(W_clipped)<=0)
         frozen_fl = tf.cast(frozen,tf.float32)
         gamma = np.ones_like(W_clipped,dtype=np.float32)
         # ## norm over on/off and alpha
@@ -879,7 +879,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_i_to_l4 = arbor4to4[:,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_l4"],Wi_to_l4.shape)
         if p_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(Wi_to_l4)>0, tf.abs(Wi_to_l4)<(p_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0, tf.math.abs(Wi_to_l4)<(p_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -992,7 +992,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_e"],WI_to_E.shape)
         if p_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_E)>0, tf.abs(WI_to_E)< (p_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
@@ -1026,7 +1026,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_i"],WI_to_I.shape)
         if p_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_I)>0, tf.abs(WI_to_I)< (p_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
@@ -1088,8 +1088,8 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_l4 = tf.cast(mask,tf.float32)
 
         if p_post_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(Wi_to_l4)>0,
-                                            tf.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0,
+                                            tf.math.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -1131,14 +1131,14 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_lgne_i = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_E)>0, tf.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
         mask_fl_i_e = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_I)>0, tf.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
@@ -1247,8 +1247,8 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_l4 = tf.cast(mask,tf.float32)
 
         if p_post_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(Wi_to_l4)>0,
-                                            tf.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0,
+                                            tf.math.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -1305,7 +1305,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_e = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_E)>0, tf.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
@@ -1319,7 +1319,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_i = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.abs(WI_to_I)>0, tf.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
