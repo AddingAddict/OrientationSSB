@@ -50,7 +50,7 @@ Inp_params:
 
     cov_mat_params:
         name: 'barstats'
-        
+
         n_cov_params:
             sigma1:  0.07343857
             sigma2:  0.16119628
@@ -64,7 +64,7 @@ Inp_params:
             sigma1:  0.10819111
             sigma2:  0.14820545
             ampl1:   0.11992125
-            ampl2:   0.11992125
+            ampl2:   0.0764389
             noise:   0.0
             profile: 'Mexican-hat'
             nosumdiv: True
