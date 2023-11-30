@@ -144,9 +144,9 @@ def prune_by_norm_arbor(W,A,Wthresh):
         (tf.where(tf.equal(A,0),tf.ones(tf.shape(A),dtype=tf.float32),W/thresh)-1)))
 
 # multiplicative normlaisation
-def synaptic_normalization(W_clipped,H,arbor,Wlim,init_W,c_orth=None,axis=1,mode="xalpha"):
+def synaptic_normalization(W_clipped,H,arbor,Wlim,init_W,c_orth=None,axis=1,mode="xalpha",sign=1):
     if c_orth is None:
-        frozen = tf.math.logical_or(tf.math.abs(W_clipped)>=(Wlim*arbor), tf.math.abs(W_clipped)<=0)
+        frozen = tf.math.logical_or(sign*W_clipped>=(Wlim*arbor), sign*W_clipped<=0)
         frozen_fl = tf.cast(frozen,tf.float32)
         gamma = np.ones_like(W_clipped,dtype=np.float32)
         # ## norm over on/off and alpha
@@ -440,74 +440,74 @@ class Plasticity:
         self.l4_target = None
         if self.multiplicative_normalisation=="x":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=1)
+                                                                    c_orth=None,axis=1,sign=sign)
 
         elif self.multiplicative_normalisation=="alpha":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=(0,2))
+                                                                    c_orth=None,axis=(0,2),sign=sign)
 
         elif self.multiplicative_normalisation=="xalpha":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
                                                                     c_orth=self.c_orth,\
-                                                                    axis=None)
+                                                                    axis=None,sign=sign)
 
         elif self.multiplicative_normalisation=="xalpha_approx":
-            def xalpha_approx_mult_norm(Wnew,A,H,l4,l4_target):
+            def xalpha_approx_mult_norm(Wnew,A,H,l4,l4_target,sign=1):
                 Wnew_xalpha = Wnew
                 H_xalpha = H
                 for i in range(2):
                     Wnew_alpha,H_alpha = synaptic_normalization(Wnew_xalpha,H_xalpha,A,self.Wlim,\
                                                                     self.init_weights[0],\
-                                                                    c_orth=None,axis=(0,2))
+                                                                    c_orth=None,axis=(0,2),sign=sign)
                     Wnew_xalpha,H_xalpha = synaptic_normalization(Wnew_alpha,H_alpha,A,self.Wlim,\
                                                                     self.init_weights[1],\
-                                                                    c_orth=None,axis=1)
+                                                                    c_orth=None,axis=1,sign=sign)
                 return Wnew_xalpha,H_xalpha
             self.mult_normalization = xalpha_approx_mult_norm
 
         elif self.multiplicative_normalisation=="postx":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=0)
+                                                                    c_orth=None,axis=0,sign=sign)
 
         elif self.multiplicative_normalisation=="prex":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=1)
+                                                                    c_orth=None,axis=1,sign=sign)
 
         elif self.multiplicative_normalisation=="postprex":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
+             lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,self.init_weights,\
                                                                     c_orth=self.c_orth,\
-                                                                    axis=None)
+                                                                    axis=None,sign=sign)
 
         elif self.multiplicative_normalisation=="ffrec_post":
             self.mult_normalization =\
-              lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+              lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=0)
+                                                                    c_orth=None,axis=0,sign=sign)
 
         elif self.multiplicative_normalisation=="ffrec_pre":
             self.mult_normalization =\
-              lambda Wnew,A,H,l4,l4_target: synaptic_normalization(Wnew,H,A,self.Wlim,\
+              lambda Wnew,A,H,l4,l4_target,sign=1: synaptic_normalization(Wnew,H,A,self.Wlim,\
                                                                     self.init_weights,\
-                                                                    c_orth=None,axis=1)
+                                                                    c_orth=None,axis=1,sign=sign)
 
         elif self.multiplicative_normalisation=="homeostatic":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: homeostatic_normalization(Wnew,H,l4,l4_target,\
-                                                                    self.Wlim,self.dt)
+             lambda Wnew,A,H,l4,l4_target,sign=1: homeostatic_normalization(Wnew,H,l4,l4_target,\
+                                                                    self.Wlim,self.dt,sign=sign)
 
         elif self.multiplicative_normalisation=="None":
             self.mult_normalization =\
-             lambda Wnew,A,H,l4,l4_target: (Wnew,H)
+             lambda Wnew,A,H,l4,l4_target,sign=1: (Wnew,H)
 
         else:
             raise Exception('multiplicative_normalisation not defined.\
@@ -879,7 +879,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_i_to_l4 = arbor4to4[:,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_l4"],Wi_to_l4.shape)
         if p_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0, tf.math.abs(Wi_to_l4)<(p_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(-Wi_to_l4>0, -Wi_to_l4<(p_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -992,7 +992,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_e"],WI_to_E.shape)
         if p_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(-WI_to_E>0, -WI_to_E< (p_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
@@ -1026,7 +1026,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
         dW = tf.reshape(dW_dict["dW_i_i"],WI_to_I.shape)
         if p_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(-WI_to_I>0, -WI_to_I< (p_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
@@ -1088,8 +1088,8 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_l4 = tf.cast(mask,tf.float32)
 
         if p_post_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0,
-                                            tf.math.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(-Wi_to_l4>0,
+                                            -Wi_to_l4<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -1131,14 +1131,14 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_lgne_i = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(-WI_to_E>0, -WI_to_E< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
         mask_fl_i_e = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(-WI_to_I>0, -WI_to_I< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
@@ -1247,8 +1247,8 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_l4 = tf.cast(mask,tf.float32)
 
         if p_post_dict["p_i_l4"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(Wi_to_l4)>0,
-                                            tf.math.abs(Wi_to_l4)<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
+            notfrozen = tf.math.logical_and(-Wi_to_l4>0,
+                                            -Wi_to_l4<(p_post_dict["p_i_l4"].Wlim*arbor_i_to_l4))
         else:
             notfrozen = tf.ones_like(Wi_to_l4,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_i_to_l4>0 )
@@ -1305,7 +1305,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_e = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_e"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_E)>0, tf.math.abs(WI_to_E)< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
+            notfrozen = tf.math.logical_and(-WI_to_E>0, -WI_to_E< (p_pre_dict["p_i_e"].Wlim*arbor_I_to_E))
         else:
             notfrozen = tf.ones_like(WI_to_E,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_E>0 )
@@ -1319,7 +1319,7 @@ def constraint_update_wrapper(dW_dict,p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4
         mask_fl_e_i = tf.cast(mask,tf.float32)
 
         if p_pre_dict["p_i_i"].freeze_weights:
-            notfrozen = tf.math.logical_and(tf.math.abs(WI_to_I)>0, tf.math.abs(WI_to_I)< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
+            notfrozen = tf.math.logical_and(-WI_to_I>0, -WI_to_I< (p_pre_dict["p_i_i"].Wlim*arbor_I_to_I))
         else:
             notfrozen = tf.ones_like(WI_to_I,dtype=bool)
         mask = tf.math.logical_and( notfrozen, arbor_I_to_I>0 )
@@ -1545,7 +1545,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         W4to4_ei = W4to4[:Nl4,Nl4:]
         W4to4_ei,_ = p_dict["p_rec4_ei"].mult_normalization(W4to4_ei,A,H[1,:],\
                                                                 running_l4_avg[0,:],\
-                                                                l4_target[0])
+                                                                l4_target[0],-1)
         W4to4 = tf.concat([W4to4[:,:Nl4],tf.concat([W4to4_ei,W4to4[Nl4:,Nl4:]],0)],1)
         params_dict["W4to4"] = W4to4
 
@@ -1558,7 +1558,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         W4to4_ii = W4to4[Nl4:,Nl4:]
         W4to4_ii,_ = p_dict["p_rec4_ii"].mult_normalization(W4to4_ii,A,H[1,:],\
                                                                 running_l4_avg[0,:],\
-                                                                l4_target[0])
+                                                                l4_target[0],-1)
         W4to4 = tf.concat([W4to4[:,:Nl4],tf.concat([W4to4[:Nl4,Nl4:],W4to4_ii],0)],1)
         params_dict["W4to4"] = W4to4
 
@@ -1597,7 +1597,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         arbor_i_to_l4 = arbor4to4[:,Nl4:]
         Wi_to_l4, H_new = p_dict["p_i_l4"].mult_normalization(Wi_to_l4,arbor_i_to_l4,H[0,:],\
                                                                 running_l4_avg[0,:],\
-                                                                l4_target[0])
+                                                                l4_target[0],-1)
         W4to4 = tf.concat([W4to4[:,:Nl4],Wi_to_l4],1)
         params_dict["W4to4"] = W4to4
     # ===================================================
@@ -1636,7 +1636,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         arbor_I_to_E = arbor4to4[:Nl4,Nl4:]
         WI_to_E, H_new = p_dict["p_i_e"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
                                                                 running_l4_avg[0,:],\
-                                                                l4_target[0])
+                                                                l4_target[0],-1)
         W4to4 = tf.concat([tf.concat([W4to4[:Nl4,:Nl4], WI_to_E],1),W4to4[Nl4:,:]],0)
         params_dict["W4to4"] = W4to4
 
@@ -1646,7 +1646,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
         arbor_I_to_I = arbor4to4[Nl4:,Nl4:]
         WI_to_I, H_new = p_dict["p_i_i"].mult_normalization(WI_to_I,arbor_I_to_I,H[0,:],\
                                                                 running_l4_avg[0,:],\
-                                                                l4_target[0])
+                                                                l4_target[0],-1)
         W4to4 = tf.concat([W4to4[:Nl4,:],tf.concat([W4to4[Nl4:,:Nl4],WI_to_I],1)],0)
         params_dict["W4to4"] = W4to4
 
@@ -1677,10 +1677,10 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
                                                                     l4_target[0])
             WI_to_E_new,_ = p_pre_dict["p_i_e"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
             WI_to_I_new,_ = p_pre_dict["p_i_i"].mult_normalization(WI_to_I,arbor_I_to_I,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
 
             # update weights
             Wlgn_to_4 = tf.concat([Wlgne_to_e_new[None,:,:Nlgn],Wlgne_to_e_new[None,:,Nlgn:2*Nlgn],
@@ -1710,7 +1710,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
                                                                     l4_target[0])
             Wi_to_l4_new,_ = p_post_dict["p_i_l4"].mult_normalization(Wi_to_l4,arbor_i_to_l4,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
 
             # update weights
             Wlgn_to_4 = tf.concat([Won_l4_new[None,:Nl4,:],Woff_l4_new[None,:Nl4,:],
@@ -1753,13 +1753,13 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
                                                                     l4_target[0])
             WI_to_E_new,_ = p_pre_dict["p_i_e"].mult_normalization(WI_to_E,arbor_I_to_E,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
             WE_to_I_new,_ = p_pre_dict["p_e_i"].mult_normalization(WE_to_I,arbor_E_to_I,H[0,:],\
                                                                     running_l4_avg[0,:],\
                                                                     l4_target[0])
             WI_to_I_new,_ = p_pre_dict["p_i_i"].mult_normalization(WI_to_I,arbor_I_to_I,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
 
             # update weights
             Wlgn_to_4 = tf.concat([Wlgn_to_e_new[None,:,:Nlgn],Wlgn_to_e_new[None,:,Nlgn:],
@@ -1789,7 +1789,7 @@ def mult_norm_wrapper(p_dict,Wlgn_to_4,arbor_lgn,W4to4,arbor4to4,\
                                                                     l4_target[0])
             Wi_to_l4_new,_ = p_post_dict["p_i_l4"].mult_normalization(Wi_to_l4,arbor_i_to_l4,H[0,:],\
                                                                     running_l4_avg[0,:],\
-                                                                    l4_target[0])
+                                                                    l4_target[0],-1)
 
             # update weights
             Wlgn_to_4 = tf.concat([Won_l4_new[None,:Nl4,:],Woff_l4_new[None,:Nl4,:],
