@@ -21,11 +21,13 @@ from dev_ori_sel_RF.tools import misc,update_params_dict
 parser = argparse.ArgumentParser()
 parser.add_argument('--initver', '-v', help='version',type=int, default=-1)
 parser.add_argument('--nrep', '-n', help='version',type=int, default=20)
+parser.add_argument('--maxver', '-m', help='version',type=int, default=10000)
 parser.add_argument('--config', '-c', help='version',type=str, default="test")
 parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
 args = vars(parser.parse_args())
 Version = int(args['initver'])
 nrep = int(args['nrep'])
+maxver = int(args['maxver'])
 config_name = str(args['config'])
 gb = int(args['gb'])
 
@@ -54,5 +56,8 @@ for i in range(nrep):
     run_ffrec.parameter_sweep_ffrec(Version,config_dict,not_saving_temp=True)
 
     Version += 1
+    if Version >= maxver:
+        break
 
-os.system("python runjob_sim_config_ffrec.py -c {:s} -g {:d} -v {:d} -n{:d}".format(config_name,gb,Version,nrep));
+if Version < maxver:
+    os.system("python runjob_sim_config_ffrec.py -c {:s} -g {:d} -v {:d} -n {:d} -m {:d}".format(config_name,gb,Version,nrep,maxver));

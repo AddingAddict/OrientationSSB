@@ -125,3 +125,7 @@ function dddΦ(rp::RateParams,μ::Float64)
     return (Φitps[hash(rp)](μtox(μ+2dμ))-2Φitps[hash(rp)](μtox(μ+dμ))+
         2Φitps[hash(rp)](μtox(μ-dμ))-Φitps[hash(rp)](μtox(μ-2dμ)))/(2dμ^3)
 end
+
+function SSNdΦ(rp::SSNParams,r::Float64)
+    return rp.n*rp.k*(r/rp.k)^((rp.n-1)/rp.n)
+end

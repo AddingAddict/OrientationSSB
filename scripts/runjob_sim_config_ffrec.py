@@ -26,6 +26,7 @@ def runjobs():
     parser.add_argument("--cluster_", help=" String", default='burg')
     parser.add_argument('--initver', '-v', help='initial version to simulate',type=int, default=-1)
     parser.add_argument('--nrep', '-n', help='number of repetitions for simulation',type=int, default=20)
+    parser.add_argument('--maxver', '-m', help='maximum number of versions to simulation',type=int, default=10000)
     parser.add_argument('--config', '-c', help='param config to load',type=str, default="test")
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
@@ -35,6 +36,7 @@ def runjobs():
     cluster = str(args["cluster_"])
     initver = int(args["initver"])
     nrep = int(args["nrep"])
+    maxver = int(args["maxver"])
     config_name = str(args['config'])
     gb = int(args['gb'])
 
@@ -93,7 +95,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_config_ffrec.py"
-    c1 = "{:s} -v {:d} -n {:d} -c {:s} -g {:d}".format(inpath,initver,nrep,config_name,gb)
+    c1 = "{:s} -v {:d} -n {:d} -m {:d} -c {:s} -g {:d}".format(inpath,initver,nrep,maxver,config_name,gb)
     
     jobname="{:s}".format('ori_dev_sim_config_ffrec_'+config_name)
     
