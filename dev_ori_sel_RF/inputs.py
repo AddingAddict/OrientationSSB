@@ -409,7 +409,7 @@ class Inputs_lgn(Inputs):
             
         elif "custom_stats" in profile:
             N = self.size[0]
-            lgn = self.rng.randn(size=2*N**2)
+            lgn = self.rng.randn(2*N**2)
             lgn = self.sqrt_cov@lgn
             lgn = lgn.reshape((2,N**2))
             lgn += self.means[:,None]
