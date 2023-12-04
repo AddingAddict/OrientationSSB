@@ -35,14 +35,14 @@ config_dict.update({
 })
 config_dict["Wlgn_to4_params"].update({
     "W_mode": "load_from_external",
-    "load_from_prev_run" : maxver})
+    "load_from_prev_run" : Vers[-1]})
 if "2pop" in config_dict["W4to4_params"]["Wrec_mode"]:
     config_dict["W4to4_params"].update({
         "Wrec_mode": "load_from_external2pop"})
 else:
     config_dict["W4to4_params"].update({
         "Wrec_mode": "load_from_external"})
-n = network_ffrec.Network(maxver,config_dict)
+n = network_ffrec.Network(Vers[-1],config_dict)
 _,Wlgn_to_4,_,_,_,_,_,_,_ = n.system
 
 sd = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
