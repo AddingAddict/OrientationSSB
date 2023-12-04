@@ -55,4 +55,4 @@ sd_fft_mag = np.mean(sd_fft_mag,axis=(0,1))
 pref_lam = np.argmax(sd_fft_mag)
 
 for i,Version in enumerate(Vers):
-    probe_RFs.probe_RFs_one_layer(Version,config_name,freqs=np.array([Nlgn*pref_lam,]))
+    probe_RFs.probe_RFs_one_layer(Version,config_name,freqs=np.array([Nlgn*pref_lam,]),outdir='./../plots/')
