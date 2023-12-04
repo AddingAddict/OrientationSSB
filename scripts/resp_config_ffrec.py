@@ -30,9 +30,11 @@ config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
 
 Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)[1:]
 
+config_dict.update({
+    "system" : "one_layer"
+})
 config_dict["Wlgn_to4_params"].update({
     "W_mode": "load_from_external",
-    "system" : "one_layer",
     "load_from_prev_run" : maxver})
 if "2pop" in config_dict["W4to4_params"]["Wrec_mode"]:
     config_dict["W4to4_params"].update({
