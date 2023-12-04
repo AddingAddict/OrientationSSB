@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 from dev_ori_sel_RF import image_dir,data_dir,config_dict,dynamics_np,dynamics,\
-system_generation,network
+system_generation,network,network_ffrec
 from dev_ori_sel_RF.tools import analysis_tools,misc,update_params_dict
 
 
@@ -25,91 +25,15 @@ def fio_powerlaw(x):
     x[x<0] = 0
     return x**2
 
-def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10):
-    RF_mode = "load_from_external"
-    system_mode = "one_layer"
-    connectivity_type = "EI"
-    load_location = 'local'
-
-    load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
-    probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
-
-    gamma_ff = probe_config_dict["gamma_lgn"]
-
-    probe_config_dict["Wlgn_to4_params"].update({
-        "W_mode": RF_mode,
-        "load_from_prev_run" : Version})
-    pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
+def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode='one_layer'):
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
     suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])
     misc.ensure_path(pdf_path)
-
-    T_pd = 1000
-    dt = probe_config_dict["dt"]
-    t = np.arange(0,T_pd/dt,1).astype(int)
-    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
-    last_timestep = t[-1]
-    probe_config_dict.update({
-                        "last_timestep" : last_timestep,
-                        "RF_mode" : RF_mode,
-                        "system" : system_mode,
-                        "Version" : Version
-                        })
-    n = network.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
-    kwargs = {
-                ## parameters for moving gratings
-                "num_freq" : 1,
-                "spat_frequencies" : freqs,#40,60,90
-                "orientations" : oris,
-                "Nsur" : Nsur,
-    }
-    lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
-                            same_EI_input=True,**kwargs)
-    # lgn += 0.1
-    lgn -= np.nanmin(lgn) #- 0.5
-    print("lgn",lgn.shape)
-
-    lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
-    print(lgn_rshp.shape)
-    # lgn_rshp /= 4
-
-    _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
-    ################################# initialization ###############################
-    np.random.seed(probe_config_dict["random_seed"]*113)
-    l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
-    y0 = l40
-    def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
-                        W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
-        return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
-                                            tau,fio=fio_rect)
-    if connectivity_type=="EI":
-        def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
-                            W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
-            return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
-                                                            gamma_ff,N4,tau,fio=fio_rect)
-    W4to23 = 0
-    W23to4 = 0
-    W23to23= 0
-
-    if probe_config_dict["tau"]!=1:
-        tau = np.ones((N4**2*2*Nvert),dtype=float)
-        tau[N4**2*Nvert:] *= probe_config_dict["tau"]
-    else:
-        tau = 1.
-
-    I = np.linalg.inv(np.diagflat(np.ones(N4*N4*2*Nvert)) - W4to4)
-
+    
     print("Wlgn_to_4",Wlgn_to_4.shape,lgn_rshp.shape)
     gamma_rec = probe_config_dict["gamma_4"]
-    temporal_duration = 500
+    gamma_ff = probe_config_dict["gamma_lgn"]
     num_reps = t[-1]/temporal_duration
     for i,spat_frequency in enumerate(kwargs["spat_frequencies"]):
         all_phase = []
@@ -237,7 +161,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                     ax.set_xlabel("Timesteps")
                     ax.plot(np.arange(t1,t2),np.nanmean(It_list[k],axis=(1,2)),"-k",label="avg")
                     ax.plot(np.arange(t1,t2),It_list[k][:,ymax,xmax],"-",c="gray",label="max mod")
-                    # ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
+                    ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
                     ax.legend(loc="best")
 
 
@@ -247,7 +171,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                 ax.set_xlabel("Timesteps")
                 ax.plot(np.arange(t1,t2),trace_list[k],"-k",label="avg")
                 ax.plot(np.arange(t1,t2),yt_pop[:,ymax,xmax],"-",c="gray",label="max mod")
-                # ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
+                ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
                 ax.legend(loc="best")
 
                 ## frequency spectrum
@@ -430,6 +354,228 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     pp.close()
 
     return n, act_last_timestep, all_phase
+
+def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
+    RF_mode = "load_from_external"
+    system_mode = "one_layer"
+    connectivity_type = "EI"
+    load_location = 'local'
+
+    load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
+    probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+    
+    if outdir is None:
+        pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
+    else:
+        pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
+
+    probe_config_dict["Wlgn_to4_params"].update({
+        "W_mode": RF_mode,
+        "load_from_prev_run" : Version})
+
+    temporal_duration = 500
+    dt = probe_config_dict["dt"]
+    # T_pd = 1000
+    T_pd = temporal_duration*dt*Nsur
+    t = np.arange(0,T_pd/dt,1).astype(int)
+    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
+    last_timestep = t[-1]
+    probe_config_dict.update({
+                        "last_timestep" : last_timestep,
+                        "RF_mode" : RF_mode,
+                        "system" : system_mode,
+                        "Version" : Version
+                        })
+    n = network.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
+    kwargs = {
+                ## parameters for moving gratings
+                "num_freq" : 1,
+                "spat_frequencies" : freqs,#40,60,90
+                "orientations" : oris,
+                "Nsur" : Nsur,
+    }
+
+    _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
+
+    ################################# calc pref freq ###############################
+    if calc_pref_freq:
+        sd = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+        sd = sd.reshape((N4,N4,Nlgn,Nlgn))
+        
+        xs,ys = np.meshgrid(np.arange(Nlgn),np.arange(Nlgn))
+        xs[xs > Nlgn//2] -= Nlgn
+        ys[ys > Nlgn//2] -= Nlgn
+        ls = np.sqrt(xs**2+ys**2)
+        ls_bins = np.digitize(ls,np.arange(0,Nlgn//2)+0.5)
+        
+        sd_fft = np.fft.fft2(sd,axes=(2,3))
+        sd_fft_mag = np.zeros((N4,N4,Nlgn//2))
+        for i in range(N4):
+            for j in range(N4):
+                for k in range(Nlgn//2):
+                    sd_fft_mag[i,j,k] = np.max(np.abs(sd_fft[i,j,ls_bins == k]))
+        sd_fft_mag = np.mean(sd_fft_mag,axis=(0,1))
+        pref_lam = np.argmax(sd_fft_mag)
+        kwargs.update({
+            "spat_frequencies" : np.array([pref_lam*Nlgn,])
+        })
+        
+    lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
+                            same_EI_input=True,**kwargs)
+    # lgn += 0.1
+    lgn -= np.nanmin(lgn) #- 0.5
+    print("lgn",lgn.shape)
+
+    lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
+    print(lgn_rshp.shape)
+    # lgn_rshp /= 4
+    
+    ################################# initialization ###############################
+    np.random.seed(probe_config_dict["random_seed"]*113)
+    l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
+    y0 = l40
+    def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
+                        W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+        return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
+                                            tau,fio=fio_rect)
+    if connectivity_type=="EI":
+        def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
+                            W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+            return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
+                                                            gamma_ff,N4,tau,fio=fio_rect)
+    W4to23 = 0
+    W23to4 = 0
+    W23to23= 0
+
+    if probe_config_dict["tau"]!=1:
+        tau = np.ones((N4**2*2*Nvert),dtype=float)
+        tau[N4**2*Nvert:] *= probe_config_dict["tau"]
+    else:
+        tau = 1.
+        
+    return plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,tau,system_mode='one_layer')
+
+def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
+    RF_mode = "load_from_external"
+    system_mode = "one_layer"
+    connectivity_type = "EI"
+    load_location = 'local'
+
+    load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
+    probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+    
+    if outdir is None:
+        pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
+    else:
+        pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
+
+    probe_config_dict["Wlgn_to4_params"].update({
+        "W_mode": RF_mode,
+        "load_from_prev_run" : Version})
+    if "2pop" in probe_config_dict["W4to4_params"]["Wrec_mode"]:
+        probe_config_dict["W4to4_params"].update({
+            "Wrec_mode": "load_from_external2pop"})
+    else:
+        probe_config_dict["W4to4_params"].update({
+            "Wrec_mode": "load_from_external"})
+
+    temporal_duration = 500
+    dt = probe_config_dict["dt"]
+    # T_pd = 1000
+    T_pd = temporal_duration*dt*Nsur
+    t = np.arange(0,T_pd/dt,1).astype(int)
+    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
+    last_timestep = t[-1]
+    probe_config_dict.update({
+                        "last_timestep" : last_timestep,
+                        "RF_mode" : RF_mode,
+                        "system" : system_mode,
+                        "Version" : Version
+                        })
+    n = network_ffrec.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
+    kwargs = {
+                ## parameters for moving gratings
+                "num_freq" : 1,
+                "spat_frequencies" : freqs,#40,60,90
+                "orientations" : oris,
+                "Nsur" : Nsur,
+    }
+
+    _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
+
+    ################################# calc pref freq ###############################
+    if calc_pref_freq:
+        sd = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+        sd = sd.reshape((N4,N4,Nlgn,Nlgn))
+        
+        xs,ys = np.meshgrid(np.arange(Nlgn),np.arange(Nlgn))
+        xs[xs > Nlgn//2] -= Nlgn
+        ys[ys > Nlgn//2] -= Nlgn
+        ls = np.sqrt(xs**2+ys**2)
+        ls_bins = np.digitize(ls,np.arange(0,Nlgn//2)+0.5)
+        
+        sd_fft = np.fft.fft2(sd,axes=(2,3))
+        sd_fft_mag = np.zeros((N4,N4,Nlgn//2))
+        for i in range(N4):
+            for j in range(N4):
+                for k in range(Nlgn//2):
+                    sd_fft_mag[i,j,k] = np.max(np.abs(sd_fft[i,j,ls_bins == k]))
+        sd_fft_mag = np.mean(sd_fft_mag,axis=(0,1))
+        pref_lam = np.argmax(sd_fft_mag)
+        kwargs.update({
+            "spat_frequencies" : np.array([pref_lam*Nlgn,])
+        })
+        
+    lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
+                            same_EI_input=True,**kwargs)
+    # lgn += 0.1
+    lgn -= np.nanmin(lgn) #- 0.5
+    print("lgn",lgn.shape)
+
+    lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
+    print(lgn_rshp.shape)
+    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
+    print(lgn_rshp.shape)
+    # lgn_rshp /= 4
+    
+    ################################# initialization ###############################
+    np.random.seed(probe_config_dict["random_seed"]*113)
+    l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
+    y0 = l40
+    def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
+                        W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+        return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
+                                            tau,fio=fio_rect)
+    if connectivity_type=="EI":
+        def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
+                            W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
+            return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
+                                                            gamma_ff,N4,tau,fio=fio_rect)
+    W4to23 = 0
+    W23to4 = 0
+    W23to23= 0
+
+    if probe_config_dict["tau"]!=1:
+        tau = np.ones((N4**2*2*Nvert),dtype=float)
+        tau[N4**2*Nvert:] *= probe_config_dict["tau"]
+    else:
+        tau = 1.
+        
+    return plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,tau,system_mode='one_layer')
 
 if __name__=="__main__":
 

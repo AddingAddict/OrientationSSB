@@ -169,6 +169,113 @@ function evonet!(net::NetworkParams, nrep::Int, Δt::Float64, ttot::Float64,
     return (rrs,rfs,wrs,wfs)
 end
 
+function symevonet!(net::NetworkParams, nori::Int, nrep::Int, Δt::Float64, ttot::Float64,
+        tstm::Float64, af::Float64, σf::Float64,
+        freezew::Matrix{Bool}=[false false false; false false false])
+    eidx = 1:net.ne
+    iidx = net.ne+1:net.nr
+
+    ntot = round(Int,ttot/tstm)
+    nstm = round(Int,tstm/Δt)
+
+    τs = zeros(Float64,(net.nr))
+    τs[eidx] .= net.rps[1].τs::Float64
+    τs[iidx] .= net.rps[2].τs::Float64
+    τinvs = 1.0./τs
+
+    εs = zeros(Float64,(net.nr))
+    εs[eidx] .= net.rps[1].τs::Float64
+    εs[iidx] .= net.rps[2].τs::Float64
+
+    rr = zeros(Float64,(net.nr))
+    rf = zeros(Float64,(net.nf))
+
+    fori::Float64 = 0.0
+    oris = [0:net.nf-1;]*180.0/net.nf
+    Δoris = zeros(Float64,(net.nf))
+
+    du = zeros(Float64,(net.nr))
+    dwf = zeros(Float64,(net.nr,net.nf))
+    dwr = zeros(Float64,(net.nr,net.nr))
+
+    rrs = zeros(Float64,(nrep+1,net.nr))
+    rfs = zeros(Float64,(nrep+1,net.nf))
+    wrs = zeros(Float64,(nrep+1,net.nr,net.nr))
+    wfs = zeros(Float64,(nrep+1,net.nr,net.nf))
+    @views rrs[1,:] = [Φ(net.rps[net.rpidx[i]],net.u[i]) for i in 1:net.nr]
+    @views wrs[1,:,:] .= net.wr
+    @views wfs[1,:,:] .= net.wf
+
+    for repidx in 1:nrep
+        for totidx in 1:ntot
+            dwf .= 0
+            dwr .= 0
+            for oriidx in 1:nori
+                fori = 180.0*(oriidx-1)/nori
+                Δoris .= [dori(fori,ori) for ori in oris]
+                @fastmath rf .= af*exp.(-Δoris.^2/(2*σf^2))
+                for stmidx in 1:nstm
+                    rr .= [Φint(net.rps[net.rpidx[i]],net.u[i]) for i in 1:net.nr]
+                    
+                    # update currents
+                    du .= -net.u
+                    BLAS.gemv!('N',1.0,net.wf,rf,1.0,du)
+                    BLAS.gemv!('N',1.0,net.wr,net.pmei.*rr,1.0,du)
+                    du .*= Δt*τinvs
+                    net.u .+= du
+                end
+
+                # update weights
+                BLAS.ger!(1.0,rr,rf,dwf)
+                BLAS.ger!(1.0,rr,rr,dwr)
+            end
+            dwf ./= nori
+            dwr ./= nori
+
+            if freezew[1,1]
+                @views dwf[eidx,:] .= 0
+            else
+                @views dwf[eidx,:] .*= Δt*nstm*net.εrate[1,1]
+            end
+            if freezew[2,1]
+                @views dwf[iidx,:] .= 0
+            else
+                @views dwf[iidx,:] .*= Δt*nstm*net.εrate[2,1]
+            end
+            net.wf .+= dwf
+            
+            if freezew[1,2]
+                @views dwr[eidx,eidx] .= 0
+            else
+                @views dwr[eidx,eidx] .*= Δt*nstm*net.εrate[1,2]
+            end
+            if freezew[1,3]
+                @views dwr[eidx,iidx] .= 0
+            else
+                @views dwr[eidx,iidx] .*= Δt*nstm*net.εrate[1,3]
+            end
+            if freezew[2,2]
+                @views dwr[iidx,eidx] .= 0
+            else
+                @views dwr[iidx,eidx] .*= Δt*nstm*net.εrate[2,2]
+            end
+            if freezew[2,3]
+                @views dwr[iidx,iidx] .= 0
+            else
+                @views dwr[iidx,iidx] .*= Δt*nstm*net.εrate[2,3]
+            end
+            net.wr .+= dwr
+
+            normw!(net)
+        end
+        @views rrs[repidx+1,:] .= rr
+        @views rfs[repidx+1,:] .= rf
+        @views wrs[repidx+1,:,:] .= net.wr
+        @views wfs[repidx+1,:,:] .= net.wf
+    end
+    return (rrs,rfs,wrs,wfs)
+end
+
 function sortcells(rrs::Array{Float64,2},wrs::Array{Float64,3},wfs::Array{Float64,3})::Array{Float64,1}
     θs = [0:net.nf-1;]*2π/net.nf
     poris = angle.(mean(wfs[end,:,:].*exp.(-im*θs)',dims=2))[:]
@@ -268,4 +375,76 @@ function plotanim(net::NetworkParams,rrs::Array{Float64,2},rfs::Array{Float64,2}
     end
 
     display("text/html", html_video(name*".mp4"))
+end
+
+function genrs(net::NetworkParams, nori::Int, Δt::Float64, tstm::Float64, af::Float64, σf::Float64)
+    eidx = 1:net.ne
+    iidx = net.ne+1:net.nr
+
+    nstm = round(Int,tstm/Δt)
+
+    τs = zeros(Float64,(net.nr))
+    τs[eidx] .= net.rps[1].τs::Float64
+    τs[iidx] .= net.rps[2].τs::Float64
+    τinvs = 1.0./τs
+
+    rr = zeros(Float64,(net.nr))
+    rf = zeros(Float64,(net.nf))
+
+    fori::Float64 = 0.0
+    oris = [0:net.nf-1;]*180.0/net.nf
+    Δoris = zeros(Float64,(net.nf))
+
+    du = zeros(Float64,(net.nr))
+
+    rrs = zeros(Float64,(nori,net.nr))
+    rfs = zeros(Float64,(nori,net.nf))
+
+    for oriidx in 1:nori
+        fori = 180.0*(oriidx-1)/nori
+        Δoris .= [dori(fori,ori) for ori in oris]
+        @fastmath rf .= af*exp.(-Δoris.^2/(2*σf^2))
+        for stmidx in 1:nstm
+            rr .= [Φint(net.rps[net.rpidx[i]],net.u[i]) for i in 1:net.nr]
+            
+            # update currents
+            du .= -net.u
+            BLAS.gemv!('N',1.0,net.wf,rf,1.0,du)
+            BLAS.gemv!('N',1.0,net.wr,net.pmei.*rr,1.0,du)
+            du .*= Δt*τinvs
+            net.u .+= du
+        end
+
+        @views rrs[oriidx,:] .= rr
+        @views rfs[oriidx,:] .= rf
+    end
+
+    return (rrs,rfs)
+end
+
+function symave(A::Matrix{Float64})
+    n1,n2 = size(A)
+    A_shift = deepcopy(A)
+    A .= 0
+    
+    if n2 >= n1
+        for i in 1:n1
+            A .+= A_shift
+            A_shift = circshift(A_shift,(1,n2÷n1))
+        end
+        A ./= n1
+    else
+        for i in 1:n2
+            A .+= A_shift
+            A_shift = circshift(A_shift,(n1÷n2,1))
+        end
+        A ./= n2
+    end
+
+    maxidx1 = argmax(A[:,1])
+    maxidx2 = argmax(A[1,:])
+    A_shift = circshift(circshift(A,(-(maxidx1-1),-(maxidx2-1)))[end:-1:1,end:-1:1],(maxidx1,maxidx2))
+    A .= 0.5*(A+A_shift)
+
+    return A
 end

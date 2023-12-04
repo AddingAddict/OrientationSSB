@@ -271,6 +271,33 @@ class Network:
             lgn = lgn.reshape(2,num_freq*num_oris*Nsur,-1)
             lgn = np.swapaxes(lgn,1,2)
             lgn = lgn.reshape(2,-1,num_freq,num_oris,Nsur)
+            
+        if "moving_grating_photoreceptor" in self.config_dict["Inp_params"]["input_type"]:
+            lgn_input_on,lgn_input_off = [],[]
+            num_freq = kwargs["num_freq"]#3
+            num_oris = len(kwargs["orientations"])
+            Nsur = kwargs["Nsur"]## gives number of input patterns with diff phases
+            spat_frequencies = kwargs["spat_frequencies"]#np.array([80,90,120])
+            orientations = kwargs["orientations"]
+            for spat_frequency in spat_frequencies:
+                for orientation in orientations:
+                    self.config_dict["Inp_params"]["spat_frequency"] = spat_frequency # vary between 60 and 120 (3 steps?)
+                    self.config_dict["Inp_params"]["Nsur"] = Nsur
+                    self.config_dict["Inp_params"]["orientation"] = orientation # vary in 8 steps
+                    on_inp = inputs.Inputs_lgn((self.Nret,self.Nret),1,2020).create_lgn_input(\
+                                                self.config_dict["Inp_params"],\
+                                                "moving_grating_online", Wret_to_lgn)
+                    off_inp = inputs.Inputs_lgn((self.Nret,self.Nret),1,2020).create_lgn_input(\
+                                                 self.config_dict["Inp_params"],\
+                                                 "moving_grating_online", -Wret_to_lgn)
+                    lgn_input_on.append(on_inp)
+                    lgn_input_off.append(off_inp)
+            lgn_input_on = np.array(lgn_input_on)
+            lgn_input_off = np.array(lgn_input_off)
+            lgn = np.stack([lgn_input_on,np.array(lgn_input_off)])
+            lgn = lgn.reshape(2,num_freq*num_oris*Nsur,-1)
+            lgn = np.swapaxes(lgn,1,2)
+            lgn = lgn.reshape(2,-1,num_freq,num_oris,Nsur)
 
         elif self.config_dict["Inp_params"]["input_type"] in ("white_noise_online",\
                 "ringlike_online","gaussian_noise_online"):
