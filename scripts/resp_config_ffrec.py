@@ -28,7 +28,7 @@ config_name = str(args['config'])
 
 config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
 
-Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)
+Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)[1:]
 
 config_dict["Wlgn_to4_params"].update({
     "W_mode": "load_from_external",
