@@ -363,6 +363,8 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
 
     load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
     probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+    Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
+                             probe_config_dict["N23"],probe_config_dict["Nvert"]
     
     if outdir is None:
         pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
@@ -471,6 +473,8 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
 
     load_path = data_dir + "ffrec/{s}/v{v}/".format(s=config_name,v=Version)
     probe_config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+    Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
+                             probe_config_dict["N23"],probe_config_dict["Nvert"]
     
     if outdir is None:
         pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
