@@ -25,29 +25,32 @@ def fio_powerlaw(x):
     x[x<0] = 0
     return x**2
 
-def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode='one_layer'):
+def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode='one_layer',RF_mode='load_from_external'):
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
     suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])
     misc.ensure_path(pdf_path)
     
-    print("Wlgn_to_4",Wlgn_to_4.shape,lgn_rshp.shape)
+    print("Wlgn_to_4",Wlgn_to_4.shape,lgn.shape)
     gamma_rec = probe_config_dict["gamma_4"]
     gamma_ff = probe_config_dict["gamma_lgn"]
+    dt = config_dict["dt"]
+    temporal_duration = inp_dict["temporal_duration"]
+    last_timestep = t[-1]
     num_reps = t[-1]/temporal_duration
-    for i,spat_frequency in enumerate(kwargs["spat_frequencies"]):
+    for i,spat_frequency in enumerate(inp_dict["spat_frequencies"]):
         all_phase = []
         act_last_timestep = []
-        for j,orientation in enumerate(kwargs["orientations"]):
+        for j,orientation in enumerate(inp_dict["orientations"]):
             mod_ratio = []
             phases = []
             yt = [y0]
             y = y0
-            It = [l40*0]
+            It = [y0*0]
             for kt in t:
-                lgn_t = int((kt//temporal_duration)%kwargs["Nsur"])#
+                lgn_t = int((kt//temporal_duration)%inp_dict["Nsur"])#
                 # inp = lgn[:2,:,0]
-                inp = lgn_rshp[:,:,i,j,lgn_t]
+                inp = lgn[:,:,i,j,lgn_t]
                 out = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
                                      W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
                 try:
@@ -69,9 +72,9 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
 
             ## collect last responses for all orientations
             ## take max response over last moving grating
-            last_response = np.nanmax(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
+            last_response = np.nanmax(yt[-temporal_duration*inp_dict["Nsur"]:,...],axis=0)
             ## take mean response over last moving grating
-            # last_response = np.nanmean(yt[-temporal_duration*kwargs["Nsur"]:,...],axis=0)
+            # last_response = np.nanmean(yt[-temporal_duration*inp_dict["Nsur"]:,...],axis=0)
             ## take last frame of ff input to show pattern
             last_input = It[-1,...]
             act_last_timestep.append(last_response)
@@ -79,7 +82,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
             t1 = 500
             t2 = int(probe_config_dict["last_timestep"]+1)
             dT = t2-t1
-            temp_freq = int((last_timestep+1)//temporal_duration//kwargs["Nsur"])
+            temp_freq = int((last_timestep+1)//temporal_duration//inp_dict["Nsur"])
             print("temp_freq",temp_freq)
             if system_mode=="one_layer":
                 labels = ["L4,E","L4,I"]
@@ -148,10 +151,10 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
                     ax = fig.add_subplot(nrows,ncols,1)
                     ax.set_ylabel("Raw input")
                     ax.set_xlabel("Timesteps")
-                    ax.plot(np.nanmean(lgn_rshp[0,:,i,j,:],axis=1),"-k",label="avg")
-                    ax.plot(np.nanmean(lgn_rshp[1,:,i,j,:],axis=1),"--k",label="avg")
-                    ax.plot(lgn_rshp[0,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"-",c="gray",label="max mod")
-                    ax.plot(lgn_rshp[1,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"--",c="gray",label="max mod")
+                    ax.plot(np.nanmean(lgn[0,:,i,j,:],axis=1),"-k",label="avg")
+                    ax.plot(np.nanmean(lgn[1,:,i,j,:],axis=1),"--k",label="avg")
+                    ax.plot(lgn[0,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"-",c="gray",label="max mod")
+                    ax.plot(lgn[1,:,i,j,:].reshape(-1,N4,N4*Nvert)[:,ymax,xmax],"--",c="gray",label="max mod")
                     ax.legend(loc="best")
 
                 if (k<2):
@@ -181,7 +184,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
                 ax.plot(spectrum_list[k][0][:,ymax,xmax],"-",c="gray",label="max mod")
                 ax.plot(spectrum_list[k][0][:,ymin,xmin],"--",c="gray",label="min mod")
                 ax.plot(spectrum_list[k][1],"-k",label="avg")
-                ax.set_xlim(0,Nsur*temp_freq)
+                ax.set_xlim(0,inp_dict["Nsur"]*temp_freq)
                 ax.set_ylim(0,1)
 
                 if k<2:
@@ -195,7 +198,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
                 ax = fig.add_subplot(nrows,ncols,6)
                 ax.set_title("Activity last timestep")
                 # im=ax.imshow(yfinal_list[k],interpolation="nearest",cmap="binary")
-                im=ax.imshow(np.nanmean(yt_pop[-temporal_duration*kwargs["Nsur"]:,:,:],axis=0),interpolation="nearest",cmap="binary")
+                im=ax.imshow(np.nanmean(yt_pop[-temporal_duration*inp_dict["Nsur"]:,:,:],axis=0),interpolation="nearest",cmap="binary")
                 plt.colorbar(im,ax=ax)
 
                 ax = fig.add_subplot(nrows,ncols,7)
@@ -211,7 +214,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
                 plt.close(fig)
 
 
-                axes[0].plot(np.sort(yt_pop[-temporal_duration*kwargs["Nsur"]:,:].mean(0).flatten()),\
+                axes[0].plot(np.sort(yt_pop[-temporal_duration*inp_dict["Nsur"]:,:].mean(0).flatten()),\
                             np.linspace(0,1,yfinal_list[k].size),'-',label=label)
                 axes[1].plot(np.sort(mod_ratio[k].flatten()),\
                             np.linspace(0,1,mod_ratio[k].size),'-',label=label)
@@ -274,7 +277,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
 
     all_phase = np.array(all_phase)
     act_last_timestep = np.array(act_last_timestep)
-    num_oris = len(kwargs["orientations"])
+    num_oris = len(inp_dict["orientations"])
     if system_mode=="one_layer":
         labels = ["L4,E","L4,I"]
         L4_size = N4*N4*Nvert
@@ -307,11 +310,11 @@ def plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamic_system,Wlgn_
     plt.close(fig)
 
     ncols,nrows = 4,1
-    orientations_binning = np.concatenate([kwargs["orientations"],np.array([np.pi])])
+    orientations_binning = np.concatenate([inp_dict["orientations"],np.array([np.pi])])
     # orientations_binning -= np.pi/2./num_oris
     for j,(final_act,jall_phase) in enumerate(zip(final_act_list,all_phase_list)):
         opm = analysis_tools.compute_orientation_tuning_from_activity(final_act,\
-                                                        kwargs["orientations"]*2,norm=True)
+                                                        inp_dict["orientations"]*2,norm=True)
         sel = np.abs(opm)
         ori = np.angle(opm)*0.5
         ori = ori - (np.sign(ori)-1)*0.5*np.pi
@@ -385,6 +388,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
+                        "config_name" : config_name,
                         "last_timestep" : last_timestep,
                         "RF_mode" : RF_mode,
                         "system" : system_mode,
@@ -397,6 +401,8 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                 "spat_frequencies" : freqs,#40,60,90
                 "orientations" : oris,
                 "Nsur" : Nsur,
+                "temporal_duration": temporal_duration,
+                "dt": dt
     }
 
     _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
@@ -463,7 +469,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     else:
         tau = 1.
         
-    return plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,tau,system_mode='one_layer')
+    return plot_probe_RFs(pdf_path,probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode=system_mode,RF_mode=RF_mode)
 
 def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
     RF_mode = "load_from_external"
@@ -501,6 +507,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
+                        "config_name" : config_name,
                         "last_timestep" : last_timestep,
                         "RF_mode" : RF_mode,
                         "system" : system_mode,
@@ -513,6 +520,8 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
                 "spat_frequencies" : freqs,#40,60,90
                 "orientations" : oris,
                 "Nsur" : Nsur,
+                "temporal_duration": temporal_duration,
+                "dt": dt
     }
 
     _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
@@ -579,7 +588,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     else:
         tau = 1.
         
-    return plot_probe_RFs(pdf_path,probe_config_dict,Nsur,lgn_rshp,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,tau,system_mode='one_layer')
+    return plot_probe_RFs(pdf_path,probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode=system_mode,RF_mode=RF_mode)
 
 if __name__=="__main__":
 

@@ -31,6 +31,7 @@ config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
 Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)[1:]
 
 config_dict.update({
+    "config_name" : config_name,
     "system" : "one_layer"
 })
 config_dict["Wlgn_to4_params"].update({
