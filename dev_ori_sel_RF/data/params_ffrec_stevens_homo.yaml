@@ -111,19 +111,19 @@ W4to4_params:
     ampl:   1.0
     noise:   0.0
     ##Gaussian2pop
-    sigma_EE:   0.025
-    sigma_IE:   0.025
-    sigma_EI:   0.075
-    sigma_II:   0.075
-    aEE:  1.3
-    aIE:  1.3
-    aEI:  1.4
-    aII:  1.4
+    sigma_EE:   0.02
+    sigma_IE:   0.02
+    sigma_EI:   0.016
+    sigma_II:   0.008
+    aEE:  2.95
+    aIE:  3.00
+    aEI:  2.58
+    aII:  2.58
 
-    rA_EE:   0.1
-    rA_IE:   0.1
-    rA_EI:   0.23
-    rA_II:   0.23
+    rA_EE:   0.08
+    rA_IE:   0.08
+    rA_EI:   0.06
+    rA_II:   0.03
     ampl_EE:   1.
     ampl_IE:   1.
     ampl_EI:   1.
@@ -140,6 +140,13 @@ W4to4_params:
     ## params for clustered/sparse Connectivity
     density:   0.5
     ncluster:   3
+
+    ## params for heterogeneously varying anisotropic Connections
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   "independent"
+    smoothness_width:   0.05
 
     # plasticity params
     nu_4:   3.
@@ -185,10 +192,10 @@ W23_params:
     ncluster:   3
 
     ## params for heterogeneously varying anisotropic Connections
-    mean_eccentricity:   0.
-    SD_eccentricity:   0.
-    SD_size:   0.
-    heterogeneity_type:   "independent"
+    mean_eccentricity:   0.7
+    SD_eccentricity:   0.0175
+    SD_size:   0.0021
+    heterogeneity_type:   null
     smoothness_width:   0.05
 
     # plasticity params

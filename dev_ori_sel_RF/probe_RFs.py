@@ -38,15 +38,18 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
     temporal_duration = inp_dict["temporal_duration"]
     last_timestep = t[-1]
     num_reps = t[-1]/temporal_duration
+    act_per_freq_ori_phase = []
     for i,spat_frequency in enumerate(inp_dict["spat_frequencies"]):
         all_phase = []
         act_last_timestep = []
+        act_per_ori_phase = []
         for j,orientation in enumerate(inp_dict["orientations"]):
             mod_ratio = []
             phases = []
             yt = [y0]
             y = y0
             It = [y0*0]
+            act_per_phase = []
             for kt in t:
                 lgn_t = int((kt//temporal_duration)%inp_dict["Nsur"])#
                 # inp = lgn[:2,:,0]
@@ -65,6 +68,9 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
                 ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],inp[0,:])+\
                                      np.dot(Wlgn_to_4[3,:,:],inp[1,:]))
                 It.append(np.concatenate([ff_inp_E,ff_inp_I]))
+                
+                if (kt+1)%temporal_duration == 0:
+                    act_per_phase.append(y)
 
             yt = np.array(yt)
             It = np.array(It)
@@ -78,6 +84,8 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
             ## take last frame of ff input to show pattern
             last_input = It[-1,...]
             act_last_timestep.append(last_response)
+            act_per_phase = np.array(act_per_phase)
+            act_per_ori_phase.append(act_per_phase)
 
             t1 = 500
             t2 = int(probe_config_dict["last_timestep"]+1)
@@ -164,7 +172,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
                     ax.set_xlabel("Timesteps")
                     ax.plot(np.arange(t1,t2),np.nanmean(It_list[k],axis=(1,2)),"-k",label="avg")
                     ax.plot(np.arange(t1,t2),It_list[k][:,ymax,xmax],"-",c="gray",label="max mod")
-                    ax.plot(np.arange(t1,t2),yt_pop[:,ymin,xmin],"--",c="gray",label="min mod")
+                    ax.plot(np.arange(t1,t2),It_list[k][:,ymin,xmin],"--",c="gray",label="min mod")
                     ax.legend(loc="best")
 
 
@@ -274,6 +282,11 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
             pp.close()
             print("plot done",orientation,spat_frequency)
+            
+        act_per_ori_phase = np.array(act_per_ori_phase)
+        act_per_freq_ori_phase.append(act_per_ori_phase)
+        
+    act_per_freq_ori_phase = np.array(act_per_freq_ori_phase)
 
     all_phase = np.array(all_phase)
     act_last_timestep = np.array(act_last_timestep)
@@ -336,9 +349,16 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
         ax = fig.add_subplot(nrows,ncols,2)
         opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(opm - np.nanmean(opm))))
+        opm_fps = np.zeros(int(np.ceil(N4//2*np.sqrt(2))))
+        grid = np.arange(-N4//2,N4//2)
+        x,y = np.meshgrid(grid,grid)
+        bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N4//2*np.sqrt(2)))+0.5)
+        for idx in range(0,int(np.ceil(N4//2*np.sqrt(2)))):
+            opm_fps[idx] = np.mean(opm_fft[bin_idxs == idx])
         ax.set_title("Spectrum Orientation preference map {}".format(labels[j]))
         im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
         plt.colorbar(im,ax=ax,orientation="horizontal")
+        ax.plot(np.arange(N4//2,N4),(N4//4)*opm_fps[:N4//2]/np.nanmax(opm_fps[:N4//2-1]))
 
         ax = fig.add_subplot(nrows,ncols,3)
         ax.set_title("Preferred absolute phase {}".format(labels[j]))
@@ -347,16 +367,23 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
         ax = fig.add_subplot(nrows,ncols,4)
         opm_fft = np.abs(np.fft.fftshift(np.fft.fft2(pref_phase_full - np.nanmean(pref_phase_full))))
+        opm_fps = np.zeros(int(np.ceil(N4//2*np.sqrt(2))))
+        grid = np.arange(-N4//2,N4//2)
+        x,y = np.meshgrid(grid,grid)
+        bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N4//2*np.sqrt(2)))+0.5)
+        for idx in range(0,int(np.ceil(N4//2*np.sqrt(2)))):
+            opm_fps[idx] = np.mean(opm_fft[bin_idxs == idx])
         ax.set_title("Spectrum Preferred absolute phase {}".format(labels[j]))
         im=ax.imshow(opm_fft,cmap="binary",interpolation="nearest")
         plt.colorbar(im,ax=ax,orientation="horizontal")
+        ax.plot(np.arange(N4//2,N4),(N4//4)*opm_fps[:N4//2]/np.nanmax(opm_fps[:N4//2-1]))
 
         pp.savefig(dpi=300,bbox_inches="tight")
         plt.close(fig)
 
     pp.close()
 
-    return n, act_last_timestep, all_phase
+    return act_per_freq_ori_phase, all_phase
 
 def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
     RF_mode = "load_from_external"
