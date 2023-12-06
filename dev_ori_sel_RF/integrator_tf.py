@@ -540,21 +540,23 @@ class Tf_integrator_new:
                             Wlim,init_weights_ei,freeze_weights,Wthresh)
 
                 if self.connectivity_type=="EI":
-                    if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
-                        beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
-                                tf.reduce_sum(self.params_dict["arbor4to4_full"][Nl4,Nl4:])
-                    p_dict["p_rec4_ii"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
-                                plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ii,\
-                                Wlim,init_weights_ii,freeze_weights,Wthresh)
+                    if not self.params_dict["config_dict"]["W4to4_params"].get("ei_ie_plasticity_only",False):
+                        if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                            beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                                    tf.reduce_sum(self.params_dict["arbor4to4_full"][Nl4,Nl4:])
+                        p_dict["p_rec4_ii"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                                    plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ii,\
+                                    Wlim,init_weights_ii,freeze_weights,Wthresh)
                 if self.params_dict["config_dict"]["W4to4_params"].get("e_plasticity",False):
                     weight_strength_ee = self.params_dict["config_dict"]["W4to4_params"]["aEE"]
                     weight_strength_ie = self.params_dict["config_dict"]["W4to4_params"]["aIE"]
-                    if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
-                        beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
-                                tf.reduce_sum(self.params_dict["arbor4to4_full"][0,:Nl4])
-                    p_dict["p_rec4_ee"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
-                                plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ee,\
-                                Wlim,init_weights_ee,freeze_weights,Wthresh)
+                    if not self.params_dict["config_dict"]["W4to4_params"].get("ei_ie_plasticity_only",False):
+                        if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
+                            beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
+                                    tf.reduce_sum(self.params_dict["arbor4to4_full"][0,:Nl4])
+                        p_dict["p_rec4_ee"] = plasticity_dynamics.Plasticity(dt,c_orth,s_orth,beta_P,\
+                                    plasticity_rule,constraint_mode,mult_norm,clip_mode,weight_strength_ee,\
+                                    Wlim,init_weights_ee,freeze_weights,Wthresh)
                     if self.connectivity_type=="EI":
                         if self.params_dict["config_dict"]["W4to4_params"].get("scale_beta",False):
                             beta_P = self.params_dict["config_dict"]["W4to4_params"]["beta_P"] /\
