@@ -148,31 +148,31 @@ W4to4_params:
     ampl:   1.0
     noise:   0.0
     ##Gaussian2pop
-    # sigma_EE:   0.02
-    # sigma_IE:   0.02
-    # sigma_EI:   0.016
-    # sigma_II:   0.008
-    # aEE:  2.95
-    # aIE:  3.00
-    # aEI:  2.58
-    # aII:  2.58
     sigma_EE:   0.025
-    sigma_IE:   0.03
+    sigma_IE:   0.025
     sigma_EI:   0.02
     sigma_II:   0.01
-    aEE:  2.3
-    aIE:  2.6
-    aEI:  2.8
-    aII:  2.5
+    aEE:  3.60
+    aIE:  3.66
+    aEI:  3.15
+    aII:  3.15
+    # sigma_EE:   0.025
+    # sigma_IE:   0.03
+    # sigma_EI:   0.02
+    # sigma_II:   0.01
+    # aEE:  2.3
+    # aIE:  2.6
+    # aEI:  2.8
+    # aII:  2.5
 
-    # rA_EE:   0.08
-    # rA_IE:   0.08
-    # rA_EI:   0.06
-    # rA_II:   0.03
     rA_EE:   0.1
-    rA_IE:   0.12
-    rA_EI:   0.08
-    rA_II:   0.04
+    rA_IE:   0.1
+    rA_EI:   0.075
+    rA_II:   0.0375
+    # rA_EE:   0.1
+    # rA_IE:   0.12
+    # rA_EI:   0.08
+    # rA_II:   0.04
     ampl_EE:   1.
     ampl_IE:   1.
     ampl_EI:   1.
