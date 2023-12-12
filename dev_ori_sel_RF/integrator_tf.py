@@ -81,6 +81,8 @@ class Tf_integrator_new:
             tf_nonlinearity = network_tools.nl_linear
         elif nonlinearity_rule == "powerlaw":
             tf_nonlinearity = network_tools.nl_powerlaw
+        elif nonlinearity_rule == 'rectifier_max':
+            tf_nonlinearity = network_tools.nl_rect_max(2)
         else:
             raise Exception('Unknown nonlinearity rule')
         return tf_nonlinearity

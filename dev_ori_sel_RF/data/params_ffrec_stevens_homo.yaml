@@ -20,7 +20,7 @@ saving_stepsize:   10000
 plasticity_rule:   "activity_based"
 
 random_seed:   19
-nonlinearity_l4:   "rectifier"
+nonlinearity_l4:   "rectifier_max"
 nonlinearity_l23:   "rectifier"
 integrator:   "Euler"
 
@@ -119,6 +119,10 @@ W4to4_params:
     aIE:  3.66
     aEI:  3.15
     aII:  3.15
+    # aEE:  5.95
+    # aIE:  6.70
+    # aEI:  5.75
+    # aII:  5.20
     # sigma_EE:   0.025
     # sigma_IE:   0.03
     # sigma_EI:   0.02
@@ -178,7 +182,7 @@ W4to4_params:
     theta_4:   0
     l4_avg:   0.024
     l4e_target:   0.024
-    l4i_target:   0.024
+    l4i_target:   0.036
     beta_avg: 0.009
     beta_thresh: 0.01
 
