@@ -20,7 +20,7 @@ saving_stepsize:   10000
 plasticity_rule:   "activity_based"
 
 random_seed:   19
-nonlinearity_l4:   "rectifier_max"
+nonlinearity_l4:   "rectifier"
 nonlinearity_l23:   "rectifier"
 integrator:   "Euler"
 
@@ -43,10 +43,17 @@ Inp_params:
     mean_width: 0.3
     onoff_corr_factor: 1.0
     onoff_rel_weight: 1.0
-    input_type: "white_noise_rect"
+    input_type: "stevens_bars_rect"
 
     off_bias_strength: 0.0
     off_bias_region_size: 0.5
+
+    gain_control_params:
+        sigma:  0.037
+        ampl:   1.0
+        noise:   0.0
+        profile: 'Gaussian'
+        stevensetal: True
 
 Wret_to_lgn_params:
     sigma1:   0.037 #from Stevens et al, eq (3)
@@ -99,8 +106,8 @@ W4to4_params:
     s_noise_II:   0.00
     u_noise_EE: 0.0
     u_noise_EI: 1.0
-    u_noise_IE: 1.0
-    u_noise_II: 0.0
+    u_noise_IE: 0.0
+    u_noise_II: 1.0
     ## MH
     sigma1:   0.16
     sigma2:   0.3
@@ -113,17 +120,17 @@ W4to4_params:
     ##Gaussian2pop
     sigma_EE:   0.025
     sigma_IE:   0.025
-    sigma_EI:   0.02
-    sigma_II:   0.01
-    aEE:  3.60
-    aIE:  3.66
-    aEI:  3.15
-    aII:  3.15
+    sigma_EI:   0.075
+    sigma_II:   0.075
+    aEE:  0.65
+    aIE:  0.65
+    aEI:  0.7
+    aII:  0.7
 
     rA_EE:   0.1
     rA_IE:   0.1
-    rA_EI:   0.075
-    rA_II:   0.0375
+    rA_EI:   0.23
+    rA_II:   0.23
     ampl_EE:   1.
     ampl_IE:   1.
     ampl_EI:   1.
@@ -141,13 +148,6 @@ W4to4_params:
     density:   0.5
     ncluster:   3
 
-    ## params for heterogeneously varying anisotropic Connections
-    mean_eccentricity:   0.7
-    SD_eccentricity:   0.0175
-    SD_size:   0.0021
-    heterogeneity_type:   "independent"
-    smoothness_width:   0.05
-
     # plasticity params
     nu_4:   3.
     beta_P: 0.42
@@ -157,8 +157,7 @@ W4to4_params:
     plasticity_rule:   "activity_based"
     constraint_mode:   "divisive"
     mult_norm:   "prex"
-    e_plasticity:      True
-    ei_ie_plasticity_only: True
+    e_plasticity:      False
     freeze_weights:    False
     clip_weights:       True
 
@@ -166,7 +165,7 @@ W4to4_params:
     theta_4:   0
     l4_avg:   0.024
     l4e_target:   0.024
-    l4i_target:   0.036
+    l4i_target:   0.024
     beta_avg: 0.009
     beta_thresh: 0.01
 
@@ -193,10 +192,10 @@ W23_params:
     ncluster:   3
 
     ## params for heterogeneously varying anisotropic Connections
-    mean_eccentricity:   0.7
-    SD_eccentricity:   0.0175
-    SD_size:   0.0021
-    heterogeneity_type:   null
+    mean_eccentricity:   0.
+    SD_eccentricity:   0.
+    SD_size:   0.
+    heterogeneity_type:   "seppendent"
     smoothness_width:   0.05
 
     # plasticity params

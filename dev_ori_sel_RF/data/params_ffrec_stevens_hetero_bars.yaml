@@ -43,10 +43,17 @@ Inp_params:
     mean_width: 0.3
     onoff_corr_factor: 1.0
     onoff_rel_weight: 1.0
-    input_type: "white_noise_rect"
+    input_type: "stevens_bars_rect"
 
     off_bias_strength: 0.0
     off_bias_region_size: 0.5
+
+    gain_control_params:
+        sigma:  0.037
+        ampl:   1.0
+        noise:   0.0
+        profile: 'Gaussian'
+        stevensetal: True
 
 Wret_to_lgn_params:
     sigma1:   0.037 #from Stevens et al, eq (3)
@@ -166,7 +173,7 @@ W4to4_params:
     theta_4:   0
     l4_avg:   0.024
     l4e_target:   0.024
-    l4i_target:   0.036
+    l4i_target:   0.024
     beta_avg: 0.009
     beta_thresh: 0.01
 
