@@ -31,20 +31,13 @@ config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
 
 Vers = np.round(np.linspace(0,maxver,nload+1)-1).astype(int)[1:]
 
-evals = np.zeros_like(Vers)
+evals = np.zeros(len(Vers))
 
 for i,Version in enumerate(Vers):
-    config_dict.update({
-        "config_name" : config_name,
-        "system" : "one_layer"
-    })
-    config_dict["Wlgn_to4_params"].update({
-        "W_mode": "load_from_external",
-        "load_from_prev_run" : Version})
-    n = network.Network(Version,config_dict)
-    _,_,_,_,_,_,W4to4 = n.system
+    with np.load('./../dev_ori_sel_RF/data/layer4/'+config_name+'/v'+str(Version)+'/y_v'+str(Version)+'.npz') as data:
+        W4to4 = data['Wrec']
     
-    evals[i],_ = sparse.linalg.eigs(W4to4,1,which='LR')
+    evals[i] = np.real(sparse.linalg.eigs(W4to4,1,which='LR')[0][0])
     print(i,evals[i])
     
-np.savetxt('./../results/conn_evals_{:s}.txt'.format(config_name))
+np.savetxt('./../results/conn_evals_{:s}.txt'.format(config_name),evals)
