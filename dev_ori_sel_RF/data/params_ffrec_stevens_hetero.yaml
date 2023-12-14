@@ -122,8 +122,8 @@ W4to4_params:
 
     rA_EE:   0.1
     rA_IE:   0.1
-    rA_EI:   0.075
-    rA_II:   0.0375
+    rA_EI:   0.08
+    rA_II:   0.04
     ampl_EE:   1.
     ampl_IE:   1.
     ampl_EI:   1.

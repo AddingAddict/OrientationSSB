@@ -122,15 +122,16 @@ W4to4_params:
     sigma_IE:   0.025
     sigma_EI:   0.02
     sigma_II:   0.01
-    aEE:  3.60
+    # aEE:  3.60
+    aEE:  2.90
     aIE:  3.66
     aEI:  3.15
     aII:  3.15
 
     rA_EE:   0.1
     rA_IE:   0.1
-    rA_EI:   0.075
-    rA_II:   0.0375
+    rA_EI:   0.08
+    rA_II:   0.04
     ampl_EE:   1.
     ampl_IE:   1.
     ampl_EI:   1.
@@ -173,7 +174,7 @@ W4to4_params:
     theta_4:   0
     l4_avg:   0.024
     l4e_target:   0.024
-    l4i_target:   0.024
+    l4i_target:   0.036
     beta_avg: 0.009
     beta_thresh: 0.01
 

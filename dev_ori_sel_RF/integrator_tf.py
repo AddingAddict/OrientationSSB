@@ -659,9 +659,10 @@ class Tf_integrator_new:
         yt = tf.convert_to_tensor([y0])
         time_dep_dict = defaultdict(list)
         time_dep_dict["l4t"].append(y0[num_lgn_paths*lim:num_lgn_paths*lim+crt_size])
-        if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_on_l4"] is not None or\
-                self.p_dict["p_lgne_e"] is not None or self.p_dict["p_ffrec"] is not None or\
-                self.p_dict["p_ffrec_sep"] is not None:
+        if self.p_dict["p_rec4_ii"] is not None or self.p_dict["p_rec4_ei"] is not None or\
+                self.p_dict["p_rec4_ie"] is not None or self.p_dict["p_rec4_ee"] is not None or\
+                self.p_dict["p_on_l4"] is not None or self.p_dict["p_lgne_e"] is not None or\
+                self.p_dict["p_ffrec"] is not None or self.p_dict["p_ffrec_sep"] is not None:
             time_dep_dict["W4to4t"].append(self.params_dict["W4to4"].numpy())
         if self.p_dict["p_rec23_ii"] is not None:
             time_dep_dict["W23to23t"].append(self.params_dict["W23to23"].numpy())
@@ -780,8 +781,12 @@ class Tf_integrator_new:
                         dW[key] += value
                         pre_size = value.shape[-1]
                         if self.connectivity_type=="EI":
-                            print("key",key,istep,np.nanmin(value[...,:pre_size//2]),np.nanmax(value[...,:pre_size//2]),
-                                 np.nanmin(value[...,pre_size//2:]),np.nanmax(value[...,pre_size//2:]))
+                            if "lgn_" in "key":
+                                print("key",key,istep,
+                                      np.nanmin(value[...,:pre_size//2]),np.nanmax(value[...,:pre_size//2]),
+                                      np.nanmin(value[...,pre_size//2:]),np.nanmax(value[...,pre_size//2:]))
+                            else:
+                                print("key",key,istep,np.nanmin(value),np.nanmax(value))
                         else:
                             print("key",key,istep,np.nanmin(value),np.nanmax(value))
 
