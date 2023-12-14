@@ -681,6 +681,8 @@ class Tf_integrator_new:
         inp = inputs.Inputs_lgn((Nret,Nret),self.params_dict["Version"].numpy(),0,\
                                 self.params_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
                                 self.params_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
+        
+        rate_dt = self.params_dict.get("rate_dt",dt)
 
         print("Number of plasticity steps: {}".format(self.num_plasticity_steps))
         for istep in range(self.num_plasticity_steps):
@@ -732,7 +734,7 @@ class Tf_integrator_new:
 
 
                     # L4 activity dynamics
-                    y,l4_avg,theta_4 = l4_dynamics(scan_func,y,t,dt,self.params_dict,\
+                    y,l4_avg,theta_4 = l4_dynamics(scan_func,y,t,rate_dt,self.params_dict,\
                                         rhs_l4=self.rhs_l4,rhs_l23=self.rhs_l23,\
                                         I_crt=self.I_crt,I_crt23=self.I_crt23)
                     self.params_dict["theta_4"] = theta_4
