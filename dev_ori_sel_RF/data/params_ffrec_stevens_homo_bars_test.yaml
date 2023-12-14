@@ -20,7 +20,7 @@ saving_stepsize:   10000
 plasticity_rule:   "activity_based"
 
 random_seed:   19
-nonlinearity_l4:   "rectifier_max"
+nonlinearity_l4:   "rectifier"
 nonlinearity_l23:   "rectifier"
 integrator:   "Euler"
 
