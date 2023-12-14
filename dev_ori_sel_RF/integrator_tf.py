@@ -60,6 +60,7 @@ class Tf_integrator_new:
             "dynamics_adaptive","stevens_etal","antolik_etal")
         self.l4_avg = params_dict["l4_avg"]
         self.theta_4 = params_dict["theta_4"]
+        self.rate_reset = params_dict.get("rate_reset",False)
         self._init_cortical_layer_dynamics()
 
         tf.random.set_seed(self.params_dict["config_dict"]["random_seed"]*114)
@@ -124,16 +125,23 @@ class Tf_integrator_new:
             lim = Nlgn*Nlgn*N4*N4*Nvert
 
             if self.system=="one_layer":
-                if "2pop" in self.params_dict["config_dict"]["W4to4_params"]["Wrec_mode"]:
-                    l40 = tf.random.uniform([N4**2*2*Nvert],minval=0,maxval=0.01,dtype=tf.float32)
+                if self.rate_reset:
+                    l40 = tf.zeros([N4**2*2*Nvert],minval=0,maxval=0.01,dtype=tf.float32)
                 else:
-                    l40 = tf.random.uniform([N4**2*Nvert],minval=0,maxval=0.01,dtype=tf.float32)
+                    if "2pop" in self.params_dict["config_dict"]["W4to4_params"]["Wrec_mode"]:
+                        l40 = tf.random.uniform([N4**2*2*Nvert],minval=0,maxval=0.01,dtype=tf.float32)
+                    else:
+                        l40 = tf.random.uniform([N4**2*Nvert],minval=0,maxval=0.01,dtype=tf.float32)
                 y0 = tf.concat([y[:self.num_lgn_paths*lim], l40], axis=0)
 
             elif self.system=="two_layer":
                 N23 = self.params_dict["N23"]
-                l40 = tf.random.uniform([N4*N4*2*Nvert], minval=0, maxval=0.01, dtype=tf.float32)
-                l230 = tf.random.uniform([N23*N23*2], minval=0, maxval=0.01, dtype=tf.float32)
+                if self.rate_reset:
+                    l40 = tf.zeros([N4*N4*2*Nvert], minval=0, maxval=0.01, dtype=tf.float32)
+                    l230 = tf.zeros([N23*N23*2], minval=0, maxval=0.01, dtype=tf.float32)
+                else:
+                    l40 = tf.random.uniform([N4*N4*2*Nvert], minval=0, maxval=0.01, dtype=tf.float32)
+                    l230 = tf.random.uniform([N23*N23*2], minval=0, maxval=0.01, dtype=tf.float32)
 
                 if self.params_dict["config_dict"]["W4to23_params"]["plasticity_rule"]!="None":
                     y0 = tf.concat([y[:self.num_lgn_paths*lim], l40, l230,\
