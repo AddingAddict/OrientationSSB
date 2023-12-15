@@ -791,7 +791,7 @@ class Tf_integrator_new:
                         dW[key] += value
                         pre_size = value.shape[-1]
                         if self.connectivity_type=="EI":
-                            if "lgn_" in "key":
+                            if "lgn_" in key:
                                 print("key",key,istep,
                                       np.nanmin(value[...,:pre_size//2]),np.nanmax(value[...,:pre_size//2]),
                                       np.nanmin(value[...,pre_size//2:]),np.nanmax(value[...,pre_size//2:]))
