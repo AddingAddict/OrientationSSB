@@ -5,9 +5,8 @@ N4: 96
 N23: 1
 Nvert: 1
 
-runtime:   20000
+runtime:   10000
 dt:   1.0
-rate_dt: 0.5
 tau:   1.
 num_lgn_paths:   4
 
@@ -36,7 +35,7 @@ Inp_params:
     width: 1.
 
     simulate_activity: "dynamics_adaptive"
-    pattern_duration: 20 #in units of dt
+    pattern_duration: 10 #in units of dt
     avg_no_inp: 1
 
     expanse_time: 1
@@ -204,7 +203,7 @@ W4to4_params:
     theta_4:   0
     l4_avg:   0.024
     l4e_target:   0.024
-    l4i_target:   0.036
+    l4i_target:   null #0.036
     beta_avg: 0.009
     beta_thresh: 0.01
 

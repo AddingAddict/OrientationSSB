@@ -252,8 +252,14 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
                           gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl, theta=theta_4)
 
         l4_avg = l4*beta_thresh*dt + l4_avg*(1-beta_thresh*dt)
-        theta_4e = theta_4[:N4*N4*Nvert] + beta_avg*dt*(l4_avg[:N4*N4*Nvert]-l4e_target)
-        theta_4i = theta_4[N4*N4*Nvert:] + beta_avg*dt*(l4_avg[N4*N4*Nvert:]-l4i_target)
+        if l4e_target is None:
+            theta_4e = 0*theta_4[:N4*N4*Nvert]
+        else:
+            theta_4e = theta_4[:N4*N4*Nvert] + beta_avg*dt*(l4_avg[:N4*N4*Nvert]-l4e_target)
+        if l4i_target is None:
+            theta_4i = 0*theta_4[N4*N4*Nvert:]
+        else:
+            theta_4i = theta_4[N4*N4*Nvert:] + beta_avg*dt*(l4_avg[N4*N4*Nvert:]-l4i_target)
         theta_4 = tf.concat([theta_4e,theta_4i], axis=0)
             
     elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="stevens_etal":
@@ -262,8 +268,14 @@ def dynamics_l4_new(scan_func,y,t,dt,params_dict,**kwargs):
                           gamma_rec=gamma_4, Wff_to_l=Wlgn_to_4, W_rec=W4to4, tau=tau, nl=nl, theta=theta_4)
 
         l4_avg = l4*0.009 + l4_avg*0.991
-        theta_4e = theta_4[:N4*N4*Nvert] + 0.01*(l4_avg[:N4*N4*Nvert]-l4e_target)
-        theta_4i = theta_4[N4*N4*Nvert:] + 0.01*(l4_avg[N4*N4*Nvert:]-l4i_target)
+        if l4e_target is None:
+            theta_4e = 0*theta_4[:N4*N4*Nvert]
+        else:
+            theta_4e = theta_4[:N4*N4*Nvert] + 0.01*(l4_avg[:N4*N4*Nvert]-l4e_target)
+        if l4i_target is None:
+            theta_4i = 0*theta_4[N4*N4*Nvert:]
+        else:
+            theta_4i = theta_4[N4*N4*Nvert:] + 0.01*(l4_avg[N4*N4*Nvert:]-l4i_target)
         theta_4 = tf.concat([theta_4e,theta_4i], axis=0)
 
     elif params_dict["config_dict"]["Inp_params"]["simulate_activity"]=="antolik_etal":
