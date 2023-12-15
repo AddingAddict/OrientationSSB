@@ -104,7 +104,7 @@ def runjobs():
             inpath,seed,n_ori,n_rpt,n_int,ksel,lker,grec,maxos)
         
         jobname="{:s}_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}_seed={:d}".format(
-            'ori_dev_sim_L23_sel_map_quality',ksel,lker,grec,maxos,seed)
+            'sim_L23_sel_map_quality',ksel,lker,grec,maxos,seed)
         
         if not args2.test:
             jobnameDir=os.path.join(ofilesdir, jobname)

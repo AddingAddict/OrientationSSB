@@ -95,7 +95,7 @@ def runjobs():
     inpath = currwd + "/resp_config.py"
     c1 = "{:s} -v {:d} -n {:d} -c {:s}".format(inpath,initver,nrep,config_name)
     
-    jobname="{:s}".format('ori_dev_resp_config_'+config_name)
+    jobname="{:s}".format('resp_config_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)

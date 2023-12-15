@@ -100,7 +100,7 @@ def runjobs():
             inpath = currwd + "/sim_L23_corr_relu.py"
             c1 = "{:s} -s {:d} -ni {:d} -nt {:d} -H {:f} -e {:f} -g {:f}".format(inpath,seed,n_inp,n_int,H,eta,grec)
             
-            jobname="{:s}_H={:.1f}_eta={:.0e}_grec={:.3f}_seed={:d}".format('ori_dev_sim_L23_corr_relu',H,eta,grec,seed)
+            jobname="{:s}_H={:.1f}_eta={:.0e}_grec={:.3f}_seed={:d}".format('sim_L23_corr_relu',H,eta,grec,seed)
             
             if not args2.test:
                 jobnameDir=os.path.join(ofilesdir, jobname)

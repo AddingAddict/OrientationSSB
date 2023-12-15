@@ -97,7 +97,7 @@ def runjobs():
     inpath = currwd + "/sim_config.py"
     c1 = "{:s} -v {:d} -n {:d} -m {:d} -c {:s} -g {:d}".format(inpath,initver,nrep,maxver,config_name,gb)
     
-    jobname="{:s}".format('ori_dev_sim_config_'+config_name)
+    jobname="{:s}".format('sim_config_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)

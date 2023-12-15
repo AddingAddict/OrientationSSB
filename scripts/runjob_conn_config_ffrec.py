@@ -97,7 +97,7 @@ def runjobs():
     inpath = currwd + "/conn_config_ffrec.py"
     c1 = "{:s} -v {:d} -n {:d} -s {:d} -c {:s}".format(inpath,maxver,nload,skip,config_name)
     
-    jobname="{:s}".format('ori_dev_conn_config_ffrec_'+config_name)
+    jobname="{:s}".format('conn_config_ffrec_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)
