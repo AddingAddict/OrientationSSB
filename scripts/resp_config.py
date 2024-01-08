@@ -64,5 +64,5 @@ if freq <= 1:
 for i,Version in enumerate(Vers):
     act,inp,_,_ = probe_RFs.probe_RFs_one_layer(Version,config_name,freqs=np.array([Nlgn*freq,]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=8,outdir='./../plots/')
     phase,modrat = phase.reshape(1,4,2,-1),modrat.reshape(1,4,2,-1)
-    np.save('grating_responses/{:s}/rates_f={:d}'.format(config_name,freq),act.flatten())
-    np.save('grating_responses/{:s}/inputs_f={:d}'.format(config_name,freq),inp.flatten())
+    np.save('./../results/grating_responses/{:s}/rates_f={:d}'.format(config_name,freq),act.flatten())
+    np.save('./../results/grating_responses/{:s}/inputs_f={:d}'.format(config_name,freq),inp.flatten())
