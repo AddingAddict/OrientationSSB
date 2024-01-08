@@ -25,76 +25,91 @@ def fio_powerlaw(x):
     x[x<0] = 0
     return x**2
 
-def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode='one_layer',RF_mode='load_from_external'):
+def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau):
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
-    suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])
-    misc.ensure_path(pdf_path)
     
     print("Wlgn_to_4",Wlgn_to_4.shape,lgn.shape)
     gamma_rec = probe_config_dict["gamma_4"]
     gamma_ff = probe_config_dict["gamma_lgn"]
     dt = config_dict["dt"]
     temporal_duration = inp_dict["temporal_duration"]
-    last_timestep = t[-1]
-    num_reps = t[-1]/temporal_duration
-    act_per_freq_ori_phase = []
+    act = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),inp_dict["Nsur"],len(y0)))
+    inp = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),inp_dict["Nsur"],len(y0)))
+    yt = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),len(t),len(y0)))
+    It = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),len(t),len(y0)))
     for i,spat_frequency in enumerate(inp_dict["spat_frequencies"]):
-        all_phase = []
-        act_last_timestep = []
-        act_per_ori_phase = []
         for j,orientation in enumerate(inp_dict["orientations"]):
-            mod_ratio = []
-            phases = []
-            yt = [y0]
             y = y0
-            It = [y0*0]
-            act_per_phase = []
             for kt in t:
+                # calculate dynamics of activity
                 lgn_t = int((kt//temporal_duration)%inp_dict["Nsur"])#
-                # inp = lgn[:2,:,0]
-                inp = lgn[:,:,i,j,lgn_t]
-                out = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
+                # lgn_inp = lgn[:2,:,0]
+                lgn_inp = lgn[:,:,i,j,lgn_t]
+                out = dynamics_system(y,lgn_inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
                                      W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
                 try:
                     y = y + dt*out
                 except:
                     y = y + dt*out[0]
-                yt.append( y )
+                yt[i,j,kt] = y
 
-                # ff input
-                ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],inp[0,:])+\
-                                     np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
-                ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],inp[0,:])+\
-                                     np.dot(Wlgn_to_4[3,:,:],inp[1,:]))
-                It.append(np.concatenate([ff_inp_E,ff_inp_I]))
+                # only calculate ff input at beginning of new phase
+                if kt%temporal_duration == 0:
+                    ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],lgn_inp[0,:])+\
+                                        np.dot(Wlgn_to_4[1,:,:],lgn_inp[1,:]))
+                    ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],lgn_inp[0,:])+\
+                                        np.dot(Wlgn_to_4[3,:,:],lgn_inp[1,:]))
+                It[i,j,kt] = np.concatenate([ff_inp_E,ff_inp_I])
                 
+                # save last activity and ff input for given phase
                 if (kt+1)%temporal_duration == 0:
-                    act_per_phase.append(y)
+                    act[i,j,lgn_t,:] = y
+                    inp[i,j,lgn_t,:] = np.concatenate([ff_inp_E,ff_inp_I])
+    
+    return act,inp,yt,It
 
-            yt = np.array(yt)
-            It = np.array(It)
+def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgn_to_4,all_yt,all_It,
+                   system_mode='one_layer',RF_mode='load_from_external'):
+    Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
+                             probe_config_dict["N23"],probe_config_dict["Nvert"]
+    suffix = "_ampl{}".format(probe_config_dict["gamma_lgn"])
+    last_timestep = all_yt.shape[2]-1 #t[-1]
+    gamma_rec = probe_config_dict["gamma_4"]
+    gamma_ff = probe_config_dict["gamma_lgn"]
+    dt = config_dict["dt"]
+    temporal_duration = inp_dict["temporal_duration"]
+    if system_mode=="one_layer":
+        npop = 2
+        L4_size = N4*N4*Nvert
+        all_phase = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),npop,N4,N4*Nvert))
+        all_modrat = np.zeros((len(inp_dict["spat_frequencies"]),len(inp_dict["orientations"]),npop,N4,N4*Nvert))
+    act_last_timestep = []
+    for i,spat_frequency in enumerate(inp_dict["spat_frequencies"]):
+        for j,orientation in enumerate(inp_dict["orientations"]):
+            yt = all_yt[i,j]
+            It = all_It[i,j]
             print("It",It.shape,yt.shape)
 
-            ## collect last responses for all orientations
-            ## take max response over last moving grating
-            last_response = np.nanmax(yt[-temporal_duration*inp_dict["Nsur"]:,...],axis=0)
+            # ## collect last responses for all orientations
+            # ## take max response over last moving grating
+            # last_response = np.nanmax(yt[-temporal_duration*inp_dict["Nsur"]:,...],axis=0)
             ## take mean response over last moving grating
             # last_response = np.nanmean(yt[-temporal_duration*inp_dict["Nsur"]:,...],axis=0)
+            ## take response over last moving grating
+            last_response = yt[-1,...]
             ## take last frame of ff input to show pattern
             last_input = It[-1,...]
             act_last_timestep.append(last_response)
-            act_per_phase = np.array(act_per_phase)
-            act_per_ori_phase.append(act_per_phase)
 
-            t1 = 500
+            # t1 = 500
+            t1 = 0
             t2 = int(probe_config_dict["last_timestep"]+1)
             dT = t2-t1
             temp_freq = int((last_timestep+1)//temporal_duration//inp_dict["Nsur"])
             print("temp_freq",temp_freq)
             if system_mode=="one_layer":
                 labels = ["L4,E","L4,I"]
-                L4_size = N4*N4*Nvert
                 yt_list = [yt[t1:t2,:L4_size].reshape(dT,N4,N4*Nvert),\
                             yt[t1:t2,L4_size:].reshape(dT,N4,N4*Nvert)]
                 yfinal_list = [last_response[:L4_size].reshape(N4,N4*Nvert),\
@@ -107,22 +122,32 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
             trace_list = []
             spectrum_list = []
-            for yt_pop in yt_list:
+            for k,yt_pop in enumerate(yt_list):
                 ## compute modulation ratio per pixel
-                trace = np.nanmean(yt_pop,axis=(1,2))
+                # trace = np.nanmean(yt_pop,axis=(1,2))
+                # spectrum_avg = np.abs(np.fft.fftshift(np.fft.fft(trace-np.nanmean(trace))))
+                # spectrum = np.abs(np.fft.fft(yt_pop-np.nanmean(yt_pop,axis=0),axis=0))
+                # trace_list.append(trace)
+                # spectrum_list.append([spectrum/np.nanmax(spectrum[:40,:],axis=0)[None,:],\
+                #                       spectrum_avg/np.nanmax(spectrum_avg[:40])])
+                # mod_ratio.append(analysis_tools.compute_MR(yt_pop,0,temp_freq))
+                # pref_phase = analysis_tools.find_preferred_abs_phase(yt_pop,\
+                #                                                         temp_freq=temp_freq)
+                this_yt = yt_pop
+                trace = np.nanmean(this_yt,axis=(1,2))
                 spectrum_avg = np.abs(np.fft.fftshift(np.fft.fft(trace-np.nanmean(trace))))
-                spectrum = np.abs(np.fft.fft(yt_pop-np.nanmean(yt_pop,axis=0),axis=0))
+                spectrum = np.abs(np.fft.fft(this_yt-np.nanmean(this_yt,axis=0),axis=0))
                 trace_list.append(trace)
                 spectrum_list.append([spectrum/np.nanmax(spectrum[:40,:],axis=0)[None,:],\
                                       spectrum_avg/np.nanmax(spectrum_avg[:40])])
-                mod_ratio.append(analysis_tools.compute_MR(yt_pop,0,temp_freq))
-                pref_phase = analysis_tools.find_preferred_abs_phase(yt_pop,\
-                                                                        temp_freq=temp_freq)
+                all_modrat[i,j,k] = analysis_tools.compute_MR(this_yt[temporal_duration-1::temporal_duration],
+                                                              0,temp_freq)
+                pref_phase = analysis_tools.find_preferred_abs_phase(this_yt[temporal_duration-1::temporal_duration],
+                                                                     temp_freq=temp_freq)
                 print("pref_phase",np.nanmax(pref_phase),np.nanmin(pref_phase))
-                phases.append(pref_phase)
-            all_phase.append(phases)
+                all_phase[i,j,k] = pref_phase
             print("Spat frequency={:.0f}, orientation={:.0f} deg".format(spat_frequency,\
-                    orientation*180/np.pi),len(phases))
+                    orientation*180/np.pi),npop)
 
             ## figure names
             if system_mode=="one_layer":
@@ -149,12 +174,12 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
                 fig = plt.figure(figsize=(6*ncols,5*nrows))
                 fig.suptitle(label)
 
-                idmax = np.argmax(mod_ratio[k])
+                idmax = np.argmax(all_modrat[i,j,k])
                 ymax,xmax = idmax//N4,idmax%N4
-                idmin = np.argmin(mod_ratio[k])
+                idmin = np.argmin(all_modrat[i,j,k])
                 ymin,xmin = idmin//N4,idmin%N4
 
-                if (k<2 and "moving_grating_online" in probe_config_dict["Inp_params"]["input_type"]):
+                if (k<2 and "moving_grating_periodic_online" in probe_config_dict["Inp_params"]["input_type"]):
                     ## raw input trace
                     ax = fig.add_subplot(nrows,ncols,1)
                     ax.set_ylabel("Raw input")
@@ -211,12 +236,12 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
                 ax = fig.add_subplot(nrows,ncols,7)
                 ax.set_title("Modulation ratio")
-                im=ax.imshow(mod_ratio[k],interpolation="nearest",cmap="binary",vmin=0,vmax=1)
+                im=ax.imshow(all_modrat[i,j,k],interpolation="nearest",cmap="binary",vmin=0,vmax=1)
                 plt.colorbar(im,ax=ax)
 
                 ax = fig.add_subplot(nrows,ncols,8)
                 ax.set_title("Phase preference")
-                im=ax.imshow(all_phase[-1][k],interpolation="nearest",cmap="hsv",vmin=0,vmax=2*np.pi)
+                im=ax.imshow(all_phase[i,j,k],interpolation="nearest",cmap="hsv",vmin=0,vmax=2*np.pi)
                 plt.colorbar(im,ax=ax)
                 pp.savefig(fig,dpi=300,bbox_inches="tight")
                 plt.close(fig)
@@ -224,8 +249,8 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
                 axes[0].plot(np.sort(yt_pop[-temporal_duration*inp_dict["Nsur"]:,:].mean(0).flatten()),\
                             np.linspace(0,1,yfinal_list[k].size),'-',label=label)
-                axes[1].plot(np.sort(mod_ratio[k].flatten()),\
-                            np.linspace(0,1,mod_ratio[k].size),'-',label=label)
+                axes[1].plot(np.sort(all_modrat[i,j,k].flatten()),\
+                            np.linspace(0,1,all_modrat[i,j,k].size),'-',label=label)
 
             axes[0].set_xlabel("Activity")
             axes[0].set_ylabel("Cumulative distribution")
@@ -239,20 +264,21 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
 
             ## LGN input
+            lgn_inp = lgn[:,:,i,j,-1]
             # exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn[0,i,j,0,:]) +\
             # 						 np.dot(Wlgn_to_4[1,:,:],lgn[1,i,j,0,:]))
-            exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],inp[0,:]) +\
-                                     np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
+            exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn_inp[0,:]) +\
+                                     np.dot(Wlgn_to_4[1,:,:],lgn_inp[1,:]))
             ## visual stimuli
             fig = plt.figure(figsize=(18,5))
             ax = fig.add_subplot(131)
             ax.set_title("Input ON")
-            im=ax.imshow(gamma_ff*inp[0,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
+            im=ax.imshow(gamma_ff*lgn_inp[0,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
                         cmap="binary")
             plt.colorbar(im,ax=ax)
             ax = fig.add_subplot(132)
             ax.set_title("Input OFF")
-            im=ax.imshow(gamma_ff*inp[1,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
+            im=ax.imshow(gamma_ff*lgn_inp[1,:].reshape(Nlgn,Nlgn),interpolation="nearest",\
                         cmap="binary")
             plt.colorbar(im,ax=ax)
             ax = fig.add_subplot(133)
@@ -265,10 +291,10 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
             ## VARIABILITY IN RESPONSE PATTERN DURING ONE GRATING OSCILLATION
             oscillation_duration = (last_timestep+1)/temp_freq
-            timesteps = np.array([last_timestep-oscillation_duration,\
-                                 last_timestep-3/4.*oscillation_duration,\
-                                 last_timestep-1./2*oscillation_duration,\
-                                 last_timestep-1./4*oscillation_duration]).astype(int)
+            timesteps = np.array([last_timestep+1-oscillation_duration,\
+                                 last_timestep+1-3/4.*oscillation_duration,\
+                                 last_timestep+1-1./2*oscillation_duration,\
+                                 last_timestep+1-1./4*oscillation_duration]).astype(int)
             ncol,nrow = len(timesteps),1
             fig = plt.figure(figsize=(6*ncol,5*nrow))
             for k in range(ncol):
@@ -282,13 +308,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
             pp.close()
             print("plot done",orientation,spat_frequency)
-            
-        act_per_ori_phase = np.array(act_per_ori_phase)
-        act_per_freq_ori_phase.append(act_per_ori_phase)
-        
-    act_per_freq_ori_phase = np.array(act_per_freq_ori_phase)
 
-    all_phase = np.array(all_phase)
     act_last_timestep = np.array(act_last_timestep)
     num_oris = len(inp_dict["orientations"])
     if system_mode=="one_layer":
@@ -296,7 +316,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
         L4_size = N4*N4*Nvert
         final_act_list = [act_last_timestep[:,:L4_size].reshape(num_oris,N4,N4*Nvert),\
                           act_last_timestep[:,L4_size:].reshape(num_oris,N4,N4*Nvert)]
-        all_phase_list = [all_phase[:,0,:,:],all_phase[:,1,:,:]]
+        all_phase_list = [all_phase[-1,:,0,:,:],all_phase[-1,:,1,:,:]]
 
     ## file names
     if system_mode=="one_layer":
@@ -383,9 +403,9 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,
 
     pp.close()
 
-    return act_per_freq_ori_phase, all_phase
+    return all_phase,all_modrat
 
-def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
+def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=8,temporal_duration=500,calc_pref_freq=False,outdir=None):
     RF_mode = "load_from_external"
     system_mode = "one_layer"
     connectivity_type = "EI"
@@ -405,13 +425,12 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
         "W_mode": RF_mode,
         "load_from_prev_run" : Version})
 
-    temporal_duration = 500
     dt = probe_config_dict["dt"]
     # T_pd = 1000
     T_pd = temporal_duration*dt*Nsur
     t = np.arange(0,T_pd/dt,1).astype(int)
-    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
+    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
     # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
@@ -496,7 +515,11 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     else:
         tau = 1.
         
-    return plot_probe_RFs(pdf_path,probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode=system_mode,RF_mode=RF_mode)
+    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
+                                    Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau)
+    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgn_to_4,yt,It,
+                                  system_mode=system_mode,RF_mode=RF_mode)
+    return act,inp,phase,modrat
 
 def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
     RF_mode = "load_from_external"
@@ -529,8 +552,8 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     # T_pd = 1000
     T_pd = temporal_duration*dt*Nsur
     t = np.arange(0,T_pd/dt,1).astype(int)
-    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_online_sharp"})
+    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
+    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
     # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
@@ -615,7 +638,11 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     else:
         tau = 1.
         
-    return plot_probe_RFs(pdf_path,probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau,system_mode=system_mode,RF_mode=RF_mode)
+    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
+                                    Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau)
+    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgn_to_4,yt,It,
+                                  system_mode=system_mode,RF_mode=RF_mode)
+    return act,inp,phase,modrat
 
 if __name__=="__main__":
 

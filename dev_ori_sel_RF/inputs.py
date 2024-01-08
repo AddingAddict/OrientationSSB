@@ -273,6 +273,28 @@ class Inputs:
             inputs = inputs.reshape(-1,Nsur)
             return inputs
 
+        elif self.profile=="moving_grating_periodic":
+            Nsur = inp_params["Nsur"]
+            n = inp_params["spat_frequency"]
+            theta = inp_params["orientation"]
+            k = np.round(np.array([n*np.cos(theta)/self.size[1],n*np.sin(theta)/self.size[0]]))
+            n = np.sqrt(np.sum(k**2))
+            theta = np.arctan2(k[1],k[0])
+            gridx = np.linspace(0,1,self.size[1],endpoint=False)
+            gridy = np.linspace(0,1,self.size[0],endpoint=False)
+            x0,y0 = np.meshgrid(gridx,gridy)
+            x = np.cos(theta) * x0 - np.sin(theta) * y0
+            y = np.sin(theta) * x0 + np.cos(theta) * y0
+            kx = 2*np.pi/self.size[1] * n
+            ky = 2*np.pi/self.size[0] * n
+            # Lambda = 2*np.pi/np.sqrt(kx**2+ky**2) #* np.sqrt(2)
+            inputs = np.zeros((self.size+(Nsur,)))
+            for isur in range(Nsur):
+                phi = 1.*isur/Nsur * 2*np.pi
+                inputs[:,:,isur] = np.sin(kx * x + 0*ky * y + phi)
+            inputs = inputs.reshape(-1,Nsur)
+            return inputs
+
         ## model spatially localised traveling wave like input
         elif self.profile=="localized_waves_online":
 
