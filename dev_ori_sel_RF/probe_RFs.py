@@ -420,6 +420,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
         pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
     else:
         pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
+    misc.ensure_path(pdf_path)
 
     probe_config_dict["Wlgn_to4_params"].update({
         "W_mode": RF_mode,
@@ -536,6 +537,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
         pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
     else:
         pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
+    misc.ensure_path(pdf_path)
 
     probe_config_dict["Wlgn_to4_params"].update({
         "W_mode": RF_mode,
