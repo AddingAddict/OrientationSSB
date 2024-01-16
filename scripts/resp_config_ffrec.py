@@ -13,7 +13,7 @@ import util_func as uf
 
 import dev_ori_sel_RF
 from dev_ori_sel_RF import probe_RFs,network_ffrec
-from dev_ori_sel_RF.tools import analysis_tools
+from dev_ori_sel_RF.tools import analysis_tools,misc
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--maxver', '-v', help='version',type=int, default=8)
@@ -69,5 +69,6 @@ if freq <= 1:
 
 for i,Version in enumerate(Vers):
     act,inp,_,_ = probe_RFs.probe_RFs_ffrec(Version,config_name,freqs=np.array([Nlgn*freq,]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=8,outdir='./../plots/')
+    misc.ensure_path('./../results/grating_responses/{:s}/'.format(config_name))
     np.save('./../results/grating_responses/{:s}/rates_f={:d}'.format(config_name,freq),act.flatten())
     np.save('./../results/grating_responses/{:s}/inputs_f={:d}'.format(config_name,freq),inp.flatten())
