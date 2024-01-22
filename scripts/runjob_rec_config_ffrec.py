@@ -29,6 +29,7 @@ def runjobs():
     parser.add_argument('--freq', '-f', help='spatial frequency',type=int, default=-1)
     parser.add_argument('--nori', '-o', help='how many orientations to probe',type=int, default=4)
     parser.add_argument('--nphs', '-p', help='how many phases to probe',type=int, default=8)
+    parser.add_argument('--skip', '-s', help='how many cells to skip when plotting averaged RFs',type=int, default=0)
     parser.add_argument('--config', '-c', help='param config to load',type=str, default="test")
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
@@ -41,6 +42,7 @@ def runjobs():
     freq = int(args["freq"])
     nori = int(args["nori"])
     nphs = int(args["nphs"])
+    skip = int(args["skip"])
     config_name = str(args['config'])
     gb = int(args['gb'])
 
@@ -98,10 +100,10 @@ def runjobs():
     
     #--------------------------------------------------------------------------
     # Make SBTACH
-    inpath = currwd + "/resp_config.py"
-    c1 = "{:s} -v {:d} -n {:d} -f {:d} -o {:d} -p {:d} -c {:s}".format(inpath,maxver,nload,freq,nori,nphs,config_name)
+    inpath = currwd + "/resp_config_ffrec.py"
+    c1 = "{:s} -v {:d} -n {:d} -f {:d} -o {:d} -p {:d} -s{:d} -c {:s}".format(inpath,maxver,nload,freq,nori,nphs,skip,config_name)
     
-    jobname="{:s}".format('resp_config_'+config_name)
+    jobname="{:s}".format('resp_config_ffrec_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)

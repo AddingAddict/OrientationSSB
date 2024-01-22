@@ -153,3 +153,15 @@ def get_ori_sel(opm,calc_fft=True):
         return ori,sel,opm_fft,opm_fps
     else:
         return ori,sel
+    
+def calc_dc_ac_comp(A,axis=-1):
+    A_xpsd = np.moveaxis(A,axis,-1)
+    Nax = A.shape[axis]
+    angs = np.arange(Nax) * 2*np.pi/Nax
+    A0 = np.mean(A_xpsd,axis=-1)
+    As = np.mean(A_xpsd*np.sin(angs),axis=-1)
+    Ac = np.mean(A_xpsd*np.cos(angs),axis=-1)
+    A1mod = np.sqrt(As**2+Ac**2)
+    A1phs = np.arctan2(As,Ac)
+    
+    return A0,A1mod,A1phs
