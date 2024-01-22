@@ -100,10 +100,10 @@ def runjobs():
     
     #--------------------------------------------------------------------------
     # Make SBTACH
-    inpath = currwd + "/resp_config_ffrec.py"
+    inpath = currwd + "/rec_config_ffrec.py"
     c1 = "{:s} -v {:d} -n {:d} -f {:d} -o {:d} -p {:d} -s{:d} -c {:s}".format(inpath,maxver,nload,freq,nori,nphs,skip,config_name)
     
-    jobname="{:s}".format('resp_config_ffrec_'+config_name)
+    jobname="{:s}".format('rec_config_ffrec_'+config_name)
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)
