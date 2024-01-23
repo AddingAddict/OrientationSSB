@@ -16,11 +16,11 @@ def tf_check_type(t, y0):
         raise TypeError('Error in Datatype')
 
 
-# def clip_weights(Wlgn_to_4,Wlim,arbor):
-# 	return tf.clip_by_value(Wlgn_to_4,0,arbor*Wlim)
+# def clip_weights(Wlgnto4,Wlim,arbor):
+# 	return tf.clip_by_value(Wlgnto4,0,arbor*Wlim)
 
-def check_for_frozen_weights(Wlgn_to_4,Wlim,arbor):
-    frozen = tf.math.logical_or(Wlgn_to_4[arbor>0]>=(Wlim*arbor[arbor>0]), Wlgn_to_4[arbor>0]<=0)
+def check_for_frozen_weights(Wlgnto4,Wlim,arbor):
+    frozen = tf.math.logical_or(Wlgnto4[arbor>0]>=(Wlim*arbor[arbor>0]), Wlgnto4[arbor>0]<=0)
     return np.sum(frozen)>0
 
 
@@ -655,9 +655,9 @@ class Tf_integrator_new:
             return out
 
         ## init norm
-        Wlgn_to_4 = y0[:lim*num_lgn_paths].numpy().reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
-        init_norm_alpha = np.nansum(Wlgn_to_4,axis=(0,2))
-        init_norm_x = np.nansum(Wlgn_to_4,axis=1)
+        Wlgnto4 = y0[:lim*num_lgn_paths].numpy().reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
+        init_norm_alpha = np.nansum(Wlgnto4,axis=(0,2))
+        init_norm_x = np.nansum(Wlgnto4,axis=1)
         # print("init_sum",init_norm_alpha[:5],init_norm_x[0,:5])
         H = tf.convert_to_tensor(np.ones((self.num_pop,N4**2)),dtype=tf.float32)
 
@@ -783,9 +783,9 @@ class Tf_integrator_new:
                     timestep = istep * self.expanse_steps + jexp
                     l4 = y[lim*num_lgn_paths:num_lgn_paths*lim+l4_size]
                     l23 = y[lim*num_lgn_paths+l4_size:num_lgn_paths*lim+crt_size]
-                    Wlgn_to_4 = tf.reshape(y[:lim*num_lgn_paths],[num_lgn_paths,pop_size,-1])
+                    Wlgnto4 = tf.reshape(y[:lim*num_lgn_paths],[num_lgn_paths,pop_size,-1])
                     dW_dict = plasticity_dynamics.unconstrained_plasticity_wrapper(self.p_dict,\
-                                l4, l23, lgn, Wlgn_to_4, self.params_dict["W4to4"],\
+                                l4, l23, lgn, Wlgnto4, self.params_dict["W4to4"],\
                                 self.params_dict["W4to23"], self.params_dict["W23to23"], timestep)
                     for key,value in dW_dict.items():
                         dW[key] += value
@@ -814,9 +814,9 @@ class Tf_integrator_new:
 
                 # Plasticity update averaged over avg_no_inp number of input patterns
                 s = num_lgn_paths*lim
-                Wlgn_to_4 = tf.reshape(y[:s],[num_lgn_paths,pop_size,Nlgn**2])
-                Wlgn_to_4,W4to4,W4to23,W23to23 =\
-                 plasticity_dynamics.constraint_update_wrapper(dW,self.p_dict,Wlgn_to_4,\
+                Wlgnto4 = tf.reshape(y[:s],[num_lgn_paths,pop_size,Nlgn**2])
+                Wlgnto4,W4to4,W4to23,W23to23 =\
+                 plasticity_dynamics.constraint_update_wrapper(dW,self.p_dict,Wlgnto4,\
                                                             self.params_dict["arbor2"],\
                                                             self.params_dict["W4to4"],#change to updated W4to4\
                                                             self.params_dict["arbor4to4_full"],\
@@ -827,8 +827,8 @@ class Tf_integrator_new:
                                                             dt,self.params_dict)
                 
                 # synaptic normalisation
-                Wlgn_to_4,W4to4,W4to23,W23to23 =\
-                    plasticity_dynamics.prune_weights_wrapper(self.p_dict,Wlgn_to_4,\
+                Wlgnto4,W4to4,W4to23,W23to23 =\
+                    plasticity_dynamics.prune_weights_wrapper(self.p_dict,Wlgnto4,\
                                                         self.params_dict["arbor2"],\
                                                         self.params_dict["W4to4"],\
                                                         self.params_dict["arbor4to4_full"],\
@@ -840,8 +840,8 @@ class Tf_integrator_new:
 
                 for rep in range(4):
                     # synaptic normalisation
-                    Wlgn_to_4,W4to4,W4to23,W23to23 =\
-                     plasticity_dynamics.clip_weights_wrapper(self.p_dict,Wlgn_to_4,\
+                    Wlgnto4,W4to4,W4to23,W23to23 =\
+                     plasticity_dynamics.clip_weights_wrapper(self.p_dict,Wlgnto4,\
                                                             self.params_dict["arbor2"],\
                                                             self.params_dict["W4to4"],\
                                                             self.params_dict["arbor4to4_full"],\
@@ -851,9 +851,9 @@ class Tf_integrator_new:
                                                             self.params_dict["arbor23to23_full"],\
                                                             self.params_dict)
 
-                    if True:#check_for_frozen_weights(Wlgn_to_4,Wlim,arbor2):
-                        Wlgn_to_4,W4to4,W4to23,W23to23,H =\
-                         plasticity_dynamics.mult_norm_wrapper(self.p_dict,Wlgn_to_4,\
+                    if True:#check_for_frozen_weights(Wlgnto4,Wlim,arbor2):
+                        Wlgnto4,W4to4,W4to23,W23to23,H =\
+                         plasticity_dynamics.mult_norm_wrapper(self.p_dict,Wlgnto4,\
                                                             self.params_dict["arbor2"],\
                                                             self.params_dict["W4to4"],\
                                                             self.params_dict["arbor4to4_full"],\
@@ -865,22 +865,22 @@ class Tf_integrator_new:
                                                             self.params_dict)
 
                 # for i in range(20):
-                # 	norm = tf.reduce_sum(Wlgn_to_4,axis=(0,2))
+                # 	norm = tf.reduce_sum(Wlgnto4,axis=(0,2))
                 # 	norm = tf.where(tf.equal(norm, 0), tf.ones_like(norm), norm)
-                # 	Wlgn_to_4 /= norm[None,:,None]
-                # 	norm = tf.reduce_sum(Wlgn_to_4,axis=1)
+                # 	Wlgnto4 /= norm[None,:,None]
+                # 	norm = tf.reduce_sum(Wlgnto4,axis=1)
                 # 	norm = tf.where(tf.equal(norm, 0), tf.ones_like(norm), norm)
-                # 	Wlgn_to_4 /= norm[:,None,:]
-                # 	Wlgn_to_4 = tf.clip_by_value(Wlgn_to_4,0,Wlim*arbor2)
+                # 	Wlgnto4 /= norm[:,None,:]
+                # 	Wlgnto4 = tf.clip_by_value(Wlgnto4,0,Wlim*arbor2)
 
                 # check fraction of synaptic ff weights are frozen
-                frozen = np.sum(tf.boolean_mask(Wlgn_to_4,arbor2)<=0) + \
-                         np.sum(tf.boolean_mask(Wlgn_to_4,arbor2)>=Wlim*(arbor2[arbor2>0]))
+                frozen = np.sum(tf.boolean_mask(Wlgnto4,arbor2)<=0) + \
+                         np.sum(tf.boolean_mask(Wlgnto4,arbor2)>=Wlim*(arbor2[arbor2>0]))
                 if frozen>(0.9*np.sum(arbor2.numpy())):
                     self.frozen = True
                     print("0.9 of ff weights are frozen at t={}, exit integration!".format(kinput))
                     break
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[lim*num_lgn_paths])
+                Wlgnto4 = tf.reshape(Wlgnto4,[lim*num_lgn_paths])
 
 
                 ## if w4to23 is plastic do multiplicative normalisation
@@ -898,10 +898,10 @@ class Tf_integrator_new:
                 # 									axis=0)
                 # 	W4to23 = tf.reshape(W4to23,[l23_size*l4_size])
                 # 	####### concatenate updated connectivity to y vector #######
-                # 	y = tf.concat([Wlgn_to_4,y[lim*num_lgn_paths:lim*num_lgn_paths+crt_size],\
+                # 	y = tf.concat([Wlgnto4,y[lim*num_lgn_paths:lim*num_lgn_paths+crt_size],\
                 # 					W4to23],0)
                 # else:
-                y = tf.concat([Wlgn_to_4,y[lim*num_lgn_paths:]],0)
+                y = tf.concat([Wlgnto4,y[lim*num_lgn_paths:]],0)
                 # if self.params_dict["config_dict"]["W4to23_params"]["plasticity_rule"]!="None":
                 # 	y = tf.concat([y[:lim*num_lgn_paths+crt_size],\
                 # 		tf.reshape(self.params_dict["W4to23"],[-1])],0)
@@ -984,16 +984,16 @@ class Tf_integrator:
                 arbor2 = np.stack([arbor,arbor]).flatten()
                 init_weights = self.params_dict["init_weights"]
                 Wlim = self.params_dict["Wlim"]
-                Wlgn_to_4 = out[:lim]
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[2,N4*N4*Nvert,Nlgn*Nlgn])
-                Wlgn_to_4 = clip_weights(Wlgn_to_4,Wlim,arbor)
+                Wlgnto4 = out[:lim]
+                Wlgnto4 = tf.reshape(Wlgnto4,[2,N4*N4*Nvert,Nlgn*Nlgn])
+                Wlgnto4 = clip_weights(Wlgnto4,Wlim,arbor)
 
-                Wlgn_to_4 = synaptic_normalization(Wlgn_to_4,arbor,Wlim,init_weights)
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[lim])
-                if (np.sum(Wlgn_to_4[arbor2>0]==0)+np.sum(Wlgn_to_4[arbor2>0]==Wlim))>\
+                Wlgnto4 = synaptic_normalization(Wlgnto4,arbor,Wlim,init_weights)
+                Wlgnto4 = tf.reshape(Wlgnto4,[lim])
+                if (np.sum(Wlgnto4[arbor2>0]==0)+np.sum(Wlgnto4[arbor2>0]==Wlim))>\
                    (1.8*np.sum(arbor.numpy())):
                     self.frozen = True
-                out = tf.concat([Wlgn_to_4,out[lim:]],0)
+                out = tf.concat([Wlgnto4,out[lim:]],0)
             # if (t%T_pd)==(T_pd-1):
             # 	out = tf.concat([out[:lim],0*out[lim:]],0)
 
@@ -1091,16 +1091,16 @@ class Tf_integrator:
                 arbor2 = np.stack([arbor,arbor]).flatten()
                 init_weights = self.params_dict["init_weights"]
                 Wlim = self.params_dict["Wlim"]
-                Wlgn_to_4 = out[:lim]
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[2,N4*N4*Nvert,Nlgn*Nlgn])
-                Wlgn_to_4 = clip_weights(Wlgn_to_4,Wlim,arbor)
+                Wlgnto4 = out[:lim]
+                Wlgnto4 = tf.reshape(Wlgnto4,[2,N4*N4*Nvert,Nlgn*Nlgn])
+                Wlgnto4 = clip_weights(Wlgnto4,Wlim,arbor)
 
-                Wlgn_to_4 = synaptic_normalization(Wlgn_to_4,arbor,Wlim,init_weights)
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[lim])
-                if (np.sum(Wlgn_to_4[arbor2>0]==0)+np.sum(Wlgn_to_4[arbor2>0]==Wlim))>\
+                Wlgnto4 = synaptic_normalization(Wlgnto4,arbor,Wlim,init_weights)
+                Wlgnto4 = tf.reshape(Wlgnto4,[lim])
+                if (np.sum(Wlgnto4[arbor2>0]==0)+np.sum(Wlgnto4[arbor2>0]==Wlim))>\
                    (1.8*np.sum(arbor.numpy())):
                     self.frozen = True
-                out = tf.concat([Wlgn_to_4,out[lim:]],0)
+                out = tf.concat([Wlgnto4,out[lim:]],0)
             return out
 
         y = y0
@@ -1135,17 +1135,17 @@ class Tf_integrator:
 
                 init_weights = self.params_dict["init_weights"]
                 Wlim = self.params_dict["Wlim"]
-                Wlgn_to_4 = out
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[2,N4*N4*Nvert,Nlgn*Nlgn])
-                Wlgn_to_4 = clip_weights(Wlgn_to_4,Wlim,arbor)
+                Wlgnto4 = out
+                Wlgnto4 = tf.reshape(Wlgnto4,[2,N4*N4*Nvert,Nlgn*Nlgn])
+                Wlgnto4 = clip_weights(Wlgnto4,Wlim,arbor)
 
-                Wlgn_to_4 = synaptic_normalization(Wlgn_to_4,arbor,Wlim,init_weights)
-                Wlgn_to_4 = tf.reshape(Wlgn_to_4,[lim])
+                Wlgnto4 = synaptic_normalization(Wlgnto4,arbor,Wlim,init_weights)
+                Wlgnto4 = tf.reshape(Wlgnto4,[lim])
                 arbor2 = np.stack([arbor,arbor]).flatten()
-                if (np.sum(Wlgn_to_4[arbor2>0]==0)+np.sum(Wlgn_to_4[arbor2>0]==Wlim))>\
+                if (np.sum(Wlgnto4[arbor2>0]==0)+np.sum(Wlgnto4[arbor2>0]==Wlim))>\
                     (1.8*np.sum(arbor.numpy())):
                     self.frozen = True
-                out = Wlgn_to_4
+                out = Wlgnto4
 
             return out
 

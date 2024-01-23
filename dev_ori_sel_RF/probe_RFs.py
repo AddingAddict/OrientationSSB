@@ -25,11 +25,11 @@ def fio_powerlaw(x):
     x[x<0] = 0
     return x**2
 
-def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau):
+def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgnto4,W4to4,W4to23,W23to23,W23to4,tau):
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
     
-    print("Wlgn_to_4",Wlgn_to_4.shape,lgn.shape)
+    print("Wlgnto4",Wlgnto4.shape,lgn.shape)
     gamma_rec = probe_config_dict["gamma_4"]
     gamma_ff = probe_config_dict["gamma_lgn"]
     dt = config_dict["dt"]
@@ -46,7 +46,7 @@ def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_
                 lgn_t = int((kt//temporal_duration)%inp_dict["Nsur"])#
                 # lgn_inp = lgn[:2,:,0]
                 lgn_inp = lgn[:,:,i,j,lgn_t]
-                out = dynamics_system(y,lgn_inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
+                out = dynamics_system(y,lgn_inp,Wlgnto4,W4to4,W4to23,W23to23,\
                                      W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
                 try:
                     y = y + dt*out
@@ -56,10 +56,10 @@ def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_
 
                 # only calculate ff input at beginning of new phase
                 if kt%temporal_duration == 0:
-                    ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],lgn_inp[0,:])+\
-                                        np.dot(Wlgn_to_4[1,:,:],lgn_inp[1,:]))
-                    ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],lgn_inp[0,:])+\
-                                        np.dot(Wlgn_to_4[3,:,:],lgn_inp[1,:]))
+                    ff_inp_E = gamma_ff*(np.dot(Wlgnto4[0,:,:],lgn_inp[0,:])+\
+                                        np.dot(Wlgnto4[1,:,:],lgn_inp[1,:]))
+                    ff_inp_I = gamma_ff*(np.dot(Wlgnto4[2,:,:],lgn_inp[0,:])+\
+                                        np.dot(Wlgnto4[3,:,:],lgn_inp[1,:]))
                 It[i,j,kt] = np.concatenate([ff_inp_E,ff_inp_I])
                 
                 # save last activity and ff input for given phase
@@ -69,7 +69,7 @@ def probe_responses(probe_config_dict,inp_dict,t,lgn,y0,dynamics_system,Wlgn_to_
     
     return act,inp,yt,It
 
-def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgn_to_4,all_yt,all_It,
+def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgnto4,all_yt,all_It,
                    system_mode='one_layer',RF_mode='load_from_external'):
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
@@ -265,10 +265,10 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgn_to_4,all_yt,all_
 
             ## LGN input
             lgn_inp = lgn[:,:,i,j,-1]
-            # exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn[0,i,j,0,:]) +\
-            # 						 np.dot(Wlgn_to_4[1,:,:],lgn[1,i,j,0,:]))
-            exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn_inp[0,:]) +\
-                                     np.dot(Wlgn_to_4[1,:,:],lgn_inp[1,:]))
+            # exc_ff_inp = gamma_ff * (np.dot(Wlgnto4[0,:,:],lgn[0,i,j,0,:]) +\
+            # 						 np.dot(Wlgnto4[1,:,:],lgn[1,i,j,0,:]))
+            exc_ff_inp = gamma_ff * (np.dot(Wlgnto4[0,:,:],lgn_inp[0,:]) +\
+                                     np.dot(Wlgnto4[1,:,:],lgn_inp[1,:]))
             ## visual stimuli
             fig = plt.figure(figsize=(18,5))
             ax = fig.add_subplot(131)
@@ -329,7 +329,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgn_to_4,all_yt,all_
                                                              probe_config_dict["Version"],suffix)
     pp = PdfPages(pdf_path + filename)
 
-    sf = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+    sf = Wlgnto4[0,...] - Wlgnto4[1,...]
     rA = int(probe_config_dict["Wlgn_to4_params"]["r_A_on"] * probe_config_dict["Wlgn_to4_params"].get("r_lim",1.) * N4)
     DA = 2*rA + 5
     RF,_,_,_ = analysis_tools.get_RF_form(sf,N4,Nlgn,DA,calc_PF=False,Nvert=Nvert,mode="o")
@@ -452,11 +452,11 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                 "dt": dt
     }
 
-    _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
+    _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
 
     ################################# calc pref freq ###############################
     if calc_pref_freq:
-        sd = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+        sd = Wlgnto4[0,...] - Wlgnto4[1,...]
         sd = sd.reshape((N4,N4,Nlgn,Nlgn))
         
         xs,ys = np.meshgrid(np.arange(Nlgn),np.arange(Nlgn))
@@ -517,8 +517,8 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
         tau = 1.
         
     act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
-                                    Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau)
-    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgn_to_4,yt,It,
+                                    Wlgnto4,W4to4,W4to23,W23to23,W23to4,tau)
+    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgnto4,yt,It,
                                   system_mode=system_mode,RF_mode=RF_mode)
     return act,inp,phase,modrat
 
@@ -576,11 +576,11 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
                 "dt": dt
     }
 
-    _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
+    _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
 
     ################################# calc pref freq ###############################
     if calc_pref_freq:
-        sd = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+        sd = Wlgnto4[0,...] - Wlgnto4[1,...]
         sd = sd.reshape((N4,N4,Nlgn,Nlgn))
         
         xs,ys = np.meshgrid(np.arange(Nlgn),np.arange(Nlgn))
@@ -641,8 +641,8 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
         tau = 1.
         
     act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
-                                    Wlgn_to_4,W4to4,W4to23,W23to23,W23to4,tau)
-    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgn_to_4,yt,It,
+                                    Wlgnto4,W4to4,W4to23,W23to23,W23to4,tau)
+    phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgnto4,yt,It,
                                   system_mode=system_mode,RF_mode=RF_mode)
     return act,inp,phase,modrat
 
@@ -759,8 +759,8 @@ if __name__=="__main__":
     print("lgn",lgn.shape)
     # print("lgn",lgn.shape,np.nanmax(lgn,axis=(0,1,2,4)),np.nanstd(lgn,axis=(0,1,2,4)))
 
-    # _,Wlgn_to_4,_,_,_,_,_,_,_,_,_,_ = n.system
-    # sf = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+    # _,Wlgnto4,_,_,_,_,_,_,_,_,_,_ = n.system
+    # sf = Wlgnto4[0,...] - Wlgnto4[1,...]
     # rA = int(config_dict["Wlgn_to4_params"]["r_A_on"] * N4)
     # DA = 2*rA + 5
     # RF,_,_,_ = analysis_tools.get_RF_form(sf,N4,Nlgn,DA,calc_PF=False,Nvert=Nvert,mode="o")
@@ -776,7 +776,7 @@ if __name__=="__main__":
 
 
     if system_mode=="one_layer":
-        _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
+        _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
         ################################# initialization ###############################
         np.random.seed(config_dict["random_seed"]*113)
         l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
@@ -794,7 +794,7 @@ if __name__=="__main__":
         W23to4 = 0
         W23to23= 0
     elif system_mode=="two_layer":
-        _,Wlgn_to_4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,W23to23,arbor23,W4to23,arbor4to23,_,W23to4 = n.system
+        _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,W23to23,arbor23,W4to23,arbor4to23,_,W23to4 = n.system
         ################################# initialization ###############################
         np.random.seed(config_dict["random_seed"]*113)
         l40 = np.random.uniform(0,1,2*N4*N4*Nvert)*0.1
@@ -827,7 +827,7 @@ if __name__=="__main__":
 
     I = np.linalg.inv(np.diagflat(np.ones(N4*N4*2*Nvert)) - W4to4)
 
-    print("Wlgn_to_4",Wlgn_to_4.shape,lgn.shape)
+    print("Wlgnto4",Wlgnto4.shape,lgn.shape)
     gamma_rec = config_dict["gamma_4"]
     temporal_duration = 500
     num_reps = t[-1]/temporal_duration
@@ -844,34 +844,34 @@ if __name__=="__main__":
                 lgn_t = int((kt//temporal_duration)%kwargs["Nsur"])#
                 # inp = lgn[:2,:,0]
                 inp = lgn[:,:,i,j,lgn_t]
-                dy,_ = dynamics_system(y,inp,Wlgn_to_4,W4to4,W4to23,W23to23,\
+                dy,_ = dynamics_system(y,inp,Wlgnto4,W4to4,W4to23,W23to23,\
                                      W23to4,gamma_rec,gamma_ff,N4*N4*Nvert,N23**2,tau)
                 y = y + dt*dy
                 yt.append( y )
 
                 # ff input
-                ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],inp[0,:])+\
-                                     np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
-                ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],inp[0,:])+\
-                                     np.dot(Wlgn_to_4[3,:,:],inp[1,:]))
+                ff_inp_E = gamma_ff*(np.dot(Wlgnto4[0,:,:],inp[0,:])+\
+                                     np.dot(Wlgnto4[1,:,:],inp[1,:]))
+                ff_inp_I = gamma_ff*(np.dot(Wlgnto4[2,:,:],inp[0,:])+\
+                                     np.dot(Wlgnto4[3,:,:],inp[1,:]))
                 It.append(np.concatenate([ff_inp_E,ff_inp_I]))
 
             # l4_I_avg = 0
             # for k in range(lgn.shape[-1]):
-            # 	l4_I = np.dot(I[:,:N4*N4*Nvert], np.dot(Wlgn_to_4[0,:,:],lgn[0,:,i,j,k]) +\
-            # 	 		np.dot(Wlgn_to_4[1,:,:],lgn[1,:,i,j,k])) * gamma_ff
+            # 	l4_I = np.dot(I[:,:N4*N4*Nvert], np.dot(Wlgnto4[0,:,:],lgn[0,:,i,j,k]) +\
+            # 	 		np.dot(Wlgnto4[1,:,:],lgn[1,:,i,j,k])) * gamma_ff
             # 	if connectivity_type=="EI":
-            # 		l4_I_toI = np.dot(I[:,N4*N4*Nvert:], np.dot(Wlgn_to_4[2,:,:],lgn[0,:,i,j,k]) +\
-            # 		 			np.dot(Wlgn_to_4[3,:,:],lgn[1,:,i,j,k])) * gamma_ff
+            # 		l4_I_toI = np.dot(I[:,N4*N4*Nvert:], np.dot(Wlgnto4[2,:,:],lgn[0,:,i,j,k]) +\
+            # 		 			np.dot(Wlgnto4[3,:,:],lgn[1,:,i,j,k])) * gamma_ff
             # 		l4_I += l4_I_toI
             # 	l4_I = np.clip(l4_I,0,np.nanmax(l4_I))
             # 	l4_I_avg += l4_I
             # yt = np.ones_like(t)
 
-            # ff_inp_E = gamma_ff*(np.dot(Wlgn_to_4[0,:,:],lgn[0,:,i,j,:])+\
-            # 					 np.dot(Wlgn_to_4[1,:,:],lgn[1,:,i,j,:]))
-            # ff_inp_I = gamma_ff*(np.dot(Wlgn_to_4[2,:,:],lgn[0,:,i,j,:])+\
-            # 					 np.dot(Wlgn_to_4[3,:,:],lgn[1,:,i,j,:]))
+            # ff_inp_E = gamma_ff*(np.dot(Wlgnto4[0,:,:],lgn[0,:,i,j,:])+\
+            # 					 np.dot(Wlgnto4[1,:,:],lgn[1,:,i,j,:]))
+            # ff_inp_I = gamma_ff*(np.dot(Wlgnto4[2,:,:],lgn[0,:,i,j,:])+\
+            # 					 np.dot(Wlgnto4[3,:,:],lgn[1,:,i,j,:]))
             # It = np.stack([np.repeat(ff_inp_E,num_reps,axis=1),np.repeat(ff_inp_E,num_reps,axis=1)])
 
             yt = np.array(yt)
@@ -1081,10 +1081,10 @@ if __name__=="__main__":
 
 
             ## LGN input
-            # exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],lgn[0,i,j,0,:]) +\
-            # 						 np.dot(Wlgn_to_4[1,:,:],lgn[1,i,j,0,:]))
-            exc_ff_inp = gamma_ff * (np.dot(Wlgn_to_4[0,:,:],inp[0,:]) +\
-                                     np.dot(Wlgn_to_4[1,:,:],inp[1,:]))
+            # exc_ff_inp = gamma_ff * (np.dot(Wlgnto4[0,:,:],lgn[0,i,j,0,:]) +\
+            # 						 np.dot(Wlgnto4[1,:,:],lgn[1,i,j,0,:]))
+            exc_ff_inp = gamma_ff * (np.dot(Wlgnto4[0,:,:],inp[0,:]) +\
+                                     np.dot(Wlgnto4[1,:,:],inp[1,:]))
             ## visual stimuli
             fig = plt.figure(figsize=(18,5))
             ax = fig.add_subplot(131)
@@ -1169,7 +1169,7 @@ if __name__=="__main__":
                             spat_frequency,config_dict["Version"],suffix)
         pp = PdfPages(pdf_path + filename)
 
-        sf = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+        sf = Wlgnto4[0,...] - Wlgnto4[1,...]
         rA = int(config_dict["Wlgn_to4_params"]["r_A_on"] * N4)
         DA = 2*rA + 5
         RF,_,_,_ = analysis_tools.get_RF_form(sf,N4,Nlgn,DA,calc_PF=False,Nvert=Nvert,mode="o")

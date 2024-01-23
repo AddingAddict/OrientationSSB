@@ -64,7 +64,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
 
     # =================== Network system ===============================================
     n = network_ffrec.Network(Version,config_dict)
-    Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,init_weights_4to4 = n.system
+    Wret_to_lgn,Wlgnto4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,init_weights_4to4 = n.system
     arbor_e = arbor4to4[:N4*N4*Nvert,:N4*N4*Nvert]
     arbor_i = arbor4to4[:N4*N4*Nvert,N4*N4*Nvert:]
     Wrec_mode = config_dict["W4to4_params"]["Wrec_mode"]
@@ -107,11 +107,11 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
                                                   "rec4_I")
 
     if config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
-        num_pops = Wlgn_to_4.shape[0]//2
+        num_pops = Wlgnto4.shape[0]//2
         init_weights = 0
         ## do normalisation separately for E and I population
         for i in range(num_pops):
-            Wpop = Wlgn_to_4[i*2:(i+1)*2,...]
+            Wpop = Wlgnto4[i*2:(i+1)*2,...]
             arbpop = arbor2[i*2:(i+1)*2,...]
 
             dot_product = np.dot(c_orth,Wpop[arbpop>0])
@@ -200,7 +200,7 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
     sys.stdout.flush()
     if config_dict["Inp_params"]["simulate_activity"]:
         if True:
-            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+            y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
             if config_dict["test_lowDsubset"]:
                 yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
                                                 y0, t, dt, params_dict, mode="dynamic")
@@ -230,13 +230,13 @@ def parameter_sweep_ffrec(Version,config_dict,**kwargs):
 
         else:
             t = t[:-config_dict["Inp_params"]["pattern_duration"]]
-            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+            y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
             y,_ = integrator_tf.odeint(dynamics.dynamics_l4_sgl, y0, t, dt, params_dict,\
                                         mode="single_stim_update")
             l4 = y[2*s:]
 
     else:
-        y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+        y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
         if config_dict["test_lowDsubset"]:
             yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
                                             y0, t, dt, params_dict, mode="dynamic")

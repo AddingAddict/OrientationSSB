@@ -48,7 +48,7 @@ class Network:
         Wlgn4 = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
                                            random_seed=self.config_dict["random_seed"],\
                                            Nvert=(1,self.Nvert), verbose=self.verbose)
-        self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2 = \
+        self.Wlgnto4,self.arbor_on,self.arbor_off,self.arbor2 = \
             self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4,\
                                       system_mode=self.config_dict["system"],**self.kwargs)
         self.arbor2 = np.concatenate([self.arbor2]*(self.config_dict["num_lgn_paths"]//2))
@@ -57,9 +57,9 @@ class Network:
             Wlgn4_I = connectivity.Connectivity((self.Nlgn,self.Nlgn), (self.N4,self.N4),\
                                                  random_seed=self.config_dict["random_seed"]+1,\
                                                  Nvert=(1,self.Nvert), verbose=self.verbose)
-            Wlgn_to_4_I,_,_,_ = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4_I,\
+            Wlgnto4_I,_,_,_ = self.get_RFs(self.config_dict["Wlgn_to4_params"]["W_mode"],Wlgn4=Wlgn4_I,\
                                         system_mode=self.config_dict["system"], **self.kwargs)
-            self.Wlgn_to_4 = np.concatenate([self.Wlgn_to_4,Wlgn_to_4_I])
+            self.Wlgnto4 = np.concatenate([self.Wlgnto4,Wlgnto4_I])
 
         # recurrent connectivity
         W4 = connectivity.Connectivity((self.N4,self.N4), (self.N4,self.N4),\
@@ -103,39 +103,39 @@ class Network:
         # init normalization
         # syn norm over x
         if self.config_dict["Wlgn_to4_params"]["mult_norm"]=="x":
-            self.init_weights = np.sum(self.Wlgn_to_4,axis=1)
+            self.init_weights = np.sum(self.Wlgnto4,axis=1)
         # syn norm over alpha
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="alpha":
-            self.init_weights = np.sum(self.Wlgn_to_4,axis=2)
+            self.init_weights = np.sum(self.Wlgnto4,axis=2)
         # syn norm over x and alpha
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
             self.init_weights = None ## create in script, needs orth norm vectors
         # == ff and rec plasticity
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_post":
             self.init_weights = np.stack( \
-                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
-                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    )
+                ( np.sum(np.concatenate( [self.Wlgnto4[0,:,:],self.Wlgnto4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgnto4[1,:,:],self.Wlgnto4[3,:,:]] ,0), axis=0) )    )
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_pre":
             N = self.W4to4.shape[1]//2
             self.init_weights = np.stack( \
-                ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
-                    np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )
+                ( np.sum(self.Wlgnto4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
+                    np.sum(self.Wlgnto4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_postpre_approx":
             N = self.W4to4.shape[1]//2
             self.init_weights = [np.stack( \
-                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
-                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    ),
+                ( np.sum(np.concatenate( [self.Wlgnto4[0,:,:],self.Wlgnto4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgnto4[1,:,:],self.Wlgnto4[3,:,:]] ,0), axis=0) )    ),
                   np.stack( \
-                ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
-                    np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )]
+                ( np.sum(self.Wlgnto4[:2,:,:],axis=(0,2)) + np.sum(self.W4to4[:N,:N],axis=1) , \
+                    np.sum(self.Wlgnto4[2:,:,:],axis=(0,2)) + np.sum(self.W4to4[N:,:N],axis=1) )    )]
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="ffrec_postpre_approx_sep":
             N = self.W4to4.shape[1]//2
             self.init_weights = [np.stack( \
-                ( np.sum(np.concatenate( [self.Wlgn_to_4[0,:,:],self.Wlgn_to_4[2,:,:]] ,0) , axis=0) , \
-                  np.sum(np.concatenate( [self.Wlgn_to_4[1,:,:],self.Wlgn_to_4[3,:,:]] ,0), axis=0) )    ),
+                ( np.sum(np.concatenate( [self.Wlgnto4[0,:,:],self.Wlgnto4[2,:,:]] ,0) , axis=0) , \
+                  np.sum(np.concatenate( [self.Wlgnto4[1,:,:],self.Wlgnto4[3,:,:]] ,0), axis=0) )    ),
                   np.stack( \
-                ( np.sum(self.Wlgn_to_4[:2,:,:],axis=(0,2)) , \
-                    np.sum(self.Wlgn_to_4[2:,:,:],axis=(0,2))  )    )]
+                ( np.sum(self.Wlgnto4[:2,:,:],axis=(0,2)) , \
+                    np.sum(self.Wlgnto4[2:,:,:],axis=(0,2))  )    )]
             
         # ========================
         elif self.config_dict["Wlgn_to4_params"]["mult_norm"]=="homeostatic":
@@ -181,7 +181,7 @@ class Network:
             self.init_weights_4to4 = np.array([]) ## not needed
 
         if self.config_dict["system"]=="one_layer":
-            self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,self.arbor2,self.init_weights,
+            self.system = (self.Wret_to_lgn,self.Wlgnto4,self.arbor_on,self.arbor_off,self.arbor2,self.init_weights,
                 self.W4to4,self.arbor4to4,self.init_weights_4to4)
 
         elif self.config_dict["system"]=="two_layer":
@@ -226,7 +226,7 @@ class Network:
             Wrec_mode = self.config_dict["W23to4_params"]["Wrec_mode"]
             self.W23to4,_ = W4.create_matrix_2pop(self.config_dict["W23to4_params"],Wrec_mode)
 
-            self.system = (self.Wret_to_lgn,self.Wlgn_to_4,self.arbor_on,self.arbor_off,\
+            self.system = (self.Wret_to_lgn,self.Wlgnto4,self.arbor_on,self.arbor_off,\
                             self.arbor2,self.init_weights,self.W4to4,self.arbor4to4,self.W23to23,\
                             self.arbor23,self.W4to23,self.arbor4to23,self.init_weights_4to23,self.W23to4)
 
@@ -375,7 +375,7 @@ class Network:
                         r_A=self.config_dict["Wlgn_to4_params"]["r_A_on"],profile_A="heaviside")
             Wof_to_4,_ = Wlgn4.create_matrix(self.config_dict["Wlgn_to4_params"], W_mode,\
                         r_A=self.config_dict["Wlgn_to4_params"]["r_A_off"],profile_A="heaviside")
-            Wlgn_to_4 = np.stack([Won_to_4,Wof_to_4])
+            Wlgnto4 = np.stack([Won_to_4,Wof_to_4])
         elif mode=="gabor":
             conn = connectivity.Connectivity((self.Nlgn,self.Nlgn),(self.N4,self.N4),\
                                             random_seed=12345, verbose=self.verbose)
@@ -416,12 +416,12 @@ class Network:
                             "spatial_freq_het" : spatial_freq_het,
                             }
             gb,_ = conn.create_matrix(conn_params, "Gabor")
-            Wlgn_to_4_on = np.copy(gb)
-            Wlgn_to_4_off = np.copy(gb)
-            Wlgn_to_4_on[Wlgn_to_4_on<0] = 0
-            Wlgn_to_4_off[Wlgn_to_4_off>0] = 0
-            Wlgn_to_4_off *= -1.
-            Wlgn_to_4 = np.stack([Wlgn_to_4_on,Wlgn_to_4_off])
+            Wlgnto4_on = np.copy(gb)
+            Wlgnto4_off = np.copy(gb)
+            Wlgnto4_on[Wlgnto4_on<0] = 0
+            Wlgnto4_off[Wlgnto4_off>0] = 0
+            Wlgnto4_off *= -1.
+            Wlgnto4 = np.stack([Wlgnto4_on,Wlgnto4_off])
 
         elif mode=="load_from_external":
             Version = self.config_dict["Wlgn_to4_params"]["load_from_prev_run"]
@@ -438,7 +438,7 @@ class Network:
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "two_layer/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 
                 elif kwargs["load_location"]=="habanero":
                     if os.environ["USER"]=="bh2757":
@@ -455,9 +455,9 @@ class Network:
                         else:
                             yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/ori_dev_model/"+\
                                 "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                     # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                    # 	Wlgnto4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
                 elif kwargs["load_location"]=="aws":
                     if self.config_dict.get("config_name",False):
@@ -467,7 +467,7 @@ class Network:
                     else:
                         yfile = np.load("/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\
                         "ori_dev_model/data/two_layer/aws/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 
             elif kwargs["system_mode"]=="one_layer":
 
@@ -477,42 +477,42 @@ class Network:
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                 elif os.environ["USER"]=="tuannguyen":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                 elif os.environ["USER"]=="thn2112":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                 elif os.environ["USER"]=="alex":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                 elif os.environ["USER"]=="ah3913":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                 elif kwargs["load_location"]=="habanero":
                     if self.config_dict.get("config_name",False):
                         yfile = np.load(data_dir + "ffrec/habanero/{s}/v{v}/y_v{v}.npz".format(
                             s=self.config_dict["config_name"],v=Version))
                     else:
                         yfile = np.load(data_dir + "ffrec/habanero/y_files/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
 
                 else:
                     if self.config_dict.get("config_name",False):
@@ -524,9 +524,9 @@ class Network:
                         yfile = np.load(\
                             "/media/bettina/TOSHIBA EXT/physics/columbia/projects/ori_dev_model/"+\
                             "data/ffrec/habanero/v{v}/y_v{v}.npz".format(v=Version))
-                    Wlgn_to_4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
+                    Wlgnto4 = yfile["W"].reshape(num_lgn_paths,self.N4**2*self.Nvert,self.Nlgn**2)
                     # with np.load(data_dir + "ffrec/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                    # 	Wlgnto4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
         arbor_params = {}
         if self.config_dict["Wlgn_to4_params"].get("ret_scatter",False):
@@ -544,12 +544,12 @@ class Network:
         arbor2 = np.stack([arbor_on,arbor_off])
 
         # if mode=="initializegauss":
-        #     new_Wlgn_to_4 = Wlgn_to_4 * arbor2
-        #     old_norm = np.sum(Wlgn_to_4,axis=-1)[:,:,None]
-        #     new_norm = np.sum(new_Wlgn_to_4,axis=-1)[:,:,None]
-        #     Wlgn_to_4 = new_Wlgn_to_4 * old_norm / new_norm * self.config_dict["Wlgn_to4_params"].get("algn",1.0)
+        #     new_Wlgnto4 = Wlgnto4 * arbor2
+        #     old_norm = np.sum(Wlgnto4,axis=-1)[:,:,None]
+        #     new_norm = np.sum(new_Wlgnto4,axis=-1)[:,:,None]
+        #     Wlgnto4 = new_Wlgnto4 * old_norm / new_norm * self.config_dict["Wlgn_to4_params"].get("algn",1.0)
 
-        return Wlgn_to_4,arbor_on,arbor_off,arbor2
+        return Wlgnto4,arbor_on,arbor_off,arbor2
 
 
     def get_Wrec4(self,mode,conn_type,**kwargs):
@@ -614,12 +614,12 @@ class Network:
             #                 "spatial_freq_het" : spatial_freq_het,
             #                 }
             # gb,_ = conn.create_matrix(conn_params, "Gabor")
-            # Wlgn_to_4_on = np.copy(gb)
-            # Wlgn_to_4_off = np.copy(gb)
-            # Wlgn_to_4_on[Wlgn_to_4_on<0] = 0
-            # Wlgn_to_4_off[Wlgn_to_4_off>0] = 0
-            # Wlgn_to_4_off *= -1.
-            # Wlgn_to_4 = np.stack([Wlgn_to_4_on,Wlgn_to_4_off])
+            # Wlgnto4_on = np.copy(gb)
+            # Wlgnto4_off = np.copy(gb)
+            # Wlgnto4_on[Wlgnto4_on<0] = 0
+            # Wlgnto4_off[Wlgnto4_off>0] = 0
+            # Wlgnto4_off *= -1.
+            # Wlgnto4 = np.stack([Wlgnto4_on,Wlgnto4_off])
             raise Exception("TODO")
 
         elif mode=="load_from_external":
@@ -659,7 +659,7 @@ class Network:
                                 "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                     # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                    # 	Wlgnto4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
                 elif kwargs["load_location"]=="aws":
                     if self.config_dict.get("config_name",False):
@@ -728,7 +728,7 @@ class Network:
                             "data/ffrec/habanero/v{v}/y_v{v}.npz".format(v=Version))
                     W4to4 = yfile["Wrec"]#.reshape(num_pops*self.N4**2*self.Nvert,num_pops*self.N4**2*self.Nvert)
                     # with np.load(data_dir + "ffrec/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-                    # 	Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+                    # 	Wlgnto4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
 
         arbor_params = {}
         if self.config_dict["W4to4_params"].get("ret_scatter",False):
@@ -804,7 +804,7 @@ class Network:
                 "data/two_layer/habanero/v{v}/y_v{v}.npz".format(v=Version))
             W4to23 = yfile["W4to23"].reshape(self.N23**2,self.N4**2*self.Nvert)
             # with np.load(data_dir + "layer4/v{v}/yt_v{v}.npz".format(v=Version)) as yt:
-            #   Wlgn_to_4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
+            #   Wlgnto4 = yt["Wt"][-1,:].reshape(2,self.N4**2,self.Nlgn**2)
         elif kwargs["load_location"]=="aws":
             yfile = np.load(\
                 "/media/bettina/Seagate Portable Drive/physics/columbia/projects/"+\

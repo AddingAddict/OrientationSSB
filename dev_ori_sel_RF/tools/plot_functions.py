@@ -114,7 +114,7 @@ def plot_RF(RF,PF,add_PF_row=True,**kwargs):
     return fig
 
 
-def plot_RF_visual_space(Wlgn_to_4,**kwargs):
+def plot_RF_visual_space(Wlgnto4,**kwargs):
     """create figure to display RFs in visual space"""
     Nlgn = kwargs["Nlgn"]
     N4 = kwargs["N4"]
@@ -124,8 +124,8 @@ def plot_RF_visual_space(Wlgn_to_4,**kwargs):
     for irow in range(2):
         for jcol in range(4):
             axes.append(fig.add_subplot(2,4,1+jcol+irow*4))
-    Wlgn_to_4 = Wlgn_to_4.reshape(2,N4*N4*Nvert,Nlgn*Nlgn)
-    deltaS = Wlgn_to_4[0,...] - Wlgn_to_4[1,...]
+    Wlgnto4 = Wlgnto4.reshape(2,N4*N4*Nvert,Nlgn*Nlgn)
+    deltaS = Wlgnto4[0,...] - Wlgnto4[1,...]
     deltaS = deltaS/np.nanmax(np.abs(deltaS),axis=1)[:,None]
     ## normalise max value to 1 such that contours can be drawn at same height for each crt unit
     deltaS = deltaS.reshape(N4,N4*Nvert,Nlgn,Nlgn)

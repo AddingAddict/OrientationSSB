@@ -59,7 +59,7 @@ def parameter_sweep_twolayer(Version,config_dict,**kwargs):
                     "Version" : Version,
                     })
     n = network.Network(Version,config_dict)
-    Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,\
+    Wret_to_lgn,Wlgnto4,arbor_on,arbor_off,arbor2,init_weights,W4to4,arbor4to4,\
                             W23to23,arbor23,W4to23,arbor4to23,init_weights_4to23,W23to4 = n.system
     Wrec_mode = config_dict["W4to4_params"]["Wrec_mode"]
     max_ew = config_dict["W4to4_params"]["max_ew"]
@@ -78,7 +78,7 @@ def parameter_sweep_twolayer(Version,config_dict,**kwargs):
                                                 "layer23")
 
     # normalise learning rate by number of projections per projection field
-    proj_field = np.sum(Wlgn_to_4[0,:N4**2,0]>0)
+    proj_field = np.sum(Wlgnto4[0,:N4**2,0]>0)
     config_dict["Wlgn_to4_params"]["beta_P"] /= proj_field
     print("PLASTICITY RATE",config_dict["Wlgn_to4_params"]["beta_P"])
 
@@ -149,9 +149,9 @@ def parameter_sweep_twolayer(Version,config_dict,**kwargs):
     print("...")
     sys.stdout.flush()
     if config_dict["W4to23_params"]["plasticity_rule"]!="None":
-        y0 = tf.concat([Wlgn_to_4.flatten(), l40, l230, W4to23.flatten()], axis=0)
+        y0 = tf.concat([Wlgnto4.flatten(), l40, l230, W4to23.flatten()], axis=0)
     else:
-        y0 = tf.concat([Wlgn_to_4.flatten(), l40, l230], axis=0)
+        y0 = tf.concat([Wlgnto4.flatten(), l40, l230], axis=0)
     yt,time_dep_dict = integrator_tf.odeint_new(dynamics.dynamics_twolayer,\
                                             y0, t, dt, params_dict, mode="dynamic")
     del params_dict["config_dict"]["W4to4_params"]['l4_avg']

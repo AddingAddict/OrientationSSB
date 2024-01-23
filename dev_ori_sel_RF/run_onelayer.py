@@ -63,7 +63,7 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                     })
     # ================== Network system =========================================
     n = network.Network(Version,config_dict)
-    Wret_to_lgn,Wlgn_to_4,arbor_on,arbor_off,arbor2,init_weights,W4to4 = n.system
+    Wret_to_lgn,Wlgnto4,arbor_on,arbor_off,arbor2,init_weights,W4to4 = n.system
     Wrec_mode = config_dict["W4to4_params"]["Wrec_mode"]
     max_ew = config_dict["W4to4_params"]["max_ew"]
 
@@ -96,11 +96,11 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
                                                   "layer4")
 
     if config_dict["Wlgn_to4_params"]["mult_norm"]=="xalpha":
-        num_pops = Wlgn_to_4.shape[0]//2
+        num_pops = Wlgnto4.shape[0]//2
         init_weights = 0
         ## do normalisation separately for E and I population
         for i in range(num_pops):
-            Wpop = Wlgn_to_4[i*2:(i+1)*2,...]
+            Wpop = Wlgnto4[i*2:(i+1)*2,...]
             arbpop = arbor2[i*2:(i+1)*2,...]
 
             dot_product = np.dot(c_orth,Wpop[arbpop>0])
@@ -113,8 +113,8 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     tf.random.set_seed(config_dict["random_seed"]*113)
     if "2pop" in Wrec_mode:
         l40 = tf.random.uniform([N4*N4*2*Nvert], minval=0, maxval=1, dtype=tf.float32)
-        # l4r = tf.sparse.SparseTensor(Wlgn_to_4.indices,\
-        #     tf.random.uniform([Wlgn_to_4.values.numpy().size], minval=0, maxval=1, dtype=tf.float64),Wlgn_to_4.dense_shape)
+        # l4r = tf.sparse.SparseTensor(Wlgnto4.indices,\
+        #     tf.random.uniform([Wlgnto4.values.numpy().size], minval=0, maxval=1, dtype=tf.float64),Wlgnto4.dense_shape)
         # l40 = tf.sparse.reshape(l4r,[tf.size(l4r)])
         # print(l40.dense_shape)
     else:
@@ -176,8 +176,8 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
     sys.stdout.flush()
     if config_dict["Inp_params"]["simulate_activity"]:
         if True: #not kwargs["not_saving_temp"]:
-            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
-            # y0 = tf.sparse.concat(0,[tf.sparse.reshape(Wlgn_to_4,[tf.size(Wlgn_to_4).numpy()]),tf.cast(l40,tf.float64)])
+            y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
+            # y0 = tf.sparse.concat(0,[tf.sparse.reshape(Wlgnto4,[tf.size(Wlgnto4).numpy()]),tf.cast(l40,tf.float64)])
             if config_dict["test_lowDsubset"]:
                 yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
                                                  y0, t, dt, params_dict, mode="dynamic")
@@ -205,13 +205,13 @@ def parameter_sweep_layer4(Version,config_dict,**kwargs):
 
         else:
             t = t[:-config_dict["Inp_params"]["pattern_duration"]]
-            y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+            y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
             y = integrator_tf.odeint(dynamics.dynamics_l4_sgl, y0, t, dt, params_dict,\
                                         mode="single_stim_update")
             l4 = y[2*s:]
 
     else:
-        y0 = tf.concat([Wlgn_to_4.flatten(), l40], axis=0)
+        y0 = tf.concat([Wlgnto4.flatten(), l40], axis=0)
         if config_dict["test_lowDsubset"]:
             yt,time_dep_dict = integrator_tf.odeint_new(dynamics.lowD_GRF_l4,\
                                              y0, t, dt, params_dict, mode="dynamic")

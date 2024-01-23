@@ -197,13 +197,13 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
         r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
     Wof_to_4 = Wlgn4.create_matrix(Wlgn_to4_params, "random_delta",\
         r_A=Wlgn_to4_params["r_A"],profile_A="heaviside")
-    Wlgn_to_4 = np.stack([Won_to_4,Wof_to_4])
+    Wlgnto4 = np.stack([Won_to_4,Wof_to_4])
 
     ## init normalization
     ## syn norm over x
-    init_weights = np.sum(Wlgn_to_4,axis=1)
+    init_weights = np.sum(Wlgnto4,axis=1)
     ## syn norm over alpha
-    # init_weights = np.sum(Wlgn_to_4,axis=2)
+    # init_weights = np.sum(Wlgnto4,axis=2)
 
     # normalisation projector for ff connectivity
     # P_orth = dynamics.generate_simIO_normalisation_coarse(Nlgn*Nlgn,N4*N4)
@@ -258,14 +258,14 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
                     }
 
     s = N4*N4*Nlgn*Nlgn
-    y0 = tf.concat([Wlgn_to_4.reshape(2*s), l40], axis=0)
+    y0 = tf.concat([Wlgnto4.reshape(2*s), l40], axis=0)
     yt = integrator_tf.odeint(dynamics.dynamics_l4, y0, t, dt, params_dict)
     timepoints = yt.shape[0]
 
-    Wlgn_to_4 = yt[:,:2*s]
-    Wlgn_to_4 = tf.reshape(Wlgn_to_4, [timepoints,2,N4*N4,Nlgn*Nlgn])
-    after_weights = np.sum(Wlgn_to_4[-1,...],axis=1)
-    wtmp = Wlgn_to_4[-1,0,:,:]
+    Wlgnto4 = yt[:,:2*s]
+    Wlgnto4 = tf.reshape(Wlgnto4, [timepoints,2,N4*N4,Nlgn*Nlgn])
+    after_weights = np.sum(Wlgnto4[-1,...],axis=1)
+    wtmp = Wlgnto4[-1,0,:,:]
     print("weights before/after plasticity",init_weights[0,:5],after_weights[0,:5])
     print("weights outside arbor",np.sum(wtmp[np.logical_not(arbor)]),\
         np.sum(wtmp[np.logical_not(arbor)]))
@@ -298,8 +298,8 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     ############################# FIGURES ###########################################
     fig = plt.figure(figsize=(18,5))
     ax = fig.add_subplot(131)
-    deltaW_on = Wlgn_to_4[1:,0,...] - Wlgn_to_4[:-1,0,...]
-    deltaW_of = Wlgn_to_4[1:,1,...] - Wlgn_to_4[:-1,1,...]
+    deltaW_on = Wlgnto4[1:,0,...] - Wlgnto4[:-1,0,...]
+    deltaW_of = Wlgnto4[1:,1,...] - Wlgnto4[:-1,1,...]
     avg_deltaW_t = np.nanmean(deltaW_on * deltaW_of,axis=(0))
     avg_deltaW_xa = np.nanmean(deltaW_on * deltaW_of,axis=(1,2))
     DA = int(Wlgn_to4_params["r_A"]*Nlgn*2)
@@ -332,7 +332,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     ax.plot(after_weights.flatten(),'-k')
     ax.set_title("# of RF whose sum is 0: {}".format(np.sum(after_weights==0)))
     ax = fig.add_subplot(122)
-    after_weights_a = np.sum(Wlgn_to_4[-1,...],axis=2)
+    after_weights_a = np.sum(Wlgnto4[-1,...],axis=2)
     ax.plot(after_weights_a.flatten(),'-k')
     ax.set_title("# of PF whose sum is 0: {}".format(np.sum(after_weights_a==0)))
     fig.savefig(image_dir_param + "sum_RF-PF.pdf")
@@ -351,7 +351,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     plt.colorbar(im,ax=ax)
     ax = fig.add_subplot(333)
     ax.set_title("FF conn (t=-1)")
-    im=ax.imshow(tf.reshape(Wlgn_to_4[-1,1,:,Nlgn*Nlgn//2],(N4,N4)),\
+    im=ax.imshow(tf.reshape(Wlgnto4[-1,1,:,Nlgn*Nlgn//2],(N4,N4)),\
         interpolation="nearest",cmap="binary")
     plt.colorbar(im,ax=ax)
     ax.contour(tf.reshape(arbor[:,Nlgn*Nlgn//2],(N4,N4)),[1],colors="m")
@@ -409,16 +409,16 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     ax.legend(loc="best")
     ax = figt.add_subplot(143)
     try:
-        ax.plot(Wlgn_to_4[:,0,int((ctrs[0,1]*25+ctrs[0,0])*N4),:],"-")
+        ax.plot(Wlgnto4[:,0,int((ctrs[0,1]*25+ctrs[0,0])*N4),:],"-")
     except:
-        ax.plot(Wlgn_to_4[:,0,N4//2+N4//2*N4,:],"-")
+        ax.plot(Wlgnto4[:,0,N4//2+N4//2*N4,:],"-")
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Won conn")
     ax = figt.add_subplot(144)
     try:
-        ax.plot(Wlgn_to_4[:,1,int((ctrs[0,1]*25+ctrs[0,0])*N4),:],"-")
+        ax.plot(Wlgnto4[:,1,int((ctrs[0,1]*25+ctrs[0,0])*N4),:],"-")
     except:
-        ax.plot(Wlgn_to_4[:,1,N4//2+N4//2*N4,:],"-")
+        ax.plot(Wlgnto4[:,1,N4//2+N4//2*N4,:],"-")
     ax.set_xlabel("Timesteps")
     ax.set_ylabel("Woff conn")
     figt.savefig(image_dir_param + "dyn_test.pdf")
@@ -451,8 +451,8 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
 
     inp_on,inp_of = 0,0
     for it in range(min([l4.shape[0],lgn_norm.shape[2]])):
-        inp_on += np.clip(np.dot(Wlgn_to_4[it,0,...],lgn[0,:,it]).reshape(N4,N4),0,1000)
-        inp_of += np.clip(np.dot(Wlgn_to_4[it,1,...],lgn[1,:,it]).reshape(N4,N4),0,1000)
+        inp_on += np.clip(np.dot(Wlgnto4[it,0,...],lgn[0,:,it]).reshape(N4,N4),0,1000)
+        inp_of += np.clip(np.dot(Wlgnto4[it,1,...],lgn[1,:,it]).reshape(N4,N4),0,1000)
     fig = plt.figure()
     ax = fig.add_subplot(121)
     im=ax.imshow(inp_on/lgn_norm.shape[2],interpolation="nearest",cmap="binary")
@@ -471,8 +471,8 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     #   plt.colorbar(im,ax=ax)
     #   try:
     #       ax = fig.add_subplot(132)
-    #       inp_on = np.dot(Wlgn_to_4[it,0,...],lgn[0,:,it]).reshape(N4,N4)
-    #       inp_of = np.dot(Wlgn_to_4[it,1,...],lgn[1,:,it]).reshape(N4,N4)
+    #       inp_on = np.dot(Wlgnto4[it,0,...],lgn[0,:,it]).reshape(N4,N4)
+    #       inp_of = np.dot(Wlgnto4[it,1,...],lgn[1,:,it]).reshape(N4,N4)
     #       im=ax.imshow(np.clip(inp_on+inp_of,0,1000),interpolation="nearest",cmap="binary")
     #       plt.colorbar(im,ax=ax)
     #       ax = fig.add_subplot(133)
@@ -490,7 +490,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     ## visualization of SD = S_on - S_off
     #sd = (s1[:,:,0]-s1[:,:,1]).reshape(Nlgn,Nlgn,N4,x_crtx)
     DA = int(Wlgn_to4_params["r_A"]*Nlgn*2)
-    sf = (Wlgn_to_4[-1,...]).numpy()
+    sf = (Wlgnto4[-1,...]).numpy()
     sf = sf.reshape(2,N4,N4,Nlgn,Nlgn)
     RF = np.zeros((3,DA*N4,DA*N4))
     PF = np.zeros((3,DA*Nlgn,DA*Nlgn))
@@ -574,7 +574,7 @@ def parameter_sweep_layer4(sigma_rec,sigma_cc,r_A):
     # plt.show()
 
     try:
-        del Wlgn_to_4
+        del Wlgnto4
         del l4
         del yt
     except:

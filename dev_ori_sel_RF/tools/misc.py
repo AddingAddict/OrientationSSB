@@ -134,7 +134,7 @@ def load_data(Version,file_dir,params):
         ## TEMPORAL DATA
         with np.load(file_dir + "yt_v{v}.npz".format(v=Version)) as yt:
             timesteps = yt["Wt"].shape[0]
-            Wlgn_to_4 = yt["Wt"][-1,:].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
+            Wlgnto4 = yt["Wt"][-1,:].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
             ## by default look at excitatory activity
             if "l4t" in yt.files:
                 l4 = yt["l4t"][-2,:N4**2*Nvert]
@@ -143,26 +143,26 @@ def load_data(Version,file_dir,params):
             else:
                 l4,l4_t,l4I_t = None,None,None
             print("yt[]",num_lgn_paths,N4,Nvert,Nlgn)
-            Wlgn_to_4_t = yt["Wt"].reshape(timesteps,num_lgn_paths,N4*N4*Nvert,Nlgn*Nlgn)
+            Wlgnto4_t = yt["Wt"].reshape(timesteps,num_lgn_paths,N4*N4*Nvert,Nlgn*Nlgn)
     except:
         ## STATIC DATA
         PrintException()
         yt = np.load(file_dir + "y_v{v}.npz".format(v=Version))
         timesteps = 1
-        if "Wlgn_to_4" in yt.files:
-            Wlgn_to_4 = yt["Wlgn_to_4"].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
+        if "Wlgnto4" in yt.files:
+            Wlgnto4 = yt["Wlgnto4"].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
         else:
-            Wlgn_to_4 = yt["W"].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
+            Wlgnto4 = yt["W"].reshape(num_lgn_paths,N4**2*Nvert,Nlgn**2)
         ## by default look at excitatory activity
         if "l4" in yt.files:
             l4 = yt["l4"][:N4**2*Nvert]
         else:
             l4 = None
-        Wlgn_to_4_t = None
+        Wlgnto4_t = None
         l4_t,l4I_t = None,None
 
     keys = sorted(yt.files)
-    return Wlgn_to_4_t,Wlgn_to_4,l4_t,l4I_t,l4,timesteps,keys
+    return Wlgnto4_t,Wlgnto4,l4_t,l4I_t,l4,timesteps,keys
 
 
 def get_projection_operators(system_dict,arbor_dict,arbor_on,arbor_off,mode,layer):
