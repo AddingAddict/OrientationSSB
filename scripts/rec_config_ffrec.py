@@ -154,4 +154,4 @@ for i,Version in enumerate(Vers):
 
         fig.tight_layout()
         plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/bin{:d}_avg_RFs".format(config_name,Version,k)+\
-            "pdf")
+            ".pdf")
