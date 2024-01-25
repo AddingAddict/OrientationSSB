@@ -48,7 +48,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_ksel={:.3f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(ksel,lker,grec)
+res_dir = res_dir + 'L4_act_L23_sel_ksel={:.3f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(ksel,lker,Wlker_fact,grec)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
