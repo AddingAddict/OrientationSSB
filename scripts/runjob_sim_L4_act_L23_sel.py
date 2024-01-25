@@ -90,25 +90,25 @@ def runjobs():
 
     time.sleep(0.2)
     
-    ksels = 10**np.linspace(-3,0,7)
-    lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))
-    grecs = 1.02*np.linspace(0.95,1.05,5)
-    maxoss = [0.5,1.0]
+    ksels = 10**np.linspace(-3,0,7)[:5]
+    lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))[2:]
+    Wlker_facts = np.linspace(0.2,1.0,5)
+    grecs = 1.02*np.linspace(0.95,1.05,5)[2]
     seeds = range(1)
 
     for ksel in ksels:
         for lker in lkers:
-            for grec in grecs:
-                for maxos in maxoss:
+            for Wlker_fact in Wlker_facts:
+                for grec in grecs:
                     for seed in seeds:
                         #--------------------------------------------------------------------------
                         # Make SBTACH
                         inpath = currwd + "/sim_L4_act_L23_sel.py"
-                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -k {:f} -l {:f} -g {:f} -m {:f}".format(
-                            inpath,seed,n_ori,n_rpt,n_int,ksel,lker,grec,maxos)
+                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -k {:f} -l {:f} -w {:f} -g {:f}".format(
+                            inpath,seed,n_ori,n_rpt,n_int,ksel,lker,Wlker_fact,grec)
                         
-                        jobname="{:s}_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}_seed={:d}".format(
-                            'sim_L4_act_L23_sel',ksel,lker,grec,maxos,seed)
+                        jobname="{:s}_ksel={:.3f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_seed={:d}".format(
+                            'sim_L4_act_L23_sel',ksel,lker,Wlker_fact,grec,seed)
                         
                         if not args2.test:
                             jobnameDir=os.path.join(ofilesdir, jobname)

@@ -28,17 +28,20 @@ parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
 parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.9)
+parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.9)
 parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.9)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
+n_phs = int(args['n_phs'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
 ksel = args['ksel']
 lker = args['lker']
 grec = args['grec']
-maxos = args['maxos']
+thresh = args['thresh']
+eta = args['eta']
 saverates = args['saverates']
 
 freq = 4
@@ -50,7 +53,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}/'.format(ksel,lker,grec,maxos)
+res_dir = res_dir + 'L4_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_thresh={:.3f}_eta={:.3f}/'.format(
+    ksel,lker,grec.thresh,eta)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -66,7 +70,6 @@ avg_CV = 0.4
 config_name = "lempel_big_L4_model"
 Version = -1
 config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
-config_dict['W4to4_params']['max_ew'] = grec
 config_dict['W4to4_params']['max_ew'] = grec
 
 conn = connectivity.Connectivity_2pop((N,N),(N,N),\
@@ -154,14 +157,14 @@ else:
     gauss = (ds2 == 0.0).astype(float)
     
 gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
-    
-z = np.einsum('ijkl,kl->ij',gauss,snp_z)
+
+z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
 
 # scale magnitude of z field until its mean selectivity matches data
-while np.abs(np.mean(np.fmin(maxos,clip_OS(np.abs(z)))) - avg_OS) > 1e-3:
-    z *= 1 - (np.mean(np.fmin(maxos,clip_OS(np.abs(z)))) - avg_OS)
+while np.abs(np.mean(clip_OS(np.abs(z))) - avg_OS) > 1e-3:
+    z *= 1 - (np.mean(clip_OS(np.abs(z))) - avg_OS)
 
-z *= np.fmin(maxos,clip_OS(np.abs(z))) / np.fmax(1e-12,np.abs(z))
+z *= clip_OS(np.abs(z)) / np.fmax(1e-12,np.abs(z))
 
 res_dict['z'] = z
 
@@ -214,7 +217,7 @@ def sq_gabor(ori,phi):
     return np.exp(-0.5*(xs**2+ys**2)/σ**2)*np.sin(k*(np.cos(ori*2*np.pi/180)*xs+np.sin(ori*2*np.pi/180)*ys)+phi)/np.sqrt(np.sin(phi)**2+(k*σ)**2)#np.sin(k*σ+phi)
 
 RFs = np.zeros((N,N,N,N))
-rng = np.random.default_rng(0)
+rng = np.random.default_rng(seed)
 for i in range(N):
     for j in range(N):
         this_rf = rng.choice([1,-1])*sq_gabor(np.angle(z[i,j])*180/(2*np.pi),rng.choice([1,-1])*L4_phis[i,j])
@@ -229,3 +232,166 @@ on_conn[RFs > 0] = RFs[RFs > 0]
 of_conn[RFs < 0] = -RFs[RFs < 0]
 
 print('Creating L4 RFs took',time.process_time() - start,'s\n')
+
+# generate inputs
+start = time.process_time()
+
+ks = np.vstack((np.round(4*np.cos(np.pi*np.arange(n_ori)/n_ori)),
+                np.round(n_ori*np.sin(np.pi*np.arange(n_ori)/n_ori)))).T
+phss = 2*np.pi*np.arange(n_phs)
+
+rets = np.zeros((n_ori,n_phs,n_rpt,2,N,N))
+
+for i,k in enumerate(ks):
+    for j,phs in enumerate(phss):
+        for k in range(n_rpt):
+            rets[i,j,k] = np.cos(2*np.pi*(k[0]*xs + k[1]*ys) - phs) + eta*rng.normal(size=(N,N))
+        
+on_inp = np.zeros_like(rets)
+of_inp = np.zeros_like(rets)
+
+on_inp[rets > 0] = rets[rets > 0]
+of_inp[rets < 0] = -rets[rets < 0]
+
+L4_inps = np.zeros((n_ori,n_phs,n_rpt,2,N,N))
+
+for i,k in enumerate(ks):
+    for j,phs in enumerate(phss):
+        for k in range(n_rpt):
+            L4_inps[i,j,k,0] = np.einsum('ijkl,kl->ij',on_conn,on_inp[i,j,k]) +\
+                            np.einsum('ijkl,kl->ij',of_conn,of_inp[i,j,k])
+            L4_inps[i,j,k,1] = L4_inps[i,j,k,0]
+    
+print('Creating L4 input patterns took',time.process_time() - start,'s\n')
+
+# Define integration functions
+def fio_rect(x):
+    return np.fmax(x,0)
+
+def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
+    arg = gamma_rec * np.dot(Wrec,y) + gamma_ff * inp_ff.flatten()
+    return 1./tau*( -y + fio_rect(arg))
+
+def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
+    y = y0
+    for t_idx in range(Nt):
+        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,1.0)
+        dy = out
+        y = y + dt*dy
+    return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
+
+# Integrate to get firing rates
+L4_rates = np.zeros_like(L4_inps)
+
+start = time.process_time()
+
+for i,k in enumerate(ks):
+    for j,phs in enumerate(phss):
+        for k in range(n_rpt):
+            L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-thresh,0.25,n_int,grec)
+    
+print('Simulating rate dynamics took',time.process_time() - start,'s\n')
+
+if saverates:
+    res_dict['L4_rates'] = L4_rates
+    
+# Calculate statistics of L2/3 inputs
+Wlker = lker
+Wlker2 = Wlker**2
+
+if Wlker != 0.0:
+    W = np.exp(-0.5*ds2/Wlker2)
+else:
+    W = (ds2 == 0.0).astype(float)
+
+W *= rng.random((N,N))
+W /= np.sum(W,(-2,-1))[:,:,None,None]
+
+L23_inps = np.zeros_like(L4_rates[:,:,:,0,:,:])
+
+for i,k in enumerate(ks):
+    for j,phs in enumerate(phss):
+        for k in range(n_rpt):
+            L23_inps[i,j,k] = np.einsum('ijkl,kl->ij',W,L4_rates[i,j,k,0])
+            
+# Calculate CV of inputs and responses
+L4_inp_CV = np.mean(np.sqrt(L4_inps,(0,1,2)) / np.mean(L4_inps,(0,1,2)))
+L4_rate_CV = np.mean(np.sqrt(L4_rates,(0,1,2)) / np.mean(L4_rates,(0,1,2)))
+L23_inp_CV = np.mean(np.sqrt(L23_inps,(0,1,2)) / np.mean(L23_inps,(0,1,2)))
+
+# Calculate noise averaged activity per orientation and phase
+noise_avg_L4_inp = np.mean(L4_inps,2)
+noise_avg_L4_rate = np.mean(L4_rates,2)
+noise_avg_L23_inp = np.mean(L23_inps,2)
+
+L4_inp_F0,L4_inp_F1,L4_inp_phase = uf.calc_dc_ac_comp(noise_avg_L4_inp,1)
+L4_inp_F1 *= 2
+L4_inp_modrat = L4_inp_F1/L4_inp_F0
+L4_inp_phase *= 360/(2*np.pi)
+L4_inp_avg,L4_inp_OS,L4_inp_PO = uf.calc_dc_ac_comp(L4_inp_F0,0)
+L4_inp_OS = L4_inp_OS/L4_inp_avg
+L4_inp_PO *= 180/(2*np.pi)
+
+L4_rate_F0,L4_rate_F1,L4_rate_phase = uf.calc_dc_ac_comp(noise_avg_L4_rate,1)
+L4_rate_F1 *= 2
+L4_rate_modrat = L4_rate_F1/L4_rate_F0
+L4_rate_phase *= 360/(2*np.pi)
+L4_rate_avg,L4_rate_OS,L4_rate_PO = uf.calc_dc_ac_comp(L4_rate_F0,0)
+L4_rate_OS = L4_rate_OS/L4_rate_avg
+L4_rate_PO *= 180/(2*np.pi)
+
+L23_inp_F0,L23_inp_F1,L23_inp_phase = uf.calc_dc_ac_comp(noise_avg_L23_inp,1)
+L23_inp_F1 *= 2
+L23_inp_modrat = L23_inp_F1/L23_inp_F0
+L23_inp_phase *= 360/(2*np.pi)
+L23_inp_avg,L23_inp_OS,L23_inp_PO = uf.calc_dc_ac_comp(L23_inp_F0,0)
+L23_inp_OS = L23_inp_OS/L23_inp_avg
+L23_inp_PO *= 180/(2*np.pi)
+
+L4_inp_z = L4_inp_OS * np.exp(1j*L4_inp_PO*2*np.pi/180)
+L4_rate_z = L4_rate_OS * np.exp(1j*L4_rate_PO*2*np.pi/180)
+L23_inp_z = L23_inp_OS * np.exp(1j*L23_inp_PO*2*np.pi/180)
+
+res_dict['L4_inp_CV'] = L4_inp_CV
+res_dict['L4_rate_CV'] = L4_rate_CV
+res_dict['L23_inp_CV'] = L23_inp_CV
+
+res_dict['L4_inp_F0'] = L4_inp_F0
+res_dict['L4_inp_F1'] = L4_inp_F1
+res_dict['L4_inp_phase'] = L4_inp_phase
+res_dict['L4_inp_modrat'] = L4_inp_modrat
+res_dict['L4_inp_avg'] = L4_inp_avg
+res_dict['L4_inp_OS'] = L4_inp_OS
+res_dict['L4_inp_PO'] = L4_inp_PO
+
+res_dict['L4_rate_F0'] = L4_rate_F0
+res_dict['L4_rate_F1'] = L4_rate_F1
+res_dict['L4_rate_phase'] = L4_rate_phase
+res_dict['L4_rate_modrat'] = L4_rate_modrat
+res_dict['L4_rate_avg'] = L4_rate_avg
+res_dict['L4_rate_OS'] = L4_rate_OS
+res_dict['L4_rate_PO'] = L4_rate_PO
+
+res_dict['L23_inp_F0'] = L23_inp_F0
+res_dict['L23_inp_F1'] = L23_inp_F1
+res_dict['L23_inp_phase'] = L23_inp_phase
+res_dict['L23_inp_modrat'] = L23_inp_modrat
+res_dict['L23_inp_avg'] = L23_inp_avg
+res_dict['L23_inp_OS'] = L23_inp_OS
+res_dict['L23_inp_PO'] = L23_inp_PO
+
+res_dict['L4_inp_z'] = L4_inp_z
+res_dict['L4_rate_z'] = L4_rate_z
+res_dict['L23_inp_z'] = L23_inp_z
+
+res_dict['L4_inp_mean_E_OS'] = np.mean(L4_inp_OS[0])
+res_dict['L4_inp_mean_I_OS'] = np.mean(L4_inp_OS[1])
+
+res_dict['L4_rate_mean_E_OS'] = np.mean(L4_rate_OS[0])
+res_dict['L4_rate_mean_I_OS'] = np.mean(L4_rate_OS[1])
+
+res_dict['L23_inp_mean_E_OS'] = np.mean(L23_inp_OS[0])
+res_dict['L23_inp_mean_I_OS'] = np.mean(L23_inp_OS[1])
+
+with open(res_file, 'wb') as handle:
+    pickle.dump(res_dict,handle)

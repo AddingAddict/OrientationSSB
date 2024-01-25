@@ -24,9 +24,9 @@ parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientatio
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
-parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
+parser.add_argument('--lker', '-l', help='smoothing kernel length scale for L4 map',type=float, default=0.01)
+parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--maxos', '-m', help='maximum input selectivity',type=float, default=1.0)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -35,8 +35,8 @@ n_int= int(args['n_int'])
 seed = int(args['seed'])
 ksel = args['ksel']
 lker = args['lker']
+Wlker_fact = args['Wlker_fact']
 grec = args['grec']
-maxos = args['maxos']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
@@ -48,7 +48,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}/'.format(ksel,lker,grec,maxos)
+res_dir = res_dir + 'L4_act_L23_sel_ksel={:.3f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(ksel,lker,grec)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -161,7 +161,7 @@ L4_z *= clip_OS(np.abs(L4_z)) / np.fmax(1e-12,np.abs(L4_z))
 
 res_dict['L4_z'] = L4_z
 
-Wlker = lker
+Wlker = Wlker_fact*lker
 Wlker2 = Wlker**2
 
 if Wlker != 0.0:
