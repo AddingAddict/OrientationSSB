@@ -153,6 +153,8 @@ if lker != 0.0:
 else:
     gauss = (ds2 == 0.0).astype(float)
     
+gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
+    
 z = np.einsum('ijkl,kl->ij',gauss,snp_z)
 
 # scale magnitude of z field until its mean selectivity matches data
@@ -199,7 +201,6 @@ RF_OS_itp = interp1d(phis,RF_OSs,fill_value='extrapolate')
 RF_OS_inv_itp = interp1d(RF_OSs,phis,fill_value='extrapolate')
 
 L4_phis = RF_OS_inv_itp(np.fmax(min_OS,np.abs(z)))
-L4_norms = RF_r0_itp(L4_phis)
 
 # Create L4 RFs
 σ = 0.04
@@ -218,7 +219,7 @@ for i in range(N):
     for j in range(N):
         this_rf = rng.choice([1,-1])*sq_gabor(np.angle(z[i,j])*180/(2*np.pi),rng.choice([1,-1])*L4_phis[i,j])
         this_rf[ds > 2.5*σ] = 0
-        this_rf /= L4_norms[i,j]
+        this_rf /= np.sum(np.abs(this_rf))
         RFs[i,j] = np.roll(this_rf,(i,j),(0,1))
         
 on_conn = np.zeros_like(RFs)

@@ -150,8 +150,8 @@ else:
     gauss = (ds2 == 0.0).astype(float)
     
 gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
-    
-L4_z = np.einsum('ijkl,kl->ij',gauss,snp_z)
+
+L4_z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
 
 # scale magnitude of z field until its mean selectivity matches data
 while np.abs(np.mean(clip_OS(np.abs(L4_z))) - avg_OS) > 1e-3:
@@ -161,7 +161,7 @@ L4_z *= clip_OS(np.abs(L4_z)) / np.fmax(1e-12,np.abs(L4_z))
 
 res_dict['L4_z'] = L4_z
 
-Wlker = 0.5*lker*2
+Wlker = lker
 Wlker2 = Wlker**2
 
 if Wlker != 0.0:
