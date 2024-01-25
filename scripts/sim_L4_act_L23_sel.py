@@ -57,7 +57,7 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 res_dict = {}
 
 # Define parameters for L2/3 input from data
-avg_OS = 0.15
+avg_OS = 0.17
 avg_CV = 0.4
 
 # Create heterogeneous recurrent connectivity
