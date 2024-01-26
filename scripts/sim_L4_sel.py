@@ -27,6 +27,7 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps',type=in
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
+parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
 parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.9)
 parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.5)
 parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.9)
@@ -39,6 +40,7 @@ n_int= int(args['n_int'])
 seed = int(args['seed'])
 ksel = args['ksel']
 lker = args['lker']
+Wlker_fact = args['Wlker_fact']
 grec = args['grec']
 thresh = args['thresh']
 eta = args['eta']
@@ -53,8 +55,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_thresh={:.3f}_eta={:.3f}/'.format(
-    ksel,lker,grec,thresh,eta)
+res_dir = res_dir + 'L4_sel_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}/'.format(
+    ksel,Wlker_fact,lker,grec,thresh,eta)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -296,7 +298,7 @@ if saverates:
     res_dict['L4_rates'] = L4_rates
     
 # Calculate statistics of L2/3 inputs
-Wlker = lker
+Wlker = Wlker_fact*lker
 Wlker2 = Wlker**2
 
 if Wlker != 0.0:
