@@ -90,10 +90,10 @@ def runjobs():
 
     time.sleep(0.2)
     
-    ksels = 10**np.linspace(-3,0,7)[:5]
+    ksels = 10**np.linspace(-4,-1,7)
     lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))[2:]
-    Wlker_facts = np.linspace(0.2,1.0,5)
-    grecs = 1.02*np.linspace(0.95,1.05,5)[2]
+    Wlker_facts = np.linspace(0.6,1.0,3)
+    grecs = 1.02*np.linspace(0.95,1.05,5)[2:3]
     seeds = range(1)
 
     for ksel in ksels:
