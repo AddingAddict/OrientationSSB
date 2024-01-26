@@ -21,14 +21,14 @@ from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=4)
-parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=15)
+parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=10)
 parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
 parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.9)
-parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.9)
+parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.5)
 parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.9)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
@@ -54,7 +54,7 @@ if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 res_dir = res_dir + 'L4_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_thresh={:.3f}_eta={:.3f}/'.format(
-    ksel,lker,grec.thresh,eta)
+    ksel,lker,grec,thresh,eta)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -214,7 +214,7 @@ ys[ys > 0.5] = ys[ys > 0.5] - 1
 ds = np.sqrt(xs**2 + ys**2)
 
 def sq_gabor(ori,phi):
-    return np.exp(-0.5*(xs**2+ys**2)/σ**2)*np.sin(k*(np.cos(ori*2*np.pi/180)*xs+np.sin(ori*2*np.pi/180)*ys)+phi)/np.sqrt(np.sin(phi)**2+(k*σ)**2)#np.sin(k*σ+phi)
+    return np.exp(-0.5*(xs**2+ys**2)/σ**2)*np.sin(k*(np.cos(ori*np.pi/180)*xs+np.sin(ori*np.pi/180)*ys)+phi)/np.sqrt(np.sin(phi)**2+(k*σ)**2)#np.sin(k*σ+phi)
 
 RFs = np.zeros((N,N,N,N))
 rng = np.random.default_rng(seed)
@@ -236,16 +236,16 @@ print('Creating L4 RFs took',time.process_time() - start,'s\n')
 # generate inputs
 start = time.process_time()
 
-ks = np.vstack((np.round(4*np.cos(np.pi*np.arange(n_ori)/n_ori)),
+kvecs = np.vstack((np.round(4*np.cos(np.pi*np.arange(n_ori)/n_ori)),
                 np.round(n_ori*np.sin(np.pi*np.arange(n_ori)/n_ori)))).T
 phss = 2*np.pi*np.arange(n_phs)
 
-rets = np.zeros((n_ori,n_phs,n_rpt,2,N,N))
+rets = np.zeros((n_ori,n_phs,n_rpt,N,N))
 
-for i,k in enumerate(ks):
+for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
-            rets[i,j,k] = np.cos(2*np.pi*(k[0]*xs + k[1]*ys) - phs) + eta*rng.normal(size=(N,N))
+            rets[i,j,k] = np.cos(2*np.pi*(kvec[0]*xs + kvec[1]*ys) - phs) + eta*rng.normal(size=(N,N))
         
 on_inp = np.zeros_like(rets)
 of_inp = np.zeros_like(rets)
@@ -255,7 +255,7 @@ of_inp[rets < 0] = -rets[rets < 0]
 
 L4_inps = np.zeros((n_ori,n_phs,n_rpt,2,N,N))
 
-for i,k in enumerate(ks):
+for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
             L4_inps[i,j,k,0] = np.einsum('ijkl,kl->ij',on_conn,on_inp[i,j,k]) +\
@@ -285,7 +285,7 @@ L4_rates = np.zeros_like(L4_inps)
 
 start = time.process_time()
 
-for i,k in enumerate(ks):
+for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
             L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-thresh,0.25,n_int,grec)
@@ -309,15 +309,15 @@ W /= np.sum(W,(-2,-1))[:,:,None,None]
 
 L23_inps = np.zeros_like(L4_rates[:,:,:,0,:,:])
 
-for i,k in enumerate(ks):
+for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
             L23_inps[i,j,k] = np.einsum('ijkl,kl->ij',W,L4_rates[i,j,k,0])
             
 # Calculate CV of inputs and responses
-L4_inp_CV = np.mean(np.sqrt(L4_inps,(0,1,2)) / np.mean(L4_inps,(0,1,2)))
-L4_rate_CV = np.mean(np.sqrt(L4_rates,(0,1,2)) / np.mean(L4_rates,(0,1,2)))
-L23_inp_CV = np.mean(np.sqrt(L23_inps,(0,1,2)) / np.mean(L23_inps,(0,1,2)))
+L4_inp_CV = np.mean(np.std(L4_inps,2) / np.mean(L4_inps,2))
+L4_rate_CV = np.mean(np.std(L4_rates,2) / np.mean(L4_rates,2))
+L23_inp_CV = np.mean(np.std(L23_inps,2) / np.mean(L23_inps,2))
 
 # Calculate noise averaged activity per orientation and phase
 noise_avg_L4_inp = np.mean(L4_inps,2)
