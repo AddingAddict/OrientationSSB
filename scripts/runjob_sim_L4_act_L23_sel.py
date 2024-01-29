@@ -90,51 +90,53 @@ def runjobs():
 
     time.sleep(0.2)
     
+    bgnds = 10**np.linspace(-4,-2,3)
     ksels = 10**np.linspace(-4,-1,7)
     lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))[2:]
     Wlker_facts = np.linspace(0.6,1.0,3)
     grecs = 1.02*np.linspace(0.95,1.05,5)[2:3]
     seeds = range(1)
 
-    for ksel in ksels:
-        for lker in lkers:
-            for Wlker_fact in Wlker_facts:
-                for grec in grecs:
-                    for seed in seeds:
-                        #--------------------------------------------------------------------------
-                        # Make SBTACH
-                        inpath = currwd + "/sim_L4_act_L23_sel.py"
-                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -k {:f} -l {:f} -w {:f} -g {:f}".format(
-                            inpath,seed,n_ori,n_rpt,n_int,ksel,lker,Wlker_fact,grec)
-                        
-                        jobname="{:s}_ksel={:.3f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_seed={:d}".format(
-                            'sim_L4_act_L23_sel',ksel,lker,Wlker_fact,grec,seed)
-                        
-                        if not args2.test:
-                            jobnameDir=os.path.join(ofilesdir, jobname)
-                            text_file=open(jobnameDir, "w");
-                            os. system("chmod u+x "+ jobnameDir)
-                            text_file.write("#!/bin/sh \n")
-                            if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                                text_file.write("#SBATCH --account=theory \n")
-                            text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                            text_file.write("#SBATCH -t 0-11:59  \n")
-                            text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-                            # text_file.write("#SBATCH --gres=gpu\n")
-                            text_file.write("#SBATCH -c 1 \n")
-                            text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-                            text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-                            text_file.write("python  -W ignore " + c1+" \n")
-                            text_file.write("echo $PATH  \n")
-                            text_file.write("exit 0  \n")
-                            text_file.close()
+    for bgnd in bgnds:
+        for ksel in ksels:
+            for lker in lkers:
+                for Wlker_fact in Wlker_facts:
+                    for grec in grecs:
+                        for seed in seeds:
+                            #--------------------------------------------------------------------------
+                            # Make SBTACH
+                            inpath = currwd + "/sim_L4_act_L23_sel.py"
+                            c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -b {:f} -k {:f} -l {:f} -w {:f} -g {:f}".format(
+                                inpath,seed,n_ori,n_rpt,n_int,bgnd,ksel,lker,Wlker_fact,grec)
+                            
+                            jobname="{:s}_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_seed={:d}".format(
+                                'sim_L4_act_L23_sel',bgnd,ksel,lker,Wlker_fact,grec,seed)
+                            
+                            if not args2.test:
+                                jobnameDir=os.path.join(ofilesdir, jobname)
+                                text_file=open(jobnameDir, "w");
+                                os. system("chmod u+x "+ jobnameDir)
+                                text_file.write("#!/bin/sh \n")
+                                if cluster=='haba' or cluster=='moto' or cluster=='burg':
+                                    text_file.write("#SBATCH --account=theory \n")
+                                text_file.write("#SBATCH --job-name="+jobname+ "\n")
+                                text_file.write("#SBATCH -t 0-11:59  \n")
+                                text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+                                # text_file.write("#SBATCH --gres=gpu\n")
+                                text_file.write("#SBATCH -c 1 \n")
+                                text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
+                                text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
+                                text_file.write("python  -W ignore " + c1+" \n")
+                                text_file.write("echo $PATH  \n")
+                                text_file.write("exit 0  \n")
+                                text_file.close()
 
-                            if cluster=='axon':
-                                os.system("sbatch -p burst " +jobnameDir);
+                                if cluster=='axon':
+                                    os.system("sbatch -p burst " +jobnameDir);
+                                else:
+                                    os.system("sbatch " +jobnameDir);
                             else:
-                                os.system("sbatch " +jobnameDir);
-                        else:
-                            print (c1)
+                                print (c1)
 
 
 

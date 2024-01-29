@@ -23,6 +23,7 @@ parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, de
 parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
+parser.add_argument('--bgnd', '-b', help='amplitude of background selectivity',type=float, default=0.001)
 parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
 parser.add_argument('--lker', '-l', help='smoothing kernel length scale for L4 map',type=float, default=0.01)
 parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
@@ -33,6 +34,7 @@ n_ori = int(args['n_ori'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
+bgnd = args['bgnd']
 ksel = args['ksel']
 lker = args['lker']
 Wlker_fact = args['Wlker_fact']
@@ -48,7 +50,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(ksel,lker,Wlker_fact,grec)
+res_dir = res_dir + 'L4_act_L23_sel_bgnd_{:.4}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(
+    bgnd,ksel,lker,Wlker_fact,grec)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -122,7 +125,7 @@ def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
     
     z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
     
-    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + 0.001*rng.random((N,N))
+    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + bgnd*rng.random((N,N))
     x = clip_OS(x)
     x = np.fmax(1e-12,x)
     
