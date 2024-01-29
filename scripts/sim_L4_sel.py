@@ -56,7 +56,7 @@ if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 res_dir = res_dir + 'L4_sel_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}/'.format(
-    ksel,Wlker_fact,lker,grec,thresh,eta)
+        ksel,lker,Wlker_fact,grec,thresh,eta)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
