@@ -52,6 +52,30 @@ for i in range(nrep):
         else:
             config_dict["W4to4_params"].update({
                 "Wrec_mode": "load_from_external"})
+            
+    if Version == 0:
+        if os.isfile('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(config_name,Version-1,Version-1)):
+            try:
+                with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
+                    config_name,Version-1,Version-1)) as data:
+                    data['W']
+                config_dict["Wlgn_to4_params"].update({
+                    "W_mode": "load_from_external",
+                    "load_from_prev_run" : Version-1})
+            except:
+                pass
+            try:
+                with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
+                    config_name,Version-1,Version-1)) as data:
+                    data['Wrec']
+                if "2pop" in config_dict["W4to4_params"]["Wrec_mode"]:
+                    config_dict["W4to4_params"].update({
+                        "Wrec_mode": "load_from_external2pop"})
+                else:
+                    config_dict["W4to4_params"].update({
+                        "Wrec_mode": "load_from_external"})
+            except:
+                pass
 
     run_ffrec.parameter_sweep_ffrec(Version,config_dict,not_saving_temp=True)
 
