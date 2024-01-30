@@ -4,6 +4,7 @@ sys.path.insert(0, './..')
 
 import argparse
 
+from math import floor, ceil
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -125,7 +126,7 @@ for i,Version in enumerate(Vers):
 
     for i,ref_x in enumerate(ref_locs):
         for j,ref_y in enumerate(ref_locs):
-            rec_weights = W4to4[N4**2:,N4**2:].reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
+            rec_weights = np.abs(W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
             sort_idxs = np.argsort(rec_weights,axis=None).reshape(N4,N4)
             for k in range(nbin):
                 bin_idxs = np.logical_and(sort_idxs >= N4**2*k/nbin - 0.5,sort_idxs < N4**2*(k+1)/nbin - 0.5)
@@ -155,3 +156,20 @@ for i,Version in enumerate(Vers):
         fig.tight_layout()
         plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/bin{:d}_avg_RFs".format(config_name,Version,k)+\
             ".pdf")
+
+dA = 2*ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4)+1
+Nshow = N4//(1+skip)
+wei = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
+for i in range(Nshow):
+    for j in range(Nshow):
+        this_wei = W4to4[:N4**2,N4**2:].reshape(N4,N4,N4,N4)[:,:,i*(1+skip),j*(1+skip),:,:]
+        wei[:,:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
+               np.roll(this_wei,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:,:,:dA,:dA]
+
+fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
+fig.subplots_adjust(hspace=.1, wspace=.3)
+
+pf.doubimshbar(fig,axs,-wei,cmap='Blues',vmin=0,vmax=np.max(np.abs(wei)))
+
+fig.tight_layout()
+plt.savefig("./../plots/WEIs/WEIs_"+config_name+".pdf")
