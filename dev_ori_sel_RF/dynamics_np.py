@@ -158,19 +158,27 @@ def dynamics_twolayer_fullinput(y,inp_ff,Wff,W4to4,W4to23,W23to23,W23to4,gamma_r
 
 
 
-def dynamics_rec_onelayer(y,Wrec,inp_ff,Wff,gamma_rec,gamma_ff):
+def dynamics_rec_onelayer(y,Wrec,inp_ff,Wff,gamma_rec,gamma_ff,theta=0):
     arg = gamma_rec * np.dot(Wrec,y) + \
             gamma_ff * (np.dot(Wff[0,:,:],inp_ff[0,:]) + np.dot(Wff[1,:,:],inp_ff[1,:]))
-    return arg
+    return arg - theta
 
-def dynamics_onelayer_fullinput(y,inp_ff,Wff,Wrec,gamma_rec,gamma_ff,N,tau=1,fio=fio_powerlaw):
-    argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff)
-    argI = dynamics_rec_onelayer(y,Wrec[N:,:],inp_ff,Wff[2:,:,:],gamma_rec,gamma_ff)
+def dynamics_onelayer_fullinput(y,inp_ff,Wff,Wrec,gamma_rec,gamma_ff,N,tau=1,fio=fio_powerlaw,theta=None):
+    if theta is None:
+        argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff)
+        argI = dynamics_rec_onelayer(y,Wrec[N:,:],inp_ff,Wff[2:,:,:],gamma_rec,gamma_ff)
+    else:
+        argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff,theta=theta[:N])
+        argI = dynamics_rec_onelayer(y,Wrec[N:,:],inp_ff,Wff[2:,:,:],gamma_rec,gamma_ff,theta=theta[N:])
     return 1./tau*( -y + fio(np.concatenate([argE,argI])))
 
-def dynamics_onelayer(y,inp_ff,Wff,Wrec,gamma_rec,gamma_ff,N,tau=1,fio=fio_powerlaw):
-    argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff)
-    argI = gamma_rec * np.dot(Wrec[N:,:],y)
+def dynamics_onelayer(y,inp_ff,Wff,Wrec,gamma_rec,gamma_ff,N,tau=1,fio=fio_powerlaw,theta=None):
+    if theta is None:
+        argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff)
+        argI = gamma_rec * np.dot(Wrec[N:,:],y)
+    else:
+        argE = dynamics_rec_onelayer(y,Wrec[:N,:],inp_ff,Wff[:2,:,:],gamma_rec,gamma_ff,theta=theta[:N])
+        argI = gamma_rec * np.dot(Wrec[N:,:],y)
     return 1./tau*( -y + fio(np.concatenate([argE,argI])))
 
 

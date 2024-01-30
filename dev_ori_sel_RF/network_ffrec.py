@@ -559,7 +559,7 @@ class Network:
         if "2pop" in mode:
             mode = mode[:-4]
         W4 = kwargs["W4"]
-        if self.verbose: print("mode in get_RFs",mode)
+        if self.verbose: print("mode in get_Wrec4",mode)
         aux_dict = self.config_dict["W4to4_params"].copy()
         if mode in ("initialize","initialize2","initializegauss"):
             W_mode = self.config_dict["W4to4_params"].get("Wrec_mode","random_delta")
@@ -630,7 +630,7 @@ class Network:
                 num_pops = 1
             if self.verbose:
                 print(" ")
-                print("Load ff connection from version {}".format(Version))
+                print("Load rec connection from version {}".format(Version))
                 print(" ")
             if kwargs["system_mode"]=="two_layer":
 

@@ -453,6 +453,11 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     }
 
     _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
+    
+    if probe_config_dict["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
+        theta_4 = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))["theta_4"]
+    else:
+        theta_4 = None
 
     ################################# calc pref freq ###############################
     if calc_pref_freq:
@@ -500,12 +505,12 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
                         W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
         return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
-                                            tau,fio=fio_rect)
+                                            tau,fio=fio_rect,theta=theta_4)
     if connectivity_type=="EI":
         def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
                             W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
             return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
-                                                            gamma_ff,N4,tau,fio=fio_rect)
+                                                            gamma_ff,N4,tau,fio=fio_rect,theta=theta_4)
     W4to23 = 0
     W23to4 = 0
     W23to23= 0
@@ -577,6 +582,11 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     }
 
     _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
+    
+    if probe_config_dict["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
+        theta_4 = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))["theta_4"]
+    else:
+        theta_4 = None
 
     ################################# calc pref freq ###############################
     if calc_pref_freq:
@@ -624,12 +634,12 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
                         W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
         return dynamics_np.dynamics_onelayer(y,inp_ff,Wff,W4to4,gamma_rec,gamma_ff,N4,\
-                                            tau,fio=fio_rect)
+                                            tau,fio=fio_rect,theta=theta_4)
     if connectivity_type=="EI":
         def dynamics_system(y,inp_ff,Wff,W4to4,W4to23,\
                             W23to23,W23to4,gamma_rec,gamma_ff,N4,N23,tau):
             return dynamics_np.dynamics_onelayer_fullinput(y,inp_ff,Wff,W4to4,gamma_rec,\
-                                                            gamma_ff,N4,tau,fio=fio_rect)
+                                                            gamma_ff,N4,tau,fio=fio_rect,theta=theta_4)
     W4to23 = 0
     W23to4 = 0
     W23to23= 0
