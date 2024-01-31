@@ -95,16 +95,18 @@ for i,Version in enumerate(Vers):
     n = network_ffrec.Network(Version,config_dict)
     _,Wlgnto4,_,_,_,_,W4to4,_,_ = n.system
 
-    sd = Wlgnto4[0,...] - Wlgnto4[1,...]
-    sd = sd.reshape((N4,N4,Nlgn,Nlgn))
+    wff = np.zeros((2,N4**2,Nlgn**2))
+    wff[0] = Wlgnto4[0,...]
+    wff[1] = Wlgnto4[1,...]
+    wff = wff.reshape((2,N4,N4,Nlgn,Nlgn))
     for i in range(N4):
         for j in range(N4):
-            sd[i,j] = np.roll(sd[i,j],(rA-i,rA-j),axis=(-2,-1))
-    sd = sd[:,:,:dA,:dA]
+            wff[:,i,j] = np.roll(wff[:,i,j],(rA-i,rA-j),axis=(-2,-1))
+    wff = wff[:,:,:,:dA,:dA]
     
     # select reference cells, bin presynaptic cells by strength of recurrent connectivity
     ref_locs = np.arange(0,N4,1+skip)
-    rec_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,dA,dA))
+    rec_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
     
     avg_resp = False
     try:
@@ -132,7 +134,7 @@ for i,Version in enumerate(Vers):
             for k in range(nbin):
                 bin_idxs = np.logical_and(rec_weights >= nz_rec_weights[int((len(nz_rec_weights)-1)*k/nbin)],
                                         rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
-                rec_bin_avg_rfs[i,j,k] = np.mean(sd[bin_idxs],axis=0)
+                rec_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
                 if avg_resp:
                     rec_bin_avg_resp_props[i,j,k] = np.mean(resp_props[bin_idxs],axis=0)
                     
@@ -146,14 +148,19 @@ for i,Version in enumerate(Vers):
 
     misc.ensure_path('./../plots/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     for k in range(nbin):
-        all_avg_RFs = np.zeros((len(ref_locs)*(dA+1)+1,len(ref_locs)*(dA+1)+1))
+        all_avg_RFs = np.zeros((2,len(ref_locs)*(dA+1)+1,len(ref_locs)*(dA+1)+1))
         for i,ref_x in enumerate(ref_locs):
             for j,ref_y in enumerate(ref_locs):
-                all_avg_RFs[1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] = rec_bin_avg_rfs[i,j,k]
+                all_avg_RFs[:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] = rec_bin_avg_rfs[i,j,k]
 
-        fig,axs = plt.subplots(1,1,figsize=(0.5*len(ref_locs),0.5*len(ref_locs)),dpi=300)
-        pf.imshowbar(fig,axs,all_avg_RFs,cmap='RdBu',
-                   vmin=-np.max(np.abs(all_avg_RFs)),vmax=np.max(np.abs(all_avg_RFs)),origin='lower')
+        fig,axs = plt.subplots(1,2,figsize=(len(ref_locs),0.5*len(ref_locs)),dpi=300)
+        pf.doubcontbar(fig,axs[0],all_avg_RFs[0],-all_avg_RFs[1],
+                       cmap='RdBu',levels=np.linspace(-np.max(np.abs(all_avg_RFs)),np.max(np.abs(all_avg_RFs)),13),
+                       linewidths=0.8,origin='lower')
+        pf.doubimshbar(fig,axs[1],all_avg_RFs[0],-all_avg_RFs[1],cmap='RdBu',vmin=-np.max(np.abs(all_avg_RFs)),
+                       vmax=np.max(np.abs(all_avg_RFs)),origin='lower')
+        # pf.imshowbar(fig,axs,all_avg_RFs,cmap='RdBu',
+        #            vmin=-np.max(np.abs(all_avg_RFs)),vmax=np.max(np.abs(all_avg_RFs)),origin='lower')
 
         fig.tight_layout()
         plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/bin{:d}_avg_RFs".format(config_name,Version,k)+\
@@ -171,7 +178,7 @@ for i in range(Nshow):
 fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
 
-pf.doubimshbar(fig,axs,-wei,cmap='Blues',vmin=0,vmax=np.max(np.abs(wei)))
+pf.imshowbar(fig,axs,-wei,cmap='Blues',vmin=0,vmax=np.max(np.abs(wei)),origin='lower')
 
 fig.tight_layout()
 plt.savefig("./../plots/WEIs/WEIs_"+config_name+".pdf")

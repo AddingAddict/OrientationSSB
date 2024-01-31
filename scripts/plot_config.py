@@ -100,7 +100,8 @@ fig.subplots_adjust(hspace=.1, wspace=.3)
 
 pf.doubcontbar(fig,axs[0],wff[0,0],-wff[0,1],
                cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8,origin='lower')
-pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),origin='lower')
+pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),
+               origin='lower')
 
 fig.tight_layout()
 plt.savefig("./../plots/RFs/RFs_"+config_name+".pdf")
