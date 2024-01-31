@@ -127,12 +127,14 @@ for i,Version in enumerate(Vers):
     for i,ref_x in enumerate(ref_locs):
         for j,ref_y in enumerate(ref_locs):
             rec_weights = np.abs(W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
-            sort_idxs = np.argsort(rec_weights,axis=None).reshape(N4,N4)
+            nz_rec_weights = np.sort(rec_weights[rec_weights > 0])
+            nz_rec_weights = np.concatenate((nz_rec_weights,nz_rec_weights[-1:]+1))
             for k in range(nbin):
-                bin_idxs = np.logical_and(sort_idxs >= N4**2*k/nbin - 0.5,sort_idxs < N4**2*(k+1)/nbin - 0.5)
-                rec_bin_avg_rfs[i,j,k] = np.mean(sd[bin_idxs],axis=(0,1))
+                bin_idxs = np.logical_and(rec_weights >= nz_rec_weights[int((len(nz_rec_weights)-1)*k/nbin)],
+                                        rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
+                rec_bin_avg_rfs[i,j,k] = np.mean(sd[bin_idxs],axis=0)
                 if avg_resp:
-                    rec_bin_avg_resp_props[i,j,k] = np.mean(resp_props[bin_idxs],axis=(0,1))
+                    rec_bin_avg_resp_props[i,j,k] = np.mean(resp_props[bin_idxs],axis=0)
                     
     misc.ensure_path('./../results/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_RFs'.format(config_name,Version),
@@ -162,9 +164,9 @@ Nshow = N4//(1+skip)
 wei = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
 for i in range(Nshow):
     for j in range(Nshow):
-        this_wei = W4to4[:N4**2,N4**2:].reshape(N4,N4,N4,N4)[:,:,i*(1+skip),j*(1+skip),:,:]
-        wei[:,:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
-               np.roll(this_wei,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:,:,:dA,:dA]
+        this_wei = W4to4[:N4**2,N4**2:].reshape(N4,N4,N4,N4)[i*(1+skip),j*(1+skip),:,:]
+        wei[1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
+               np.roll(this_wei,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:dA,:dA]
 
 fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
