@@ -28,6 +28,7 @@ parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default
 parser.add_argument('--lker', '-l', help='smoothing kernel length scale for L4 map',type=float, default=0.01)
 parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
+parser.add_argument('--thresh', '-th', help='L2/3 activation threshold',type=float, default=0.5)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -39,6 +40,7 @@ ksel = args['ksel']
 lker = args['lker']
 Wlker_fact = args['Wlker_fact']
 grec = args['grec']
+thresh = args['thresh']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
@@ -50,8 +52,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}/'.format(
-    bgnd,ksel,lker,Wlker_fact,grec)
+res_dir = res_dir + 'L4_act_L23_sel_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}/'.format(
+    bgnd,ksel,lker,Wlker_fact,grec,thresh)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -227,7 +229,8 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1)),0.25,n_int,grec)
+    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1))-\
+        thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 

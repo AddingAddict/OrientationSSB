@@ -290,7 +290,8 @@ start = time.process_time()
 for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
-            L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-thresh,0.25,n_int,grec)
+            L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-\
+                thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
