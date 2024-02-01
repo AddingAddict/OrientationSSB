@@ -151,9 +151,9 @@ for i,Version in enumerate(Vers):
                                         rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
                 rec_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
                 if avg_resp:
-                    rec_bin_avg_inp_phs_props[i,j,k] = np.mean(inp_phs_props[bin_idxs],axis=0)
+                    rec_bin_avg_inp_phs_props[i,j,k] = np.mean(inp_phs_props[:,bin_idxs],axis=1)
                     rec_bin_avg_inp_ori_props[i,j,k] = np.mean(inp_ori_props[bin_idxs],axis=0)
-                    rec_bin_avg_resp_phs_props[i,j,k] = np.mean(resp_phs_props[bin_idxs],axis=0)
+                    rec_bin_avg_resp_phs_props[i,j,k] = np.mean(resp_phs_props[:,bin_idxs],axis=1)
                     rec_bin_avg_resp_ori_props[i,j,k] = np.mean(resp_ori_props[bin_idxs],axis=0)
                     
     misc.ensure_path('./../results/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
