@@ -101,7 +101,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/rec_config_ffrec.py"
-    c1 = "{:s} -v {:d} -n {:d} -f {:d} -o {:d} -p {:d} -s{:d} -c {:s}".format(inpath,maxver,nload,freq,nori,nphs,skip,config_name)
+    c1 = "{:s} -v {:d} -n {:d} -f {:d} -o {:d} -p {:d} -s {:d} -c {:s}".format(inpath,maxver,nload,freq,nori,nphs,skip,config_name)
     
     jobname="{:s}".format('rec_config_ffrec_'+config_name)
     
