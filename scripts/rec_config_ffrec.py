@@ -109,15 +109,15 @@ for i,Version in enumerate(Vers):
     rec_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
     
     avg_resp = False
-    try:
+    if os.path.isfile('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
+            config_name,Version,freq)):
+        avg_resp = True
+        
         inputs = np.load('./../results/grating_responses/{:s}/v{:d}_local/inputs_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
-        avg_resp = True
-    except:
-        avg_resp = False
-    else:
+        
         inp_F0,inp_F1,inp_phase = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
         inp_F1 *= 2
         inp_MR = inp_F1/inp_F0
@@ -138,6 +138,8 @@ for i,Version in enumerate(Vers):
         rec_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
         rec_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,3))
         rec_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
+        
+    print('Average input/response properties?',avg_resp)
 
     for i,ref_x in enumerate(ref_locs):
         for j,ref_y in enumerate(ref_locs):
