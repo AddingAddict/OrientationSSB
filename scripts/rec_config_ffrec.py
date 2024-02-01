@@ -163,12 +163,14 @@ for i,Version in enumerate(Vers):
                 if avg_resp:
                     rec_bin_avg_inp_phs_props[i,j,k] = np.concatenate((
                                             np.abs(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None],
-                                            np.angle(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)))
+                                            np.angle(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
+                                            axis=-1)
                     rec_bin_avg_inp_ori_props[i,j,k] = np.array([np.abs(np.mean(inp_ori_props[bin_idxs],axis=0)),
                                                 np.angle(np.mean(inp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
                     rec_bin_avg_resp_phs_props[i,j,k] = np.concatenate((
                                             np.abs(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None],
-                                            np.angle(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)))
+                                            np.angle(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
+                                            axis=-1)
                     rec_bin_avg_resp_ori_props[i,j,k] = np.array([np.abs(np.mean(resp_ori_props[bin_idxs],axis=0)),
                                                 np.angle(np.mean(resp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
                     
