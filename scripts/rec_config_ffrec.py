@@ -111,9 +111,9 @@ for i,Version in enumerate(Vers):
     avg_resp = False
     try:
         inputs = np.load('./../results/grating_responses/{:s}/v{:d}_local/inputs_f={:d}.npy'.format(
-            Version,config_name,freq)).reshape((1,nori,nphs,2,N4,N4))
+            config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
-            Version,config_name,freq)).reshape((1,nori,nphs,2,N4,N4))
+            config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         avg_resp = True
     except:
         avg_resp = False
