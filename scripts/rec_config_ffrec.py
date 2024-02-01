@@ -106,7 +106,8 @@ for i,Version in enumerate(Vers):
     
     # select reference cells, bin presynaptic cells by strength of recurrent connectivity
     ref_locs = np.arange(0,N4,1+skip)
-    rec_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
+    ei_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
+    et_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
     
     avg_resp = False
     if os.path.isfile('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
@@ -117,7 +118,12 @@ for i,Version in enumerate(Vers):
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
-        
+
+        inputs[:,1:] = inputs[:,-1:0:-1]
+        inputs[:,0,1:] = inputs[:,0,-1:0:-1]
+        rates[:,1:] = rates[:,-1:0:-1]
+        rates[:,0,1:] = rates[:,0,-1:0:-1]
+                
         inp_F0,inp_F1,inp_APP = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
         inp_F1 *= 2
         inp_MR = inp_F1/inp_F0
@@ -144,74 +150,130 @@ for i,Version in enumerate(Vers):
         inp_ori_props = inp_OS*np.exp(1j*inp_PO)
         resp_phs_props = resp_MR*np.exp(1j*resp_APP)
         resp_ori_props = resp_OS*np.exp(1j*resp_PO)
-        rec_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
-        rec_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
-        rec_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
-        rec_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
+        ei_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        ei_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
+        ei_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        ei_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
+        et_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        et_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
+        et_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        et_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
         
     print('Average input/response properties?',avg_resp)
 
     for i,ref_x in enumerate(ref_locs):
         for j,ref_y in enumerate(ref_locs):
-            rec_weights = np.abs(W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
-            nz_rec_weights = np.sort(rec_weights[rec_weights > 0])
-            nz_rec_weights = np.concatenate((nz_rec_weights,nz_rec_weights[-1:]+1))
+            ee_weights = np.abs(W4to4[:N4**2,:N4**2]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
+            ei_weights = np.abs(W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
+            et_weights = ee_weights - ei_weights
+            nz_ei_weights = np.sort(ei_weights[ei_weights > 0])
+            nz_ei_weights = np.concatenate((nz_ei_weights,nz_ei_weights[-1:]+1))
+            nz_et_weights = np.sort(et_weights[np.logical_or(ee_weights > 0,ei_weights > 0)])
+            nz_et_weights = np.concatenate((nz_et_weights,nz_et_weights[-1:]+1))
             for k in range(nbin):
-                bin_idxs = np.logical_and(rec_weights >= nz_rec_weights[int((len(nz_rec_weights)-1)*k/nbin)],
-                                        rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
-                rec_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
+                bin_idxs = np.logical_and(ei_weights >= nz_ei_weights[int((len(nz_ei_weights)-1)*k/nbin)],
+                                        ei_weights < nz_ei_weights[int((len(nz_ei_weights)-1)*(k+1)/nbin)])
+                ei_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
                 if avg_resp:
-                    rec_bin_avg_inp_phs_props[i,j,k] = np.concatenate((
+                    ei_bin_avg_inp_phs_props[i,j,k] = np.concatenate((
                                             np.abs(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None],
                                             np.angle(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
                                             axis=-1)
-                    rec_bin_avg_inp_ori_props[i,j,k] = np.array([np.abs(np.mean(inp_ori_props[bin_idxs],axis=0)),
+                    ei_bin_avg_inp_ori_props[i,j,k] = np.array([np.abs(np.mean(inp_ori_props[bin_idxs],axis=0)),
                                                 np.angle(np.mean(inp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
-                    rec_bin_avg_resp_phs_props[i,j,k] = np.concatenate((
+                    ei_bin_avg_resp_phs_props[i,j,k] = np.concatenate((
                                             np.abs(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None],
                                             np.angle(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
                                             axis=-1)
-                    rec_bin_avg_resp_ori_props[i,j,k] = np.array([np.abs(np.mean(resp_ori_props[bin_idxs],axis=0)),
+                    ei_bin_avg_resp_ori_props[i,j,k] = np.array([np.abs(np.mean(resp_ori_props[bin_idxs],axis=0)),
+                                                np.angle(np.mean(resp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
+                    
+                bin_idxs = np.logical_and(et_weights >= nz_et_weights[int((len(nz_et_weights)-1)*k/nbin)],
+                                        et_weights < nz_et_weights[int((len(nz_et_weights)-1)*(k+1)/nbin)])
+                bin_idxs = np.logical_and(bin_idxs,np.logical_or(ee_weights > 0,ei_weights > 0))
+                et_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
+                if avg_resp:
+                    et_bin_avg_inp_phs_props[i,j,k] = np.concatenate((
+                                            np.abs(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None],
+                                            np.angle(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
+                                            axis=-1)
+                    et_bin_avg_inp_ori_props[i,j,k] = np.array([np.abs(np.mean(inp_ori_props[bin_idxs],axis=0)),
+                                                np.angle(np.mean(inp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
+                    et_bin_avg_resp_phs_props[i,j,k] = np.concatenate((
+                                            np.abs(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None],
+                                            np.angle(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)),
+                                            axis=-1)
+                    et_bin_avg_resp_ori_props[i,j,k] = np.array([np.abs(np.mean(resp_ori_props[bin_idxs],axis=0)),
                                                 np.angle(np.mean(resp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
                     
     misc.ensure_path('./../results/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
-    np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_RFs'.format(config_name,Version),
-            rec_bin_avg_rfs.flatten())
+    np.save('./../results/grating_responses/{:s}/v{:d}_local/ei_avg_RFs'.format(config_name,Version),
+            ei_bin_avg_rfs.flatten())
+    np.save('./../results/grating_responses/{:s}/v{:d}_local/et_avg_RFs'.format(config_name,Version),
+            et_bin_avg_rfs.flatten())
     if avg_resp:
-        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_inp_phs_props_f={:d}'.format(config_name,
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/ei_avg_inp_phs_props_f={:d}'.format(config_name,
                 Version,freq),
-                rec_bin_avg_inp_phs_props.flatten())
-        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_inp_ori_props_f={:d}'.format(config_name,
+                ei_bin_avg_inp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/ei_avg_inp_ori_props_f={:d}'.format(config_name,
                 Version,freq),
-                rec_bin_avg_inp_ori_props.flatten())
-        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_resp_phs_props_f={:d}'.format(config_name,
+                ei_bin_avg_inp_ori_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/ei_avg_resp_phs_props_f={:d}'.format(config_name,
                 Version,freq),
-                rec_bin_avg_resp_phs_props.flatten())
-        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_resp_ori_props_f={:d}'.format(config_name,
+                ei_bin_avg_resp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/ei_avg_resp_ori_props_f={:d}'.format(config_name,
                 Version,freq),
-                rec_bin_avg_resp_ori_props.flatten())
+                ei_bin_avg_resp_ori_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/et_avg_inp_phs_props_f={:d}'.format(config_name,
+                Version,freq),
+                et_bin_avg_inp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/et_avg_inp_ori_props_f={:d}'.format(config_name,
+                Version,freq),
+                et_bin_avg_inp_ori_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/et_avg_resp_phs_props_f={:d}'.format(config_name,
+                Version,freq),
+                et_bin_avg_resp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/et_avg_resp_ori_props_f={:d}'.format(config_name,
+                Version,freq),
+                et_bin_avg_resp_ori_props.flatten())
 
     misc.ensure_path('./../plots/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     for k in range(nbin):
-        all_avg_RFs = np.zeros((2,len(ref_locs)*(dA+1)+1,len(ref_locs)*(dA+1)+1))
+        ei_avg_RFs = np.zeros((2,len(ref_locs)*(dA+1)+1,len(ref_locs)*(dA+1)+1))
+        et_avg_RFs = np.zeros((2,len(ref_locs)*(dA+1)+1,len(ref_locs)*(dA+1)+1))
         for i,ref_x in enumerate(ref_locs):
             for j,ref_y in enumerate(ref_locs):
-                all_avg_RFs[:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] = rec_bin_avg_rfs[i,j,k]
+                ei_avg_RFs[:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] = ei_bin_avg_rfs[i,j,k]
+                et_avg_RFs[:,1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] = et_bin_avg_rfs[i,j,k]
 
         fig,axs = plt.subplots(1,2,figsize=(len(ref_locs),0.5*len(ref_locs)),dpi=300)
-        pf.doubcontbar(fig,axs[0],all_avg_RFs[0],-all_avg_RFs[1],
-                       cmap='RdBu',levels=np.linspace(-np.max(np.abs(all_avg_RFs)),np.max(np.abs(all_avg_RFs)),13),
+        pf.doubcontbar(fig,axs[0],ei_avg_RFs[0],-ei_avg_RFs[1],
+                       cmap='RdBu',levels=np.linspace(-np.max(np.abs(ei_avg_RFs)),np.max(np.abs(ei_avg_RFs)),13),
                        linewidths=0.8,origin='lower')
-        pf.doubimshbar(fig,axs[1],all_avg_RFs[0],-all_avg_RFs[1],cmap='RdBu',vmin=-np.max(np.abs(all_avg_RFs)),
-                       vmax=np.max(np.abs(all_avg_RFs)),origin='lower')
-        # pf.imshowbar(fig,axs,all_avg_RFs,cmap='RdBu',
-        #            vmin=-np.max(np.abs(all_avg_RFs)),vmax=np.max(np.abs(all_avg_RFs)),origin='lower')
+        pf.doubimshbar(fig,axs[1],ei_avg_RFs[0],-ei_avg_RFs[1],cmap='RdBu',vmin=-np.max(np.abs(ei_avg_RFs)),
+                       vmax=np.max(np.abs(ei_avg_RFs)),origin='lower')
+        # pf.imshowbar(fig,axs,ei_avg_RFs,cmap='RdBu',
+        #            vmin=-np.max(np.abs(ei_avg_RFs)),vmax=np.max(np.abs(ei_avg_RFs)),origin='lower')
 
         fig.tight_layout()
-        plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/bin{:d}_avg_RFs".format(config_name,Version,k)+\
+        plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/ei_bin{:d}_avg_RFs".format(config_name,Version,k)+\
             ".pdf")
 
-dA = 2*ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4)+1
+        fig,axs = plt.subplots(1,2,figsize=(len(ref_locs),0.5*len(ref_locs)),dpi=300)
+        pf.doubcontbar(fig,axs[0],et_avg_RFs[0],-et_avg_RFs[1],
+                       cmap='RdBu',levels=np.linspace(-np.max(np.abs(et_avg_RFs)),np.max(np.abs(et_avg_RFs)),13),
+                       linewidths=0.8,origin='lower')
+        pf.doubimshbar(fig,axs[1],et_avg_RFs[0],-et_avg_RFs[1],cmap='RdBu',vmin=-np.max(np.abs(et_avg_RFs)),
+                       vmax=np.max(np.abs(et_avg_RFs)),origin='lower')
+        # pf.imshowbar(fig,axs,et_avg_RFs,cmap='RdBu',
+        #            vmin=-np.max(np.abs(et_avg_RFs)),vmax=np.max(np.abs(et_avg_RFs)),origin='lower')
+
+        fig.tight_layout()
+        plt.savefig("./../plots/grating_responses/{:s}/v{:d}_local/et_bin{:d}_avg_RFs".format(config_name,Version,k)+\
+            ".pdf")
+
+rI = ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4)
+dA = 2*rI+1
 Nshow = N4//(1+skip)
 wei = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
 for i in range(Nshow):
@@ -227,3 +289,22 @@ pf.imshowbar(fig,axs,-wei,cmap='Blues',vmin=0,vmax=np.max(np.abs(wei)),origin='l
 
 fig.tight_layout()
 plt.savefig("./../plots/WEIs/WEIs_"+config_name+".pdf")
+
+rT = np.fmax(ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4),
+             ceil(config_dict["W4to4_params"]["rA_EE"] * config_dict["W4to4_params"].get("r_lim",1.) * N4))
+dA = 2*rT+1
+Nshow = N4//(1+skip)
+wet = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
+for i in range(Nshow):
+    for j in range(Nshow):
+        this_wet = (W4to4[:N4**2,:N4**2]+W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[i*(1+skip),j*(1+skip),:,:]
+        wet[1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
+               np.roll(this_wet,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:dA,:dA]
+
+fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
+fig.subplots_adjust(hspace=.1, wspace=.3)
+
+pf.imshowbar(fig,axs,wet,cmap='RdBu_r',vmin=-np.max(np.abs(wet)),vmax=np.max(np.abs(wet)),origin='lower')
+
+fig.tight_layout()
+plt.savefig("./../plots/WEIs/WETs_"+config_name+".pdf")
