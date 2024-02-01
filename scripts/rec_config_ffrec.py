@@ -110,21 +110,34 @@ for i,Version in enumerate(Vers):
     
     avg_resp = False
     try:
+        inputs = np.load('./../results/grating_responses/{:s}/v{:d}_local/inputs_f={:d}.npy'.format(
+            Version,config_name,freq)).reshape((1,nori,nphs,2,N4,N4))
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
             Version,config_name,freq)).reshape((1,nori,nphs,2,N4,N4))
         avg_resp = True
     except:
         avg_resp = False
     else:
-        # resp_F0,resp_F1,resp_phase = uf.calc_dc_ac_comp(rates[0],1)
-        # resp_F1 *= 2
-        # resp_modrat = resp_F1/resp_F0
-        resp_F0,_,_ = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
+        inp_F0,inp_F1,inp_phase = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
+        inp_F1 *= 2
+        inp_MR = inp_F1/inp_F0
+        inp_avg,inp_OS,inp_PO = uf.calc_dc_ac_comp(inp_F1,0)
+        inp_OS = inp_OS / inp_avg
+        inp_PO *= 180/(2*np.pi)
+        resp_F0,resp_F1,resp_phase = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
+        resp_F1 *= 2
+        resp_MR = resp_F1/resp_F0
         resp_avg,resp_OS,resp_PO = uf.calc_dc_ac_comp(resp_F0,0)
         resp_OS = resp_OS / resp_avg
         resp_PO *= 180/(2*np.pi)
-        resp_props = np.concatenate(resp_avg[:,:,None],resp_OS[:,:,None],resp_PO[:,:,None],axis=-1)
-        rec_bin_avg_resp_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
+        inp_phs_props = np.concatenate(inp_F0[:,:,:,None],inp_MR[:,:,:,None],inp_phase[:,:,:,None],axis=-1)
+        inp_ori_props = np.concatenate(inp_avg[:,:,None],inp_OS[:,:,None],inp_PO[:,:,None],axis=-1)
+        resp_phs_props = np.concatenate(resp_F0[:,:,:,None],resp_MR[:,:,:,None],resp_phase[:,:,:,None],axis=-1)
+        resp_ori_props = np.concatenate(resp_avg[:,:,None],resp_OS[:,:,None],resp_PO[:,:,None],axis=-1)
+        rec_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,3))
+        rec_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
+        rec_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,3))
+        rec_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
 
     for i,ref_x in enumerate(ref_locs):
         for j,ref_y in enumerate(ref_locs):
@@ -136,15 +149,27 @@ for i,Version in enumerate(Vers):
                                         rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
                 rec_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
                 if avg_resp:
-                    rec_bin_avg_resp_props[i,j,k] = np.mean(resp_props[bin_idxs],axis=0)
+                    rec_bin_avg_inp_phs_props[i,j,k] = np.mean(inp_phs_props[bin_idxs],axis=0)
+                    rec_bin_avg_inp_ori_props[i,j,k] = np.mean(inp_ori_props[bin_idxs],axis=0)
+                    rec_bin_avg_resp_phs_props[i,j,k] = np.mean(resp_phs_props[bin_idxs],axis=0)
+                    rec_bin_avg_resp_ori_props[i,j,k] = np.mean(resp_ori_props[bin_idxs],axis=0)
                     
     misc.ensure_path('./../results/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_RFs'.format(config_name,Version),
             rec_bin_avg_rfs.flatten())
     if avg_resp:
-        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_resp_props_f={:d}'.format(config_name,
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_inp_phs_props_f={:d}'.format(config_name,
                 Version,freq),
-                rec_bin_avg_resp_props.flatten())
+                rec_bin_avg_inp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_inp_ori_props_f={:d}'.format(config_name,
+                Version,freq),
+                rec_bin_avg_inp_ori_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_resp_phs_props_f={:d}'.format(config_name,
+                Version,freq),
+                rec_bin_avg_resp_phs_props.flatten())
+        np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_resp_ori_props_f={:d}'.format(config_name,
+                Version,freq),
+                rec_bin_avg_resp_ori_props.flatten())
 
     misc.ensure_path('./../plots/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     for k in range(nbin):
