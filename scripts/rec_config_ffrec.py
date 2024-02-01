@@ -118,26 +118,36 @@ for i,Version in enumerate(Vers):
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         
-        inp_F0,inp_F1,inp_phase = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
+        inp_F0,inp_F1,inp_APP = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
         inp_F1 *= 2
         inp_MR = inp_F1/inp_F0
+        # inp_APP *= 360/(2*np.pi)
         inp_avg,inp_OS,inp_PO = uf.calc_dc_ac_comp(inp_F1,0)
         inp_OS = inp_OS / inp_avg
-        inp_PO *= 180/(2*np.pi)
-        resp_F0,resp_F1,resp_phase = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
+        # inp_PO *= 180/(2*np.pi)
+        resp_F0,resp_F1,resp_APP = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
         resp_F1 *= 2
         resp_MR = resp_F1/resp_F0
+        # resp_APP *= 360/(2*np.pi)
         resp_avg,resp_OS,resp_PO = uf.calc_dc_ac_comp(resp_F0,0)
         resp_OS = resp_OS / resp_avg
-        resp_PO *= 180/(2*np.pi)
-        inp_phs_props = np.concatenate((inp_F0[:,:,:,None],inp_MR[:,:,:,None],inp_phase[:,:,:,None]),axis=-1)
-        inp_ori_props = np.concatenate((inp_avg[:,:,None],inp_OS[:,:,None],inp_PO[:,:,None]),axis=-1)
-        resp_phs_props = np.concatenate((resp_F0[:,:,:,None],resp_MR[:,:,:,None],resp_phase[:,:,:,None]),axis=-1)
-        resp_ori_props = np.concatenate((resp_avg[:,:,None],resp_OS[:,:,None],resp_PO[:,:,None]),axis=-1)
-        rec_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,3))
-        rec_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
-        rec_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,3))
-        rec_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,3))
+        # resp_PO *= 180/(2*np.pi)
+        # inp_phs_props = np.concatenate((inp_MR[:,:,:,None],
+        #                                 inp_MR[:,:,:,None]*np.exp(1j*inp_APP[:,:,:,None])),axis=-1)
+        # inp_ori_props = np.concatenate((inp_OS[:,:,None],
+        #                                 inp_OS[:,:,None]*np.exp(1j*inp_PO[:,:,None])),axis=-1)
+        # resp_phs_props = np.concatenate((resp_MR[:,:,:,None],
+        #                                 resp_MR[:,:,:,None]*np.exp(1j*resp_APP[:,:,:,None])),axis=-1)
+        # resp_ori_props = np.concatenate((resp_OS[:,:,None],
+        #                                 resp_OS[:,:,None]*np.exp(1j*resp_PO[:,:,None])),axis=-1)
+        inp_phs_props = inp_MR*np.exp(1j*inp_APP)
+        inp_ori_props = inp_OS*np.exp(1j*inp_PO)
+        resp_phs_props = resp_MR*np.exp(1j*resp_APP)
+        resp_ori_props = resp_OS*np.exp(1j*resp_PO)
+        rec_bin_avg_inp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        rec_bin_avg_inp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
+        rec_bin_avg_resp_phs_props = np.zeros((len(ref_locs),len(ref_locs),nbin,nori,2))
+        rec_bin_avg_resp_ori_props = np.zeros((len(ref_locs),len(ref_locs),nbin,2))
         
     print('Average input/response properties?',avg_resp)
 
@@ -151,10 +161,16 @@ for i,Version in enumerate(Vers):
                                         rec_weights < nz_rec_weights[int((len(nz_rec_weights)-1)*(k+1)/nbin)])
                 rec_bin_avg_rfs[i,j,k] = np.mean(wff[:,bin_idxs],axis=1)
                 if avg_resp:
-                    rec_bin_avg_inp_phs_props[i,j,k] = np.mean(inp_phs_props[:,bin_idxs],axis=1)
-                    rec_bin_avg_inp_ori_props[i,j,k] = np.mean(inp_ori_props[bin_idxs],axis=0)
-                    rec_bin_avg_resp_phs_props[i,j,k] = np.mean(resp_phs_props[:,bin_idxs],axis=1)
-                    rec_bin_avg_resp_ori_props[i,j,k] = np.mean(resp_ori_props[bin_idxs],axis=0)
+                    rec_bin_avg_inp_phs_props[i,j,k] = np.concatenate((
+                                            np.abs(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None],
+                                            np.angle(np.mean(inp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)))
+                    rec_bin_avg_inp_ori_props[i,j,k] = np.array([np.abs(np.mean(inp_ori_props[bin_idxs],axis=0)),
+                                                np.angle(np.mean(inp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
+                    rec_bin_avg_resp_phs_props[i,j,k] = np.concatenate((
+                                            np.abs(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None],
+                                            np.angle(np.mean(resp_phs_props[:,bin_idxs],axis=1))[:,None]*360/(2*np.pi)))
+                    rec_bin_avg_resp_ori_props[i,j,k] = np.array([np.abs(np.mean(resp_ori_props[bin_idxs],axis=0)),
+                                                np.angle(np.mean(resp_ori_props[bin_idxs],axis=0))*180/(2*np.pi)])
                     
     misc.ensure_path('./../results/grating_responses/{:s}/v{:d}_local/'.format(config_name,Version))
     np.save('./../results/grating_responses/{:s}/v{:d}_local/avg_RFs'.format(config_name,Version),
