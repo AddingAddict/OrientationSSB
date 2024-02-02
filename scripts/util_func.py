@@ -5,6 +5,8 @@ sys.path.insert(0, './..')
 import pickle
 from math import floor, ceil
 import numpy as np
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 import dev_ori_sel_RF
 from dev_ori_sel_RF import data_dir,integrator_tf,dynamics,network, network_ffrec,run_onelayer,probe_RFs
@@ -164,6 +166,82 @@ def get_ori_sel(opm,calc_fft=True):
         return ori,sel,opm_fft,opm_fps
     else:
         return ori,sel
+    
+def calc_hypercol_size(fps,N):
+    def fps_fn(k,a0,a1,a2,a3,a4,a5):
+        return a0*np.exp(-0.5*(k-a1)**2/a2**2) + a3 + a4*k + a5*k**2
+
+    freqs = np.arange(N//2)/N
+
+    popt,pcov = curve_fit(fps_fn,freqs,fps[:N//2],
+                          p0=(fps[1],freqs[np.argmax(fps[:N//2])],0.5*freqs[np.argmax(fps[:N//2])],0,0,0))
+    
+    hcsize = 1/popt[1]
+    return hcsize,fps_fn(np.arange(len(fps))/N,*popt)
+
+def ccw(A,B,C):
+    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
+def intersect(A,B,C,D):
+    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+
+def cross(A,B):
+    return A[0]*B[1] - A[1]*B[0]
+
+def intersectpt(A,B,C,D):
+    qmp = [C[0]-A[0],C[1]-A[1]]
+    r = [B[0]-A[0],B[1]-A[1]]
+    s = [D[0]-C[0],D[1]-C[1]]
+    rxs = cross(r,s)
+    
+    t = cross(qmp,s)/rxs
+#     u = cross(qmp,r)/rxs
+    
+    return [A[0]+t*r[0],A[1]+t*r[1]]
+
+def calc_pinwheels(A):
+    rcont = plt.contour(np.real(A),levels=[0],colors="C0")
+    icont = plt.contour(np.imag(A),levels=[0],colors="C1")
+
+    rsegpts = []
+    for pts in rcont.allsegs[0]:
+        for i in range(len(pts)-1):
+            rsegpts.append([pts[i],pts[i+1]])
+    rsegpts = np.array(rsegpts)
+
+    isegpts = []
+    for pts in icont.allsegs[0]:
+        for i in range(len(pts)-1):
+            isegpts.append([pts[i],pts[i+1]])
+    isegpts = np.array(isegpts)
+    
+    pwcnt = 0
+    pwpts = []
+
+    for rsegpt in rsegpts:
+        for isegpt in isegpts:
+            if intersect(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]):
+                pwcnt += 1
+                pwpts.append(intersectpt(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]))
+    pwpts = np.array(pwpts)
+    
+    return pwcnt,pwpts
+
+def bandpass_filter(A,ll,lu):
+    Nax = A.shape[0]
+    
+    xs,ys = np.meshgrid(np.arange(Nax)/Nax,np.arange(Nax)/Nax)
+    xs[xs > 0.5] = 1 - xs[xs > 0.5]
+    ys[ys > 0.5] = 1 - ys[ys > 0.5]
+    ks = 2*np.pi*np.sqrt(xs**2 + ys**2)
+
+    def fermi_kernel(lamlp,beta=0.05):
+        return 1 / (1 + np.exp(-(2*np.pi/lamlp - ks)/beta))
+    
+    A_fft = np.fft.fft2(A)
+    
+    this_kern = fermi_kernel(ll) * (1-fermi_kernel(lu))
+    return np.fft.ifft2(A_fft*this_kern)
     
 def calc_dc_ac_comp(A,axis=-1):
     A_xpsd = np.moveaxis(A,axis,-1)

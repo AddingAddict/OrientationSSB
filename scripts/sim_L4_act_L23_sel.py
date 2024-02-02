@@ -229,8 +229,10 @@ rates = np.zeros_like(inps)
 start = time.process_time()
 
 for inp_idx in range(n_inp):
+    # rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1))-\
+    #     thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
     rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1))-\
-        thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
+        thresh,0.25,n_int,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 

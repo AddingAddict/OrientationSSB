@@ -98,15 +98,18 @@ for i,Version in enumerate(Vers):
     wff = np.zeros((2,N4**2,Nlgn**2))
     wff[0] = Wlgnto4[0,...]
     wff[1] = Wlgnto4[1,...]
-    wff = wff.reshape((2,N4,N4,Nlgn,Nlgn))
+    abs_wff = wff.reshape((2,N4,N4,Nlgn,Nlgn))
+    rel_wff = abs_wff.copy()
     for i in range(N4):
         for j in range(N4):
-            wff[:,i,j] = np.roll(wff[:,i,j],(rA-i,rA-j),axis=(-2,-1))
-    wff = wff[:,:,:,:dA,:dA]
+            rel_wff[:,i,j] = np.roll(rel_wff[:,i,j],(rA-i,rA-j),axis=(-2,-1))
+    rel_wff = rel_wff[:,:,:,:dA,:dA]
     
     # select reference cells, bin presynaptic cells by strength of recurrent connectivity
     ref_locs = np.arange(0,N4,1+skip)
+    ei_weighted_rfs = np.zeros((len(ref_locs),len(ref_locs),2,3*dA,3*dA))
     ei_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
+    et_weighted_rfs = np.zeros((len(ref_locs),len(ref_locs),2,3*dA,3*dA))
     et_bin_avg_rfs = np.zeros((len(ref_locs),len(ref_locs),nbin,2,dA,dA))
     
     avg_resp = False
@@ -114,16 +117,19 @@ for i,Version in enumerate(Vers):
             config_name,Version,freq)):
         avg_resp = True
         
+        # Load FF input and response to full field grating data
         inputs = np.load('./../results/grating_responses/{:s}/v{:d}_local/inputs_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
         rates = np.load('./../results/grating_responses/{:s}/v{:d}_local/rates_f={:d}.npy'.format(
             config_name,Version,freq)).reshape((1,nori,nphs,2,N4,N4))
 
+        # Fix inverted orientations and phases
         inputs[:,1:] = inputs[:,-1:0:-1]
         inputs[:,0,1:] = inputs[:,0,-1:0:-1]
         rates[:,1:] = rates[:,-1:0:-1]
         rates[:,0,1:] = rates[:,0,-1:0:-1]
-                
+        
+        # Calculate feature preferences and properties of inputs and responses
         inp_F0,inp_F1,inp_APP = uf.calc_dc_ac_comp(rates[0,:,:,0,:,:],1)
         inp_F1 *= 2
         inp_MR = inp_F1/inp_F0
@@ -166,6 +172,10 @@ for i,Version in enumerate(Vers):
             ee_weights = np.abs(W4to4[:N4**2,:N4**2]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
             ei_weights = np.abs(W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[ref_x,ref_y,:,:]
             et_weights = ee_weights - ei_weights
+            
+            # Calculate weighted absolute RFs
+            
+            # Calculate weight bin averaged relative RFs and properties
             nz_ei_weights = np.sort(ei_weights[ei_weights > 0])
             nz_ei_weights = np.concatenate((nz_ei_weights,nz_ei_weights[-1:]+1))
             nz_et_weights = np.sort(et_weights[np.logical_or(ee_weights > 0,ei_weights > 0)])
@@ -273,14 +283,14 @@ for i,Version in enumerate(Vers):
             ".pdf")
 
 rI = ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4)
-dA = 2*rI+1
+dI = 2*rI+1
 Nshow = N4//(1+skip)
-wei = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
+wei = np.zeros((Nshow*(dI+1)+1,Nshow*(dI+1)+1))
 for i in range(Nshow):
     for j in range(Nshow):
         this_wei = W4to4[:N4**2,N4**2:].reshape(N4,N4,N4,N4)[i*(1+skip),j*(1+skip),:,:]
-        wei[1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
-               np.roll(this_wei,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:dA,:dA]
+        wei[1+i*(dI+1):1+i*(dI+1)+dI,1+j*(dI+1):1+j*(dI+1)+dI] =\
+               np.roll(this_wei,(rI-i*(1+skip),rI-j*(1+skip)),axis=(-2,-1))[:dI,:dI]
 
 fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
@@ -292,14 +302,14 @@ plt.savefig("./../plots/WEIs/WEIs_"+config_name+".pdf")
 
 rT = np.fmax(ceil(config_dict["W4to4_params"]["rA_EI"] * config_dict["W4to4_params"].get("r_lim",1.) * N4),
              ceil(config_dict["W4to4_params"]["rA_EE"] * config_dict["W4to4_params"].get("r_lim",1.) * N4))
-dA = 2*rT+1
+dT = 2*rT+1
 Nshow = N4//(1+skip)
-wet = np.zeros((Nshow*(dA+1)+1,Nshow*(dA+1)+1))
+wet = np.zeros((Nshow*(dT+1)+1,Nshow*(dT+1)+1))
 for i in range(Nshow):
     for j in range(Nshow):
         this_wet = (W4to4[:N4**2,:N4**2]+W4to4[:N4**2,N4**2:]).reshape(N4,N4,N4,N4)[i*(1+skip),j*(1+skip),:,:]
-        wet[1+i*(dA+1):1+i*(dA+1)+dA,1+j*(dA+1):1+j*(dA+1)+dA] =\
-               np.roll(this_wet,(rA-i*(1+skip),rA-j*(1+skip)),axis=(-2,-1))[:dA,:dA]
+        wet[1+i*(dT+1):1+i*(dT+1)+dT,1+j*(dT+1):1+j*(dT+1)+dT] =\
+               np.roll(this_wet,(rT-i*(1+skip),rT-j*(1+skip)),axis=(-2,-1))[:dT,:dT]
 
 fig,axs = plt.subplots(1,1,figsize=(0.5*Nshow,0.5*Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)

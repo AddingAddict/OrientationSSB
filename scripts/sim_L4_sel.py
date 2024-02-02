@@ -25,12 +25,13 @@ parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, de
 parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
+parser.add_argument('--bgnd', '-b', help='amplitude of background selectivity',type=float, default=0.0001)
+parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.001)
 parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
 parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
-parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.9)
+parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.8)
 parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.5)
-parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.9)
+parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.01)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -38,6 +39,7 @@ n_phs = int(args['n_phs'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
+bgnd = args['bgnd']
 ksel = args['ksel']
 lker = args['lker']
 Wlker_fact = args['Wlker_fact']
@@ -55,8 +57,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_sel_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}/'.format(
-        ksel,lker,Wlker_fact,grec,thresh,eta)
+res_dir = res_dir + 'L4_sel_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}/'.format(
+        bgnd,ksel,lker,Wlker_fact,grec,thresh,eta)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -131,7 +133,7 @@ def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
     
     z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
     
-    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + 0.001*rng.random((N,N))
+    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + bgnd*rng.random((N,N))
     x = clip_OS(x)
     x = np.fmax(1e-12,x)
     
@@ -160,15 +162,29 @@ else:
     
 gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
 
-z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
+L4_z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
 
 # scale magnitude of z field until its mean selectivity matches data
-while np.abs(np.mean(clip_OS(np.abs(z))) - avg_OS) > 1e-3:
-    z *= 1 - (np.mean(clip_OS(np.abs(z))) - avg_OS)
+while np.abs(np.mean(clip_OS(np.abs(L4_z))) - avg_OS) > 1e-3:
+    L4_z *= 1 - (np.mean(clip_OS(np.abs(L4_z))) - avg_OS)
 
-z *= clip_OS(np.abs(z)) / np.fmax(1e-12,np.abs(z))
+L4_z *= clip_OS(np.abs(L4_z)) / np.fmax(1e-12,np.abs(L4_z))
 
-res_dict['z'] = z
+res_dict['L4_z'] = L4_z
+
+Wlker = Wlker_fact*lker
+Wlker2 = Wlker**2
+
+if Wlker != 0.0:
+    W = np.exp(-0.5*ds2/Wlker2)
+else:
+    W = (ds2 == 0.0).astype(float)
+    
+W *= np.random.default_rng(seed).random((N,N))
+    
+W /= np.sum(W,(-2,-1))[:,:,None,None]
+
+res_dict['z'] = L4_z
 
 print('Creating input orientation map took',time.process_time() - start,'s\n')
 
@@ -205,7 +221,7 @@ RF_r1_itp = interp1d(phis,RF_r1s,fill_value='extrapolate')
 RF_OS_itp = interp1d(phis,RF_OSs,fill_value='extrapolate')
 RF_OS_inv_itp = interp1d(RF_OSs,phis,fill_value='extrapolate')
 
-L4_phis = RF_OS_inv_itp(np.fmax(min_OS,np.abs(z)))
+L4_phis = RF_OS_inv_itp(np.fmax(min_OS,np.abs(L4_z)))
 
 # Create L4 RFs
 σ = 0.04
@@ -222,7 +238,7 @@ RFs = np.zeros((N,N,N,N))
 rng = np.random.default_rng(seed)
 for i in range(N):
     for j in range(N):
-        this_rf = rng.choice([1,-1])*sq_gabor(np.angle(z[i,j])*180/(2*np.pi),rng.choice([1,-1])*L4_phis[i,j])
+        this_rf = rng.choice([1,-1])*sq_gabor(np.angle(L4_z[i,j])*180/(2*np.pi),rng.choice([1,-1])*L4_phis[i,j])
         this_rf[ds > 2.5*σ] = 0
         this_rf /= np.sum(np.abs(this_rf))
         RFs[i,j] = np.roll(this_rf,(i,j),(0,1))
@@ -240,7 +256,7 @@ start = time.process_time()
 
 kvecs = np.vstack((np.round(4*np.cos(np.pi*np.arange(n_ori)/n_ori)),
                 np.round(n_ori*np.sin(np.pi*np.arange(n_ori)/n_ori)))).T
-phss = 2*np.pi*np.arange(n_phs)
+phss = 2*np.pi*np.arange(n_phs)/n_phs
 
 rets = np.zeros((n_ori,n_phs,n_rpt,N,N))
 
@@ -290,25 +306,15 @@ start = time.process_time()
 for i,kvec in enumerate(kvecs):
     for j,phs in enumerate(phss):
         for k in range(n_rpt):
+            # L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-\
+            #     thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
             L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-\
-                thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
+                thresh,0.25,n_int,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 if saverates:
     res_dict['L4_rates'] = L4_rates
-    
-# Calculate statistics of L2/3 inputs
-Wlker = Wlker_fact*lker
-Wlker2 = Wlker**2
-
-if Wlker != 0.0:
-    W = np.exp(-0.5*ds2/Wlker2)
-else:
-    W = (ds2 == 0.0).astype(float)
-
-W *= rng.random((N,N))
-W /= np.sum(W,(-2,-1))[:,:,None,None]
 
 L23_inps = np.zeros_like(L4_rates[:,:,:,0,:,:])
 
@@ -327,26 +333,26 @@ noise_avg_L4_inp = np.mean(L4_inps,2)
 noise_avg_L4_rate = np.mean(L4_rates,2)
 noise_avg_L23_inp = np.mean(L23_inps,2)
 
-L4_inp_F0,L4_inp_F1,L4_inp_phase = uf.calc_dc_ac_comp(noise_avg_L4_inp,1)
+L4_inp_F0,L4_inp_F1,L4_inp_APP = uf.calc_dc_ac_comp(noise_avg_L4_inp,1)
 L4_inp_F1 *= 2
-L4_inp_modrat = L4_inp_F1/L4_inp_F0
-L4_inp_phase *= 360/(2*np.pi)
-L4_inp_avg,L4_inp_OS,L4_inp_PO = uf.calc_dc_ac_comp(L4_inp_F0,0)
+L4_inp_MR = L4_inp_F1/L4_inp_F0
+L4_inp_APP *= 360/(2*np.pi)
+L4_inp_avg,L4_inp_OS,L4_inp_PO = uf.calc_dc_ac_comp(L4_inp_F1,0)
 L4_inp_OS = L4_inp_OS/L4_inp_avg
 L4_inp_PO *= 180/(2*np.pi)
 
-L4_rate_F0,L4_rate_F1,L4_rate_phase = uf.calc_dc_ac_comp(noise_avg_L4_rate,1)
+L4_rate_F0,L4_rate_F1,L4_rate_APP = uf.calc_dc_ac_comp(noise_avg_L4_rate,1)
 L4_rate_F1 *= 2
-L4_rate_modrat = L4_rate_F1/L4_rate_F0
-L4_rate_phase *= 360/(2*np.pi)
+L4_rate_MR = L4_rate_F1/L4_rate_F0
+L4_rate_APP *= 360/(2*np.pi)
 L4_rate_avg,L4_rate_OS,L4_rate_PO = uf.calc_dc_ac_comp(L4_rate_F0,0)
 L4_rate_OS = L4_rate_OS/L4_rate_avg
 L4_rate_PO *= 180/(2*np.pi)
 
-L23_inp_F0,L23_inp_F1,L23_inp_phase = uf.calc_dc_ac_comp(noise_avg_L23_inp,1)
+L23_inp_F0,L23_inp_F1,L23_inp_APP = uf.calc_dc_ac_comp(noise_avg_L23_inp,1)
 L23_inp_F1 *= 2
-L23_inp_modrat = L23_inp_F1/L23_inp_F0
-L23_inp_phase *= 360/(2*np.pi)
+L23_inp_MR = L23_inp_F1/L23_inp_F0
+L23_inp_APP *= 360/(2*np.pi)
 L23_inp_avg,L23_inp_OS,L23_inp_PO = uf.calc_dc_ac_comp(L23_inp_F0,0)
 L23_inp_OS = L23_inp_OS/L23_inp_avg
 L23_inp_PO *= 180/(2*np.pi)
@@ -361,24 +367,24 @@ res_dict['L23_inp_CV'] = L23_inp_CV
 
 res_dict['L4_inp_F0'] = L4_inp_F0
 res_dict['L4_inp_F1'] = L4_inp_F1
-res_dict['L4_inp_phase'] = L4_inp_phase
-res_dict['L4_inp_modrat'] = L4_inp_modrat
+res_dict['L4_inp_APP'] = L4_inp_APP
+res_dict['L4_inp_MR'] = L4_inp_MR
 res_dict['L4_inp_avg'] = L4_inp_avg
 res_dict['L4_inp_OS'] = L4_inp_OS
 res_dict['L4_inp_PO'] = L4_inp_PO
 
 res_dict['L4_rate_F0'] = L4_rate_F0
 res_dict['L4_rate_F1'] = L4_rate_F1
-res_dict['L4_rate_phase'] = L4_rate_phase
-res_dict['L4_rate_modrat'] = L4_rate_modrat
+res_dict['L4_rate_APP'] = L4_rate_APP
+res_dict['L4_rate_MR'] = L4_rate_MR
 res_dict['L4_rate_avg'] = L4_rate_avg
 res_dict['L4_rate_OS'] = L4_rate_OS
 res_dict['L4_rate_PO'] = L4_rate_PO
 
 res_dict['L23_inp_F0'] = L23_inp_F0
 res_dict['L23_inp_F1'] = L23_inp_F1
-res_dict['L23_inp_phase'] = L23_inp_phase
-res_dict['L23_inp_modrat'] = L23_inp_modrat
+res_dict['L23_inp_APP'] = L23_inp_APP
+res_dict['L23_inp_MR'] = L23_inp_MR
 res_dict['L23_inp_avg'] = L23_inp_avg
 res_dict['L23_inp_OS'] = L23_inp_OS
 res_dict['L23_inp_PO'] = L23_inp_PO

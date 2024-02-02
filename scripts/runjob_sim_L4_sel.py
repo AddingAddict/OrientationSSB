@@ -92,54 +92,56 @@ def runjobs():
 
     time.sleep(0.2)
     
-    ksels = 10**np.linspace(-4,-1,7)[:2]
-    lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))[2:4]
+    bgnds = 10**np.linspace(-4,-2,3)[0:1]
+    ksels = 10**np.linspace(-4,-1,7)[2:3]
+    lkers = np.concatenate(([0],10**np.linspace(-3,0,7)[:-1]))[3:4]
     Wlker_fact = 1.0
     grecs = np.linspace(0.2,0.8,4)
     threshs = np.linspace(0.0,0.6,4)
-    etas = 10**np.linspace(-3,-1,5)
+    etas = 10**np.linspace(-2,0,5)[:-1]
     seeds = range(1)
 
-    for ksel in ksels:
-        for lker in lkers:
-            for grec in grecs:
-                for thresh in threshs:
-                    for eta in etas:
-                        for seed in seeds:
-                            #--------------------------------------------------------------------------
-                            # Make SBTACH
-                            inpath = currwd + "/sim_L4_sel.py"
-                            c1 = "{:s} -s {:d} -no {:d} -np {:d} -nr {:d} -nt {:d} -k {:f} -l {:f} -w {:f} -g {:f} -th {:f} -e {:f}".format(
-                                inpath,seed,n_ori,n_phs,n_rpt,n_int,ksel,lker,Wlker_fact,grec,thresh,eta)
-                            
-                            jobname="{:s}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}_seed={:d}".format(
-                                'sim_L4_sel',ksel,lker,Wlker_fact,grec,thresh,eta,seed)
-                            
-                            if not args2.test:
-                                jobnameDir=os.path.join(ofilesdir, jobname)
-                                text_file=open(jobnameDir, "w");
-                                os. system("chmod u+x "+ jobnameDir)
-                                text_file.write("#!/bin/sh \n")
-                                if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                                    text_file.write("#SBATCH --account=theory \n")
-                                text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                                text_file.write("#SBATCH -t 0-11:59  \n")
-                                text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-                                # text_file.write("#SBATCH --gres=gpu\n")
-                                text_file.write("#SBATCH -c 1 \n")
-                                text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-                                text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-                                text_file.write("python  -W ignore " + c1+" \n")
-                                text_file.write("echo $PATH  \n")
-                                text_file.write("exit 0  \n")
-                                text_file.close()
+    for bgnd in bgnds:
+        for ksel in ksels:
+            for lker in lkers:
+                for grec in grecs:
+                    for thresh in threshs:
+                        for eta in etas:
+                            for seed in seeds:
+                                #--------------------------------------------------------------------------
+                                # Make SBTACH
+                                inpath = currwd + "/sim_L4_sel.py"
+                                c1 = "{:s} -s {:d} -no {:d} -np {:d} -nr {:d} -nt {:d} -b {:f} -k {:f} -l {:f} -w {:f} -g {:f} -th {:f} -e {:f}".format(
+                                    inpath,seed,n_ori,n_phs,n_rpt,n_int,bgnd,ksel,lker,Wlker_fact,grec,thresh,eta)
+                                
+                                jobname="{:s}_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}_seed={:d}".format(
+                                    'sim_L4_sel',bgnd,ksel,lker,Wlker_fact,grec,thresh,eta,seed)
+                                
+                                if not args2.test:
+                                    jobnameDir=os.path.join(ofilesdir, jobname)
+                                    text_file=open(jobnameDir, "w");
+                                    os. system("chmod u+x "+ jobnameDir)
+                                    text_file.write("#!/bin/sh \n")
+                                    if cluster=='haba' or cluster=='moto' or cluster=='burg':
+                                        text_file.write("#SBATCH --account=theory \n")
+                                    text_file.write("#SBATCH --job-name="+jobname+ "\n")
+                                    text_file.write("#SBATCH -t 0-11:59  \n")
+                                    text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+                                    # text_file.write("#SBATCH --gres=gpu\n")
+                                    text_file.write("#SBATCH -c 1 \n")
+                                    text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
+                                    text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
+                                    text_file.write("python  -W ignore " + c1+" \n")
+                                    text_file.write("echo $PATH  \n")
+                                    text_file.write("exit 0  \n")
+                                    text_file.close()
 
-                                if cluster=='axon':
-                                    os.system("sbatch -p burst " +jobnameDir);
+                                    if cluster=='axon':
+                                        os.system("sbatch -p burst " +jobnameDir);
+                                    else:
+                                        os.system("sbatch " +jobnameDir);
                                 else:
-                                    os.system("sbatch " +jobnameDir);
-                            else:
-                                print (c1)
+                                    print (c1)
 
 
 
