@@ -11,7 +11,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from dev_ori_sel_RF import image_dir,data_dir,config_dict,dynamics_np,dynamics,\
+from dev_ori_sel_RF import image_dir,data_dir,config_dict,inputs,dynamics_np,dynamics,\
 system_generation,network,network_ffrec
 from dev_ori_sel_RF.tools import analysis_tools,misc,update_params_dict
 
@@ -405,7 +405,7 @@ def plot_probe_RFs(pdf_path,probe_config_dict,inp_dict,lgn,Wlgnto4,all_yt,all_It
 
     return all_phase,all_modrat
 
-def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=8,temporal_duration=500,calc_pref_freq=False,outdir=None):
+def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=8,temporal_duration=500,calc_pref_freq=False,outdir=None,grating=True):
     RF_mode = "load_from_external"
     system_mode = "one_layer"
     connectivity_type = "EI"
@@ -416,10 +416,16 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     Nret,Nlgn,N4,N23,Nvert = probe_config_dict["Nret"],probe_config_dict["Nlgn"],probe_config_dict["N4"],\
                              probe_config_dict["N23"],probe_config_dict["Nvert"]
     
-    if outdir is None:
-        pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
+    if grating:
+        if outdir is None:
+            pdf_path = image_dir + "grating_responses/{}/v{}_{}/".format(config_name,Version,load_location)
+        else:
+            pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
     else:
-        pdf_path = os.path.join(outdir,"grating_responses/{}/v{}_{}/".format(config_name,Version,load_location))
+        if outdir is None:
+            pdf_path = image_dir + "inputs/{}/v{}_{}/".format(config_name,Version,load_location)
+        else:
+            pdf_path = os.path.join(outdir,"inputs/{}/v{}_{}/".format(config_name,Version,load_location))
     misc.ensure_path(pdf_path)
 
     probe_config_dict["Wlgn_to4_params"].update({
@@ -430,9 +436,10 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     # T_pd = 1000
     T_pd = temporal_duration*dt*Nsur
     t = np.arange(0,T_pd/dt,1).astype(int)
-    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
+    if grating:
+        probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
+        # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
+        # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
                         "config_name" : config_name,
@@ -442,15 +449,26 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                         "Version" : Version
                         })
     n = network.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
-    kwargs = {
-                ## parameters for moving gratings
-                "num_freq" : 1,
-                "spat_frequencies" : freqs,#40,60,90
-                "orientations" : oris,
-                "Nsur" : Nsur,
-                "temporal_duration": temporal_duration,
-                "dt": dt
-    }
+    if grating:
+        kwargs = {
+                    ## parameters for moving gratings
+                    "num_freq" : 1,
+                    "spat_frequencies" : freqs,#40,60,90
+                    "orientations" : oris,
+                    "Nsur" : Nsur,
+                    "temporal_duration": temporal_duration,
+                    "dt": dt
+        }
+    else:
+        kwargs = {
+                    ## parameters for moving gratings
+                    "num_freq" : 1,
+                    "spat_frequencies" : np.array([0]),#40,60,90
+                    "orientations" : np.array([0]),
+                    "Nsur" : Nsur,
+                    "temporal_duration": temporal_duration,
+                    "dt": dt
+        }
 
     _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
     
@@ -482,21 +500,43 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
             "spat_frequencies" : np.array([pref_lam*Nlgn,])
         })
         
-    lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
-                            same_EI_input=True,**kwargs)
-    # lgn += 0.1
-    lgn -= np.nanmin(lgn) #- 0.5
-    print("lgn",lgn.shape)
+    if grating:
+        lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
+                                same_EI_input=True,**kwargs)
+        # lgn += 0.1
+        lgn -= np.nanmin(lgn) #- 0.5
+        print("lgn",lgn.shape)
 
-    lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
-    print(lgn_rshp.shape)
-    # lgn_rshp /= 4
+        lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
+        print(lgn_rshp.shape)
+        # lgn_rshp /= 4
+        lgn = lgn_rshp
+    else:
+        lgn = np.zeros(2,Nlgn**2,1,1,Nsur)
+        gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
+        off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
+                probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
+        inp = inputs.Inputs_lgn((Nret,Nret),Version,0,\
+                                probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
+                                probe_config_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
+        for i in range(Nsur):
+            inp.set_seed(i)
+            lgn[:,:,0,0,i] = inp.create_lgn_input(\
+                    probe_config_dict["config_dict"]["Inp_params"],\
+                    probe_config_dict["config_dict"]["Inp_params"]["input_type"],\
+                    probe_config_dict["Wret_to_lgn"].numpy(),\
+                    expansion_timestep = 0,
+                    )
+            if off_bias:
+                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["config_dict"]["Inp_params"])
+            if gain_control:
+                lgn[:,:,0,0,i] = inp.apply_gain_control(lgn[:,:,0,0,i])
     
     ################################# initialization ###############################
     np.random.seed(probe_config_dict["random_seed"]*113)
@@ -521,13 +561,13 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
     else:
         tau = 1.
         
-    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
+    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn,y0,dynamics_system,
                                     Wlgnto4,W4to4,W4to23,W23to23,W23to4,tau)
     phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgnto4,yt,It,
                                   system_mode=system_mode,RF_mode=RF_mode)
     return act,inp,phase,modrat
 
-def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None):
+def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.linspace(0,np.pi,4,endpoint=False),Nsur=10,calc_pref_freq=False,outdir=None,grating=True):
     RF_mode = "load_from_external"
     system_mode = "one_layer"
     connectivity_type = "EI"
@@ -559,9 +599,10 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     # T_pd = 1000
     T_pd = temporal_duration*dt*Nsur
     t = np.arange(0,T_pd/dt,1).astype(int)
-    probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
-    # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
+    if grating:
+        probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online"})
+        # probe_config_dict["Inp_params"].update({"input_type" : "moving_grating_periodic_online_sharp"})
+        # probe_config_dict["Inp_params"].update({"input_type" : "white_noise_online"})
     last_timestep = t[-1]
     probe_config_dict.update({
                         "config_name" : config_name,
@@ -571,15 +612,26 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
                         "Version" : Version
                         })
     n = network_ffrec.Network(Version,probe_config_dict,load_location=load_location)#,ampl_het=0.,spatial_freq_het=0.
-    kwargs = {
-                ## parameters for moving gratings
-                "num_freq" : 1,
-                "spat_frequencies" : freqs,#40,60,90
-                "orientations" : oris,
-                "Nsur" : Nsur,
-                "temporal_duration": temporal_duration,
-                "dt": dt
-    }
+    if grating:
+        kwargs = {
+                    ## parameters for moving gratings
+                    "num_freq" : 1,
+                    "spat_frequencies" : freqs,#40,60,90
+                    "orientations" : oris,
+                    "Nsur" : Nsur,
+                    "temporal_duration": temporal_duration,
+                    "dt": dt
+        }
+    else:
+        kwargs = {
+                    ## parameters for moving gratings
+                    "num_freq" : 1,
+                    "spat_frequencies" : np.array([0]),#40,60,90
+                    "orientations" : np.array([0]),
+                    "Nsur" : Nsur,
+                    "temporal_duration": temporal_duration,
+                    "dt": dt
+        }
 
     _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
     
@@ -611,21 +663,43 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
             "spat_frequencies" : np.array([pref_lam*Nlgn,])
         })
         
-    lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
-                            same_EI_input=True,**kwargs)
-    # lgn += 0.1
-    lgn -= np.nanmin(lgn) #- 0.5
-    print("lgn",lgn.shape)
+    if grating:
+        lgn = n.generate_inputs(full_lgn_output=True,last_timestep=last_timestep,\
+                                same_EI_input=True,**kwargs)
+        # lgn += 0.1
+        lgn -= np.nanmin(lgn) #- 0.5
+        print("lgn",lgn.shape)
 
-    lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
-    print(lgn_rshp.shape)
-    lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
-    print(lgn_rshp.shape)
-    # lgn_rshp /= 4
+        lgn_rshp = lgn.reshape(2,-1,Nlgn**2,len(oris),Nsur)
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.transpose((0,2,3,4,1))
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(oris),len(freqs),Nsur)
+        print(lgn_rshp.shape)
+        lgn_rshp = lgn_rshp.reshape(2,Nlgn**2,len(freqs),len(oris),Nsur)
+        print(lgn_rshp.shape)
+        # lgn_rshp /= 4
+        lgn = lgn_rshp
+    else:
+        lgn = np.zeros(2,Nlgn**2,1,1,Nsur)
+        gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
+        off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
+                probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
+        inp = inputs.Inputs_lgn((Nret,Nret),Version,0,\
+                                probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
+                                probe_config_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
+        for i in range(Nsur):
+            inp.set_seed(i)
+            lgn[:,:,0,0,i] = inp.create_lgn_input(\
+                    probe_config_dict["config_dict"]["Inp_params"],\
+                    probe_config_dict["config_dict"]["Inp_params"]["input_type"],\
+                    probe_config_dict["Wret_to_lgn"].numpy(),\
+                    expansion_timestep = 0,
+                    )
+            if off_bias:
+                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["config_dict"]["Inp_params"])
+            if gain_control:
+                lgn[:,:,0,0,i] = inp.apply_gain_control(lgn[:,:,0,0,i])
     
     ################################# initialization ###############################
     np.random.seed(probe_config_dict["random_seed"]*113)
@@ -650,7 +724,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
     else:
         tau = 1.
         
-    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn_rshp,y0,dynamics_system,
+    act,inp,yt,It = probe_responses(probe_config_dict,kwargs,t,lgn,y0,dynamics_system,
                                     Wlgnto4,W4to4,W4to23,W23to23,W23to4,tau)
     phase,modrat = plot_probe_RFs(pdf_path,probe_config_dict,kwargs,lgn,Wlgnto4,yt,It,
                                   system_mode=system_mode,RF_mode=RF_mode)
