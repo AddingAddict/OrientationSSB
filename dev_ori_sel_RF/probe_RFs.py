@@ -518,7 +518,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
         # lgn_rshp /= 4
         lgn = lgn_rshp
     else:
-        lgn = np.zeros(2,Nlgn**2,1,1,Nsur)
+        lgn = np.zeros((2,Nlgn**2,1,1,Nsur))
         gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
         off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
                 probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
@@ -681,7 +681,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
         # lgn_rshp /= 4
         lgn = lgn_rshp
     else:
-        lgn = np.zeros(2,Nlgn**2,1,1,Nsur)
+        lgn = np.zeros((2,Nlgn**2,1,1,Nsur))
         gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
         off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
                 probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0

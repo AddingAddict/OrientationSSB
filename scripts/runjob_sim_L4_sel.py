@@ -98,7 +98,7 @@ def runjobs():
     Wlker_fact = 1.0
     grecs = np.linspace(0.2,0.8,4)
     threshs = np.linspace(0.0,0.6,4)
-    etas = 10**np.linspace(-2,0,5)[:-1]
+    etas = 10**np.linspace(-3,-1,5)
     seeds = range(1)
 
     for bgnd in bgnds:
