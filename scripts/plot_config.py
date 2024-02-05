@@ -18,11 +18,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--maxver', '-v', help='version',type=int, default=8)
 parser.add_argument('--nload', '-n', help='version',type=int, default=8)
 parser.add_argument('--skip', '-s', help='how many RFs to skip for each plotted',type=int, default=0)
+parser.add_argument('--flip', '-f', help='flip on vs off?',type=int, default=0)
 parser.add_argument('--config', '-c', help='version',type=str, default="test")
 args = vars(parser.parse_args())
 maxver = int(args['maxver'])
 nload = int(args['nload'])
 skip = int(args["skip"])
+flip = int(args["flip"])
 config_name = str(args['config'])
 
 config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA = uf.get_network_size(config_name)
@@ -98,10 +100,16 @@ rf = wff[:,0]-wff[:,1]
 fig,axs = plt.subplots(1,2,figsize=(Nshow,0.5*Nshow),dpi=300)
 fig.subplots_adjust(hspace=.1, wspace=.3)
 
-pf.doubcontbar(fig,axs[0],wff[0,0],-wff[0,1],
-               cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8,origin='lower')
-pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),
-               origin='lower')
+if flip:
+    pf.doubcontbar(fig,axs[0],wff[0,1],-wff[0,0],
+                cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8,origin='lower')
+    pf.doubimshbar(fig,axs[1],wff[0,1],-wff[0,0],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),
+                origin='lower')
+else:
+    pf.doubcontbar(fig,axs[0],wff[0,0],-wff[0,1],
+                cmap='RdBu',levels=np.linspace(-np.max(np.abs(wff[0])),np.max(np.abs(wff[0])),13),linewidths=0.8,origin='lower')
+    pf.doubimshbar(fig,axs[1],wff[0,0],-wff[0,1],cmap='RdBu',vmin=-np.max(np.abs(wff[0])),vmax=np.max(np.abs(wff[0])),
+                origin='lower')
 
 fig.tight_layout()
 plt.savefig("./../plots/RFs/RFs_"+config_name+".pdf")

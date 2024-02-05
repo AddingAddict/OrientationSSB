@@ -27,6 +27,7 @@ def runjobs():
     parser.add_argument('--maxver', '-v', help='maximum version to run',type=int, default=-1)
     parser.add_argument('--nload', '-n', help='number of versions to run',type=int, default=20)
     parser.add_argument('--skip', '-s', help='how many RFs to skip for each plotted',type=int, default=0)
+    parser.add_argument('--flip', '-f', help='flip on vs off?',type=int, default=0)
     parser.add_argument('--config', '-c', help='param config to load',type=str, default="test")
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
@@ -37,6 +38,7 @@ def runjobs():
     maxver = int(args["maxver"])
     nload = int(args["nload"])
     skip = int(args["skip"])
+    flip = int(args["flip"])
     config_name = str(args['config'])
     gb = int(args['gb'])
 
@@ -95,7 +97,7 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/plot_config_ffrec.py"
-    c1 = "{:s} -v {:d} -n {:d} -s {:d} -c {:s}".format(inpath,maxver,nload,skip,config_name)
+    c1 = "{:s} -v {:d} -n {:d} -s {:d} -f {:d} -c {:s}".format(inpath,maxver,nload,skip,flip,config_name)
     
     jobname="{:s}".format('plot_config_ffrec_'+config_name)
     
