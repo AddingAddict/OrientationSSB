@@ -54,16 +54,16 @@ for i in range(nrep):
                 "Wrec_mode": "load_from_external"})
             
     if Version == 0:
-        if os.isfile('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(config_name,Version-1,Version-1)):
-            try:
-                with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
-                    config_name,Version-1,Version-1)) as data:
-                    data['W']
-                config_dict["Wlgn_to4_params"].update({
-                    "W_mode": "load_from_external",
-                    "load_from_prev_run" : Version-1})
-            except:
-                pass
+        if os.path.isfile('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(config_name,Version-1,Version-1)):
+            # try:
+            #     with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
+            #         config_name,Version-1,Version-1)) as data:
+            #         data['W']
+            #     config_dict["Wlgn_to4_params"].update({
+            #         "W_mode": "load_from_external",
+            #         "load_from_prev_run" : Version-1})
+            # except:
+            #     pass
             try:
                 with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
                     config_name,Version-1,Version-1)) as data:
