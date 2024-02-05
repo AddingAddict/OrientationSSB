@@ -470,7 +470,7 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
                     "dt": dt
         }
 
-    _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
+    Wrettolgn,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4 = n.system
     
     if probe_config_dict["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
         theta_4 = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))["theta_4"]
@@ -519,22 +519,22 @@ def probe_RFs_one_layer(Version,config_name,freqs=np.array([60,80,100]),oris=np.
         lgn = lgn_rshp
     else:
         lgn = np.zeros((2,Nlgn**2,1,1,Nsur))
-        gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
-        off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
-                probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
+        gain_control = probe_config_dict["Inp_params"].get("gain_control_params",None) is not None
+        off_bias = "off_bias_strength" in probe_config_dict["Inp_params"] and\
+                probe_config_dict["Inp_params"]["off_bias_strength"]>0
         inp = inputs.Inputs_lgn((Nret,Nret),Version,0,\
-                                probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
-                                probe_config_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
+                                probe_config_dict["Inp_params"].get("gain_control_params",None),\
+                                probe_config_dict["Inp_params"].get("cov_mat_params",None))
         for i in range(Nsur):
             inp.set_seed(i)
             lgn[:,:,0,0,i] = inp.create_lgn_input(\
-                    probe_config_dict["config_dict"]["Inp_params"],\
-                    probe_config_dict["config_dict"]["Inp_params"]["input_type"],\
-                    probe_config_dict["Wret_to_lgn"].numpy(),\
+                    probe_config_dict["Inp_params"],\
+                    probe_config_dict["Inp_params"]["input_type"],\
+                    Wrettolgn,\
                     expansion_timestep = 0,
                     )
             if off_bias:
-                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["config_dict"]["Inp_params"])
+                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["Inp_params"])
             if gain_control:
                 lgn[:,:,0,0,i] = inp.apply_gain_control(lgn[:,:,0,0,i])
     
@@ -633,7 +633,7 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
                     "dt": dt
         }
 
-    _,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
+    Wrettolgn,Wlgnto4,arbor_on,arbor_off,arbor2,_,W4to4,arbor4to4,_ = n.system
     
     if probe_config_dict["Inp_params"]["simulate_activity"]=="dynamics_adaptive":
         theta_4 = np.load(open(load_path + "y_v{v}.npz".format(v=Version),"rb"))["theta_4"]
@@ -682,22 +682,22 @@ def probe_RFs_ffrec(Version,config_name,freqs=np.array([60,80,100]),oris=np.lins
         lgn = lgn_rshp
     else:
         lgn = np.zeros((2,Nlgn**2,1,1,Nsur))
-        gain_control = probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None) is not None
-        off_bias = "off_bias_strength" in probe_config_dict["config_dict"]["Inp_params"] and\
-                probe_config_dict["config_dict"]["Inp_params"]["off_bias_strength"]>0
+        gain_control = probe_config_dict["Inp_params"].get("gain_control_params",None) is not None
+        off_bias = "off_bias_strength" in probe_config_dict["Inp_params"] and\
+                probe_config_dict["Inp_params"]["off_bias_strength"]>0
         inp = inputs.Inputs_lgn((Nret,Nret),Version,0,\
-                                probe_config_dict["config_dict"]["Inp_params"].get("gain_control_params",None),\
-                                probe_config_dict["config_dict"]["Inp_params"].get("cov_mat_params",None))
+                                probe_config_dict["Inp_params"].get("gain_control_params",None),\
+                                probe_config_dict["Inp_params"].get("cov_mat_params",None))
         for i in range(Nsur):
             inp.set_seed(i)
             lgn[:,:,0,0,i] = inp.create_lgn_input(\
-                    probe_config_dict["config_dict"]["Inp_params"],\
-                    probe_config_dict["config_dict"]["Inp_params"]["input_type"],\
-                    probe_config_dict["Wret_to_lgn"].numpy(),\
+                    probe_config_dict["Inp_params"],\
+                    probe_config_dict["Inp_params"]["input_type"],\
+                    Wrettolgn,\
                     expansion_timestep = 0,
                     )
             if off_bias:
-                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["config_dict"]["Inp_params"])
+                lgn[:,:,0,0,i] = inp.apply_ONOFF_bias(lgn[:,:,0,0,i],probe_config_dict["Inp_params"])
             if gain_control:
                 lgn[:,:,0,0,i] = inp.apply_gain_control(lgn[:,:,0,0,i])
     
