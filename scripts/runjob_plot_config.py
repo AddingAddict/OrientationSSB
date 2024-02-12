@@ -109,7 +109,7 @@ def runjobs():
         if cluster=='haba' or cluster=='moto' or cluster=='burg':
             text_file.write("#SBATCH --account=theory \n")
         text_file.write("#SBATCH --job-name="+jobname+ "\n")
-        text_file.write("#SBATCH -t 0-11:59  \n")
+        text_file.write("#SBATCH -t 0-3:59  \n")
         text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
         text_file.write("#SBATCH -c 1 \n")
         text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
