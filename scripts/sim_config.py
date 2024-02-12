@@ -48,9 +48,9 @@ for i in range(nrep):
             "load_from_prev_run" : Version-1})
             
     if Version == 0:
-        if os.isfile('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(config_name,Version-1,Version-1)):
+        if os.path.isfile('./../dev_ori_sel_RF/data/layer4/{:s}/v{:d}/y_v{:d}.npz'.format(config_name,Version-1,Version-1)):
             try:
-                with np.load('./../dev_ori_sel_RF/data/ffrec/{:s}/v{:d}/y_v{:d}.npz'.format(
+                with np.load('./../dev_ori_sel_RF/data/layer4/{:s}/v{:d}/y_v{:d}.npz'.format(
                     config_name,Version-1,Version-1)) as data:
                     data['W']
                 config_dict["Wlgn_to4_params"].update({
@@ -66,4 +66,4 @@ for i in range(nrep):
         break
 
 if Version < maxver:
-    os.system("python runjob_sim_config_ffrec.py -c {:s} -g {:d} -v {:d} -n {:d} -m {:d}".format(config_name,gb,Version,nrep,maxver));
+    os.system("python runjob_sim_config.py -c {:s} -g {:d} -v {:d} -n {:d} -m {:d}".format(config_name,gb,Version,nrep,maxver));
