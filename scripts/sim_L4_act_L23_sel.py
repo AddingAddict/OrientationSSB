@@ -25,6 +25,7 @@ parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientatio
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
+parser.add_argument('--areaCV', '-a', help='CV of cluster area',type=float, default=0.0)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--thresh', '-th', help='L2/3 activation threshold',type=float, default=0.0)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
@@ -34,6 +35,7 @@ n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
 dens = args['dens']
+areaCV = args['areaCV']
 grec = args['grec']
 thresh = args['thresh']
 saverates = args['saverates']
@@ -45,8 +47,8 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_dens={:.4f}_grec={:.3f}_thresh={:.2f}/'.format(
-    dens,grec,thresh)
+res_dir = res_dir + 'L4_act_L23_sel_dens={:.4f}_areaCV={:.2f}_grec={:.3f}_thresh={:.2f}/'.format(
+    dens,areaCV,grec,thresh)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -127,7 +129,7 @@ ds2 = dxs**2 + dys**2
 ds = np.sqrt(ds2)
 
 # Define function to build L4 OPM
-def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed):
+def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=0):
     rng = np.random.default_rng(seed)
     
     bgndOS = 0.5*(bgnd_min+bgnd_max)
@@ -138,6 +140,14 @@ def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed):
     rng = np.random.default_rng(seed)
 
     clstr_pts = qmc.Halton(d=2,scramble=False,seed=seed).random(nclstr)
+    
+    if np.isclose(areaCV,0):
+        sig2s = sig2*np.ones(nclstr)
+        rng.gamma(shape=1,scale=1,size=nclstr)
+    else:
+        shape = 1/areaCV**2
+        scale = sig2/shape
+        sig2s = rng.gamma(shape=shape,scale=scale,size=nclstr)
     
     xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
     dxs = np.abs(xs[None,:,:] - clstr_pts[:,0,None,None])
@@ -151,8 +161,8 @@ def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed):
     
     for i in range(nclstr):
         ori = 1j*2*np.pi*rng.random()
-        omap += np.heaviside(1.01*sig2-ds2s[i],1)*np.exp(ori)
-        holes += np.heaviside(1.01*sig2-ds2s[i],1)
+        omap += np.heaviside(1.01*sig2s[i]-ds2s[i],1)*np.exp(ori)
+        holes += np.heaviside(1.01*sig2s[i]-ds2s[i],1)
             
     true_clstr_size = np.sum(np.abs(omap))
     omap *= maxOS*nclstr*np.pi*sig2*N**2/true_clstr_size
@@ -179,7 +189,7 @@ def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed):
     
     return omap,imap,gauss
 
-L4_rate_z,L23_inp_z,W4to23 = gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed)
+L4_rate_z,L23_inp_z,W4to23 = gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=areaCV)
 
 res_dict['L4_z'] = L4_rate_z
 res_dict['z'] = L23_inp_z
@@ -275,74 +285,21 @@ inp_ori_sel = inp_r1/inp_r0
 rate_z = rate_ori_sel * np.exp(1j*rate_pref_ori*2*np.pi/180)
 inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
 
-# Calculate hypercolumn size
+# Calculate hypercolumn size and number of pinwheels
 z_unit = rate_z[0] / rate_ori_sel[0]
-z_fft = np.abs(np.fft.fftshift(np.fft.fft2(rate_z[0] - np.nanmean(rate_z[0]))))
-z_unit_fft = np.abs(np.fft.fftshift(np.fft.fft2(z_unit - np.nanmean(z_unit))))
 
-z_fps = np.zeros(N//2)
-z_unit_fps = np.zeros(N//2)
+_,z_fps = uf.get_fps(rate_z[0])
+z_hc,_ = uf.calc_hypercol_size(z_fps,N)
+z_pwcnt,z_pwpts = uf.calc_pinwheels(uf.bandpass_filter(rate_z[0],0.5*z_hc,1.5*z_hc))
+z_pwd = z_pwcnt/(N/z_hc)**2
 
-grid = np.arange(-N//2,N//2)
-x,y = np.meshgrid(grid,grid)
-bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N//2*np.sqrt(2)))+0.5)
-for idx in range(N//2):
-    z_fps[idx] = np.mean(z_fft[bin_idxs == idx])
-    z_unit_fps[idx] = np.mean(z_unit_fft[bin_idxs == idx])
+_,z_unit_fps = uf.get_fps(z_unit)
+# z_unit_hc,_ = uf.calc_hypercol_size(z_unit_fps,N)
+# z_unit_pwcnt,z_unit_pwpts = uf.calc_pinwheels(uf.bandpass_filter(z_unit,0.5*z_unit_hc,1.5*z_unit_hc))
+# z_unit_pwd = z_unit_pwcnt/(N/z_unit_hc)**2
     
-freqs = np.arange(N//2)/N
-Lam = 1/freqs[np.argmax(z_fps)]
-
-# Calculate number of pinwheels
-def ccw(A,B,C):
-    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
-
-def intersect(A,B,C,D):
-    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
-
-def cross(A,B):
-    return A[0]*B[1] - A[1]*B[0]
-
-def intersectpt(A,B,C,D):
-    qmp = [C[0]-A[0],C[1]-A[1]]
-    r = [B[0]-A[0],B[1]-A[1]]
-    s = [D[0]-C[0],D[1]-C[1]]
-    rxs = cross(r,s)
-    
-    t = cross(qmp,s)/rxs
-#     u = cross(qmp,r)/rxs
-    
-    return [A[0]+t*r[0],A[1]+t*r[1]]
-
-def calc_pinwheels(A):
-    rcont = plt.contour(np.real(A),levels=[0],colors="C0")
-    icont = plt.contour(np.imag(A),levels=[0],colors="C1")
-
-    rsegpts = []
-    for pts in rcont.allsegs[0]:
-        for i in range(len(pts)-1):
-            rsegpts.append([pts[i],pts[i+1]])
-    rsegpts = np.array(rsegpts)
-
-    isegpts = []
-    for pts in icont.allsegs[0]:
-        for i in range(len(pts)-1):
-            isegpts.append([pts[i],pts[i+1]])
-    isegpts = np.array(isegpts)
-    
-    pwcnt = 0
-    pwpts = []
-
-    for rsegpt in rsegpts:
-        for isegpt in isegpts:
-            if intersect(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]):
-                pwcnt += 1
-                pwpts.append(intersectpt(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]))
-    pwpts = np.array(pwpts)
-    
-    return pwcnt,pwpts
-
-npws,pwpts = calc_pinwheels(rate_z[0])
+Lam = z_hc
+npws,pwpts = z_pwcnt,z_pwpts
 
 res_dict['rate_r0'] = rate_r0
 res_dict['rate_r1'] = rate_r1
