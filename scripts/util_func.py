@@ -25,20 +25,88 @@ def get_network_size(config_name,verbose=True):
     
     return config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,rA
 
+def get_two_layer_network_size(config_name,verbose=True):
+    config_dict = misc.load_external_params("params_"+config_name,verbose=verbose)
+    config_dict.update({"config_name" : config_name})
+
+    N4 = config_dict["N4"]
+    N23 = config_dict["N23"]
+    Nlgn = config_dict["Nlgn"]
+    Nret = config_dict["Nret"]
+    Nlgnpop = 2
+    N4pop = config_dict["num_lgn_paths"] // Nlgnpop
+    rA = ceil(config_dict["Wlgn_to4_params"]["r_A_on"] * config_dict["Wlgn_to4_params"].get("r_lim",1.) * N4)
+    
+    return config_dict,N4pop,Nlgnpop,Nret,Nlgn,N4,N23,rA
+
 def get_network_system(Version,config_name):
     if Version == -1:
-        config_dict = misc.load_external_params("params_"+config_name,False)
-        config_dict.update({
-                        "RF_mode" : "initialize",
-                        "system" : "one_layer",
-                        "Version" : Version,
-                        })
-        net = network.Network(Version,config_dict,verbose=False)
+        try:
+            load_location = 'local'
+            load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
+            config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+        except:
+            config_dict = misc.load_external_params("params_"+config_name,False)
+            config_dict.update({
+                            "RF_mode" : "initialize",
+                            "system" : "one_layer",
+                            "Version" : Version,
+                            })
+            net = network.Network(Version,config_dict,verbose=False)
+        else:
+            config_dict.update({
+                            "config_name" : config_name,
+                            "system" : "one_layer",
+                            })
+            config_dict["Wlgn_to4_params"].update({
+                "W_mode": "load_from_external",
+                "load_from_prev_run" : Version})
+            net = network.Network(Version,config_dict,load_location=load_location,verbose=False)
     else:
         load_location = 'local'
         load_path = data_dir + "layer4/{s}/v{v}/".format(s=config_name,v=Version)
         config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
-        config_dict.update({"config_name" : config_name})
+        config_dict.update({
+                        "config_name" : config_name,
+                        "system" : "one_layer",
+                        })
+        config_dict["Wlgn_to4_params"].update({
+            "W_mode": "load_from_external",
+            "load_from_prev_run" : Version})
+        net = network.Network(Version,config_dict,load_location=load_location,verbose=False)
+    return net.system
+
+def get_two_layer_network_system(Version,config_name):
+    if Version == -1:
+        try:
+            load_location = 'local'
+            load_path = data_dir + "two_layer/{s}/v{v}/".format(s=config_name,v=Version)
+            config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+        except:
+            config_dict = misc.load_external_params("params_"+config_name,False)
+            config_dict.update({
+                            "RF_mode" : "initialize",
+                            "system" : "two_layer",
+                            "Version" : Version,
+                            })
+            net = network.Network(Version,config_dict,verbose=False)
+        else:
+            config_dict.update({
+                            "config_name" : config_name,
+                            "system" : "two_layer",
+                            })
+            config_dict["Wlgn_to4_params"].update({
+                "W_mode": "load_from_external",
+                "load_from_prev_run" : Version})
+            net = network.Network(Version,config_dict,load_location=load_location,verbose=False)
+    else:
+        load_location = 'local'
+        load_path = data_dir + "two_layer/{s}/v{v}/".format(s=config_name,v=Version)
+        config_dict = pickle.load(open(load_path + "config_v{v}.p".format(v=Version),"rb"))
+        config_dict.update({
+                        "config_name" : config_name,
+                        "system" : "two_layer",
+                        })
         config_dict["Wlgn_to4_params"].update({
             "W_mode": "load_from_external",
             "load_from_prev_run" : Version})
@@ -172,9 +240,10 @@ def calc_hypercol_size(fps,N):
         return a0*np.exp(-0.5*(k-a1)**2/a2**2) + a3 + a4*k + a5*k**2
 
     freqs = np.arange(N//2)/N
+    peak_idx = np.argmax(np.concatenate(([0,0],fps[2:N//2])))
 
     popt,pcov = curve_fit(fps_fn,freqs,fps[:N//2],
-                          p0=(fps[1],freqs[np.argmax(fps[:N//2])],0.5*freqs[np.argmax(fps[:N//2])],0,0,0))
+                          p0=(fps[peak_idx],freqs[peak_idx],0.5*freqs[peak_idx],0,0,0))
     
     hcsize = 1/popt[1]
     return hcsize,fps_fn(np.arange(len(fps))/N,*popt)

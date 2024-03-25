@@ -11,7 +11,6 @@ import time
 
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.stats import qmc
 import matplotlib.pyplot as plt
 
 import util_func as uf
@@ -24,29 +23,37 @@ parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, de
 parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
+parser.add_argument('--bgnd', '-b', help='amplitude of background selectivity',type=float, default=0.001)
+parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
+parser.add_argument('--lker', '-l', help='smoothing kernel length scale for L4 map',type=float, default=0.01)
+parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--thresh', '-th', help='L2/3 activation threshold',type=float, default=0.0)
+parser.add_argument('--thresh', '-th', help='L2/3 activation threshold',type=float, default=0.5)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
-dens = args['dens']
+bgnd = args['bgnd']
+ksel = args['ksel']
+lker = args['lker']
+Wlker_fact = args['Wlker_fact']
 grec = args['grec']
 thresh = args['thresh']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
 
+lker2 = lker**2
+
 # Define where to save results
 res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_dens={:.4f}_grec={:.3f}_thresh={:.2f}/'.format(
-    dens,grec,thresh)
+res_dir = res_dir + 'L4_act_L23_sel_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}/'.format(
+    bgnd,ksel,lker,Wlker_fact,grec,thresh)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -54,12 +61,9 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
-# Define parameters for L2/3 input from databgnd_min = 0.05
-bgnd_min = 0.05
-bgnd_max = 0.25
-meanOS = 0.17
-maxOS = 0.5
-meanCV = 0.4
+# Define parameters for L2/3 input from data
+avg_OS = 0.17
+avg_CV = 0.4
 
 # Create heterogeneous recurrent connectivity
 config_name = "big_hetero"
@@ -117,6 +121,24 @@ def gen_clip_act(ori,z):
 
 start = time.process_time()
 
+# Define function to build S&P OPM
+def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
+    rng = np.random.default_rng(seed)
+    
+    z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
+    
+    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + bgnd*rng.random((N,N))
+    x = clip_OS(x)
+    x = np.fmax(1e-12,x)
+    
+    z *= x
+    
+    return z
+
+snp_z = gen_sp_opm(avg_OS,ksel,seed)
+
+res_dict['snp_z'] = snp_z
+
 # Calculate distance from all pairs of grid points
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
 dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
@@ -126,63 +148,39 @@ dys[dys > 0.5] = 1 - dys[dys > 0.5]
 ds2 = dxs**2 + dys**2
 ds = np.sqrt(ds2)
 
-# Define function to build L4 OPM
-def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed):
-    rng = np.random.default_rng(seed)
+# Smooth S&P OPM with Gaussian kernel
+if lker != 0.0:
+    gauss = np.exp(-0.5*ds2/lker2)
+else:
+    gauss = (ds2 == 0.0).astype(float)
     
-    bgndOS = 0.5*(bgnd_min+bgnd_max)
+gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
 
-    nclstr = np.round(N**2*dens).astype(int)
-    sig2 = (meanOS - bgndOS)/((maxOS - bgndOS)*dens*np.pi) / N**2
+L4_z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
 
-    rng = np.random.default_rng(seed)
+# scale magnitude of z field until its mean selectivity matches data
+while np.abs(np.mean(clip_OS(np.abs(L4_z))) - avg_OS) > 1e-3:
+    L4_z *= 1 - (np.mean(clip_OS(np.abs(L4_z))) - avg_OS)
 
-    clstr_pts = qmc.Halton(d=2,scramble=False,seed=seed).random(nclstr)
+L4_z *= clip_OS(np.abs(L4_z)) / np.fmax(1e-12,np.abs(L4_z))
+
+res_dict['L4_z'] = L4_z
+
+Wlker = Wlker_fact*lker
+Wlker2 = Wlker**2
+
+if Wlker != 0.0:
+    W = np.exp(-0.5*ds2/Wlker2)
+else:
+    W = (ds2 == 0.0).astype(float)
     
-    xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
-    dxs = np.abs(xs[None,:,:] - clstr_pts[:,0,None,None])
-    dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
-    dys = np.abs(ys[None,:,:] - clstr_pts[:,1,None,None])
-    dys[dys > 0.5] = 1 - dys[dys > 0.5]
-    ds2s = dxs**2 + dys**2
-
-    omap = np.zeros((N,N),dtype='complex64')
-    holes = np.zeros((N,N),dtype='float64')
+W *= np.random.default_rng(seed).random((N,N))
     
-    for i in range(nclstr):
-        ori = 1j*2*np.pi*rng.random()
-        omap += np.heaviside(1.01*sig2-ds2s[i],1)*np.exp(ori)
-        holes += np.heaviside(1.01*sig2-ds2s[i],1)
-            
-    true_clstr_size = np.sum(np.abs(omap))
-    omap *= maxOS*nclstr*np.pi*sig2*N**2/true_clstr_size
+W /= np.sum(W,(-2,-1))[:,:,None,None]
 
-    ks = np.arange(N)/N
-    ks[ks > 0.5] = ks[ks > 0.5] - 1
-    kxs,kys = np.meshgrid(ks*N,ks*N)
+z = np.einsum('ijkl,kl->ij',W,L4_z)
 
-    bgnd_ofield = np.fft.ifft2(np.exp(-0.25*(kxs**2+kys**2)*sig2*16)*np.fft.fft2(np.exp(1j*2*np.pi*rng.random((N,N)))))
-    bgnd_ofield /= np.abs(bgnd_ofield)
-    bgnd_sfield = np.real(np.fft.ifft2(np.exp(-0.25*(kxs**2+kys**2)*sig2*16)*np.fft.fft2(rng.random((N,N)))))
-    bgnd_sfield -= np.min(bgnd_sfield)
-    bgnd_sfield *= (bgnd_max-bgnd_min) / (np.max(bgnd_sfield) - np.min(bgnd_sfield))
-    bgnd_sfield += bgnd_min
-    bgnd_sfield /= nclstr*np.pi*sig2*N**2/true_clstr_size
-    bgnd_sfield = bgnd_min+(bgnd_max-bgnd_min)*rng.random((N,N))
-    omap += bgnd_sfield*bgnd_ofield*(1-holes)
-
-    gauss = np.exp(-0.5*ds2/(sig2/4))
-    gauss *= np.abs(omap[None,None,:,:])**1.3
-    gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
-
-    imap = np.einsum('ijkl,kl->ij',gauss,omap)
-    
-    return omap,imap,gauss
-
-L4_rate_z,L23_inp_z,W4to23 = gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed)
-
-res_dict['L4_z'] = L4_rate_z
-res_dict['z'] = L23_inp_z
+res_dict['z'] = z
 
 print('Creating input orientation map took',time.process_time() - start,'s\n')
 
@@ -196,8 +194,8 @@ inps = np.zeros((n_inp,2,N,N))
 rng = np.random.default_rng(seed)
 for inp_idx in range(n_inp):
     ori = oris[inp_idx]
-    mean_inps[inp_idx,:,:] = np.einsum('ijkl,kl->ij',W4to23,gen_clip_act(ori,L4_rate_z))
-    shape = 1/meanCV**2
+    mean_inps[inp_idx,:,:] = gen_clip_act(ori,z)
+    shape = 1/avg_CV**2
     scale = mean_inps[inp_idx,:,:]/shape
     # scale = avg_FF
     # shape = mean_inps[inp_idx,:,:]/avg_FF
@@ -346,10 +344,14 @@ npws,pwpts = calc_pinwheels(rate_z[0])
 
 res_dict['rate_r0'] = rate_r0
 res_dict['rate_r1'] = rate_r1
+res_dict['rate_rs'] = rate_rs
+res_dict['rate_rc'] = rate_rc
 res_dict['rate_rm'] = rate_rm
 res_dict['rate_rV'] = rate_rV
 res_dict['inp_r0'] = inp_r0
 res_dict['inp_r1'] = inp_r1
+res_dict['inp_rs'] = inp_rs
+res_dict['inp_rc'] = inp_rc
 res_dict['inp_rm'] = inp_rm
 res_dict['inp_rV'] = inp_rV
 
