@@ -91,10 +91,10 @@ def runjobs():
     time.sleep(0.2)
     
     denss = 0.01*2**np.linspace(-1,1,5)
-    areaCVs = np.linspace(0,0.4,5)
-    grecs = np.linspace(1.05,1.25,5)
+    areaCVs = np.linspace(0,0.4,5)[0:1]
+    grecs = np.linspace(1.05,1.25,5)[2:3]
     threshs = np.linspace(0.0,0.2,5)[0:1]
-    seeds = range(1)
+    seeds = range(20)
 
     for dens in denss:
         for areaCV in areaCVs:
