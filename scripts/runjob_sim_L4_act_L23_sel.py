@@ -104,7 +104,7 @@ def runjobs():
                         #--------------------------------------------------------------------------
                         # Make SBTACH
                         inpath = currwd + "/sim_L4_act_L23_sel.py"
-                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -d {:f} -c {:f} -g {:f} -th {:f}".format(
+                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -d {:f} -a {:f} -g {:f} -th {:f}".format(
                             inpath,seed,n_ori,n_rpt,n_int,dens,areaCV,grec,thresh)
                         
                         jobname="{:s}_dens={:.4f}_areaCV={:.2f}_grec={:.3f}_thresh={:.2f}_seed={:d}".format(
