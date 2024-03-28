@@ -15,6 +15,7 @@ from scipy.stats import qmc
 import matplotlib.pyplot as plt
 
 import util_func as uf
+import analyze_func as af
 
 import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
@@ -287,14 +288,14 @@ inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
 # Calculate hypercolumn size and number of pinwheels
 z_unit = rate_z[0] / rate_ori_sel[0]
 
-_,z_fps = uf.get_fps(rate_z[0])
-z_hc,_ = uf.calc_hypercol_size(z_fps,N)
-z_pwcnt,z_pwpts = uf.calc_pinwheels(uf.bandpass_filter(rate_z[0],0.5*z_hc,1.5*z_hc))
+_,z_fps = af.get_fps(rate_z[0])
+z_hc,_ = af.calc_hypercol_size(z_fps,N)
+z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(rate_z[0],0.5*z_hc,1.5*z_hc))
 z_pwd = z_pwcnt/(N/z_hc)**2
 
-_,z_unit_fps = uf.get_fps(z_unit)
-# z_unit_hc,_ = uf.calc_hypercol_size(z_unit_fps,N)
-# z_unit_pwcnt,z_unit_pwpts = uf.calc_pinwheels(uf.bandpass_filter(z_unit,0.5*z_unit_hc,1.5*z_unit_hc))
+_,z_unit_fps = af.get_fps(z_unit)
+# z_unit_hc,_ = af.calc_hypercol_size(z_unit_fps,N)
+# z_unit_pwcnt,z_unit_pwpts = af.calc_pinwheels(af.bandpass_filter(z_unit,0.5*z_unit_hc,1.5*z_unit_hc))
 # z_unit_pwd = z_unit_pwcnt/(N/z_unit_hc)**2
     
 Lam = z_hc
