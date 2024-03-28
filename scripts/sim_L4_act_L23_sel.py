@@ -137,9 +137,9 @@ def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=0):
     nclstr = np.round(N**2*dens).astype(int)
     sig2 = (meanOS - bgndOS)/((maxOS - bgndOS)*dens*np.pi) / N**2
 
-    rng = np.random.default_rng(seed)
-
     clstr_pts = qmc.Halton(d=2,scramble=False,seed=seed).random(nclstr)
+    
+    oris = 2*np.pi*rng.random(nclstr)
     
     if np.isclose(areaCV,0):
         sig2s = sig2*np.ones(nclstr)
@@ -160,8 +160,7 @@ def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=0):
     holes = np.zeros((N,N),dtype='float64')
     
     for i in range(nclstr):
-        ori = 1j*2*np.pi*rng.random()
-        omap += np.heaviside(1.01*sig2s[i]-ds2s[i],1)*np.exp(ori)
+        omap += np.heaviside(1.01*sig2s[i]-ds2s[i],1)*np.exp(1j*oris[i])
         holes += np.heaviside(1.01*sig2s[i]-ds2s[i],1)
             
     true_clstr_size = np.sum(np.abs(omap))
