@@ -118,7 +118,10 @@ def bandpass_filter(A,ll,lu):
     return np.fft.ifft2(A_fft*this_kern)
     
 def calc_dc_ac_comp(A,axis=-1):
-    A_xpsd = np.moveaxis(A,axis,-1)
+    if A.ndim > 1:
+        A_xpsd = np.moveaxis(A,axis,-1)
+    else:
+        A_xpsd = A.copy()
     Nax = A.shape[axis]
     angs = np.arange(Nax) * 2*np.pi/Nax
     A0 = np.mean(A_xpsd,axis=-1)
@@ -128,3 +131,27 @@ def calc_dc_ac_comp(A,axis=-1):
     A1phs = np.arctan2(As,Ac)
     
     return A0,A1mod,A1phs
+
+def calc_OS_MR(A):
+    noris = np.shape(A)[-2]
+    
+    # calculate phase DC and AC per orientation
+    F0,F1,_ = calc_dc_ac_comp(A)
+    
+    # calculate orientation DC, AC, and center from phase-averaged response
+    A0,A1,PO = calc_dc_ac_comp(F0)
+    
+    # calculate OS from DC and AC of phase-averaged response
+    OS = np.where(A1==0,0,A1/A0)
+    
+    # infer index of preferred orientation
+    PO += np.pi/noris
+    PO = np.where(PO<0,2*np.pi + PO,PO)
+    PO = np.array(PO / (2*np.pi) * noris).astype(int)
+    
+    # calculate MR at preferred orientation
+    # pref_F0,pref_F1 = np.zeros(np.shape(A)[:-2]),np.zeros(np.shape(A)[:-2])
+    F0,F1 = np.take_along_axis(F0,PO[...,None],-1)[...,0],np.take_along_axis(F1,PO[...,None],-1)[...,0]
+    MR = np.where(F1==0,0,2*F1/F0)
+    
+    return OS,MR

@@ -18,6 +18,14 @@ lit_cmap = ListedColormap(hsluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspa
 def ytitle(ax,text,xloc=-0.25,**kwargs):
     ax.text(xloc,0.5,text,horizontalalignment='left',verticalalignment='center',
         rotation='vertical',transform=ax.transAxes,**kwargs)
+    
+def imshowticks(ax,xvals,yvals,xskip=1,yskip=1,xfmt=None,yfmt=None):
+    if xfmt is None:
+        xfmt = '{:.1f}'
+    if yfmt is None:
+        yfmt = '{:.1f}'
+    ax.set_xticks(np.arange(len(xvals))[::xskip],[xfmt.format(xval) for xval in xvals[::xskip]])
+    ax.set_yticks(np.arange(len(yvals))[::yskip],[yfmt.format(yval) for yval in yvals[::yskip]])
 
 def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     if hide_ticks:
