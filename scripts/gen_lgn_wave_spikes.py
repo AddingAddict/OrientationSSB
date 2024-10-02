@@ -10,7 +10,7 @@ import argparse
 import time
 
 import numpy as np
-from scipy.stats import poisson
+from scipy.stats import poisson,zscore
 
 import burst_func as bf
 
@@ -24,7 +24,6 @@ n_grid = int(args['n_grid'])
 seed = int(args['seed'])
 
 n_bar = 2*n_grid
-n_grid = 6
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
@@ -82,14 +81,19 @@ spike_rs = np.block([[rs*np.ones((n_in_rf,n_in_rf)),ro*np.ones((n_in_rf,n_in_rf)
 np.fill_diagonal(spike_rs,1)
 spike_rs = spike_rs[None,:,:]
 
-us = np.linspace(0,1,1001)[1:-1]
-ns = poisson.ppf(us[:,None,None],spike_ls[None,:,:])
-ms = np.mean(ns,axis=0)
-ss = np.std(ns,axis=0)
-ns = (ns - ms[None,:,:])/ss[None,:,:]
+us = np.linspace(0,1,501)[1:-1]
+ns = np.zeros((len(us),2*n_in_rf))
 
-lo_bnd = np.einsum('ijk,ijl->jkl',ns,ns[::-1,:,:]) / len(us)
-up_bnd = np.einsum('ijk,ijl->jkl',ns,ns) / len(us)
+for idx,l in enumerate(spike_ls):
+    ns[:] = poisson.ppf(us[:,None],l[None,:])
+    ns[:] = zscore(ns,axis=0)
+
+    # lo_bnd = np.einsum('ijk,ijl->jkl',ns,ns[::-1,:,:]) / len(us)
+    # up_bnd = np.einsum('ijk,ijl->jkl',ns,ns) / len(us)
+    lo_bnd = ns.T@ns[::-1,:] / len(us)
+    up_bnd = ns.T@ns / len(us)
+
+    spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
 
 spike_rs = np.fmax(np.fmin(spike_rs,up_bnd),lo_bnd)
     
@@ -97,7 +101,7 @@ print('Generating spike statistics took',time.process_time() - start,'s\n')
 
 start = time.process_time()
 
-spikes = np.zeros((len(ts),2*n_in_rf))
+spikes = np.zeros((len(ts),2*n_in_rf),np.ushort)
 
 for idx,l,r in zip(np.arange(len(ts)),spike_ls,spike_rs):
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]

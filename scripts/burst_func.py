@@ -133,7 +133,13 @@ def gen_corr_pois_vars(
     if debug:
         print((corr_mat + a) / a)
         print(norm_corr_mat)
-    norm_vec = rng.multivariate_normal(mean=np.zeros(ndim),cov=norm_corr_mat,size=nsamp).T
+    try:
+        norm_vec = rng.multivariate_normal(mean=np.zeros(ndim),cov=norm_corr_mat,size=nsamp,method='cholesky').T
+    except:
+        vals,vecs = np.linalg.eigh(norm_corr_mat)
+        print(np.min(vals))
+        norm_corr_mat = vecs @ np.diag(np.fmax(vals,1e-12)) @ vecs.T
+        norm_vec = rng.multivariate_normal(mean=np.zeros(ndim),cov=norm_corr_mat,size=nsamp,method='cholesky').T
         
     if return_prms:
         return poisson.ppf(norm.cdf(norm_vec),expec_vec[:,None]),norm_corr_mat
