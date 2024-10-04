@@ -24,9 +24,9 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=50)
-    parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=24)
-    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=20)
+    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=20)
+    parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
+    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=100)
     
     args2 = parser.parse_args()
     args = vars(args2)

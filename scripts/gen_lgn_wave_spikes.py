@@ -15,8 +15,8 @@ from scipy.stats import poisson,zscore
 import burst_func as bf
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=50)
-parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=24)
+parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=20)
+parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_wave = int(args['n_wave'])
@@ -33,7 +33,7 @@ dt = 0.25 # s
 ibi = 26 # s
 dur = 15 # s
 
-rs = 0.4
+rs = 0.35
 ro = 0.05
 
 rng = np.random.default_rng(seed)
@@ -79,7 +79,7 @@ spike_ls = np.fmax(1e-5,spike_ls)
 spike_rs = np.block([[rs*np.ones((n_in_rf,n_in_rf)),ro*np.ones((n_in_rf,n_in_rf))],
                      [ro*np.ones((n_in_rf,n_in_rf)),rs*np.ones((n_in_rf,n_in_rf))]])
 np.fill_diagonal(spike_rs,1)
-spike_rs = spike_rs[None,:,:]
+spike_rs = spike_rs[None,:,:] * np.ones((len(ts),1,1))
 
 us = np.linspace(0,1,501)[1:-1]
 ns = np.zeros((len(us),2*n_in_rf))
@@ -103,7 +103,7 @@ start = time.process_time()
 
 spikes = np.zeros((len(ts),2*n_in_rf),np.ushort)
 
-for idx,l,r in zip(np.arange(len(ts)),spike_ls,spike_rs):
+for idx,l,r in zip(range(len(ts)),spike_ls,spike_rs):
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]
     
 print('Generating spike counts took',time.process_time() - start,'s\n')
@@ -122,8 +122,8 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 res_dict = {}
 
 res_dict['burst_times'] = burst_times
-res_dict['spike_ls'] = spike_ls
-res_dict['spike_rs'] = spike_rs
+# res_dict['spike_ls'] = spike_ls
+# res_dict['spike_rs'] = spike_rs
 res_dict['spikes'] = spikes
 
 with open(res_file, 'wb') as handle:
