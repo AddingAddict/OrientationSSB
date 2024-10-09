@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import ListedColormap,hsv_to_rgb
 from hsluv import hsluv_to_rgb
@@ -35,21 +36,25 @@ def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
 
-def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**kwargs):
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
-    cmap1 = plt.get_cmap(cmap, 24)
-    cmap2 = plt.get_cmap(cmap, 24)
-    cmap1._init()
-    cmap2._init()
-    alpha = np.concatenate((np.linspace(0, 0.8, cmap2.N//2)[::-1],np.linspace(0, 0.8, cmap1.N//2),np.ones(3)))
-    cmap1._lut[:,-1] = alpha
-    cmap2._lut[:,-1] = alpha
-    plot1 = ax.imshow(A1,cmap=cmap1,**kwargs)
-    plot2 = ax.imshow(A2,cmap=cmap2,**kwargs)
+    data1 = (A1-vmin)/(vmax-vmin)
+    data2 = (A2-vmin)/(vmax-vmin)
+    data1 = np.clip(data1,0,1)
+    data2 = np.clip(data2,0,1)
+    data1 = 0.9*data1 + 0.05
+    data2 = 0.9*data2 + 0.05
+    cmap = mpl.colormaps[cmap_name](data1)
+    cmap += mpl.colormaps[cmap_name](data2)
+    cmap = 0.5*cmap
+    cmap[...,-1] = 1
+    plot = ax.imshow(cmap,**kwargs)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
-    fig.colorbar(plot1, cax=cax, orientation='vertical')
+    fig.colorbar(mpl.cm.ScalarMappable(
+                 norm=mpl.colors.Normalize(vmin=vmin-0.05*(vmax-vmin),vmax=vmax+0.05*(vmax-vmin)),cmap=cmap_name),
+                 cax=cax,orientation='vertical')
     
 def contourbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     if hide_ticks:
