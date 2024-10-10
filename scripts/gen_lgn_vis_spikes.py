@@ -76,13 +76,12 @@ start = time.process_time()
 
 ts = np.linspace(0,ibi*n_vis,int(np.round(ibi*n_vis/dt))+1)
 
-spike_ls = np.zeros((len(ts),n_in_rf))
+spike_ls = np.zeros((len(ts),2*n_in_rf))
 spike_ls += rb * dt
 
 for widx in range(n_vis):
     for cidx in range(2*n_in_rf):
         spike_ls[:,cidx] += (rm-rb)*np.exp(-(np.abs(ts-burst_times[widx,cidx])/(0.5*dur))**2) * dt
-spike_ls = np.concatenate([spike_ls,spike_ls],-1)
 spike_ls = np.fmax(1e-5,spike_ls)
 
 spike_rs = np.block([[rs*dist_corrs,ro*dist_corrs],

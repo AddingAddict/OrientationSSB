@@ -105,7 +105,7 @@ def runjobs():
         # Make SBTACH
         inpath = currwd + "/sim_lgn_wave_rfs.py"
         c1 = "{:s} -ne {:d} -ni {:d} -niter {:d} -miter {:d} -s {:d} -nw {:d} -ng {:d}".format(
-            inpath,n_e,n_i,n_iter+1,max_iter,seed,n_wave,n_grid)
+            inpath,n_e,n_i,n_iter,max_iter,seed,n_wave,n_grid)
         
         jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}'.format(seed,n_iter))
         
@@ -117,7 +117,7 @@ def runjobs():
             if cluster=='haba' or cluster=='moto' or cluster=='burg':
                 text_file.write("#SBATCH --account=theory \n")
             text_file.write("#SBATCH --job-name="+jobname+ "\n")
-            text_file.write("#SBATCH -t 0-1:59  \n")
+            text_file.write("#SBATCH -t 0-01:59  \n")
             text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
             text_file.write("#SBATCH --gres=gpu\n")
             text_file.write("#SBATCH -c 1 \n")
@@ -137,7 +137,7 @@ def runjobs():
 
 
 
-    if __name__ == "__main__":
-        runjobs()
+if __name__ == "__main__":
+    runjobs()
 
 
