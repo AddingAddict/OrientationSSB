@@ -36,6 +36,21 @@ def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
 
+def doubimsh(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+    data1 = (A1-vmin)/(vmax-vmin)
+    data2 = (A2-vmin)/(vmax-vmin)
+    data1 = np.clip(data1,0,1)
+    data2 = np.clip(data2,0,1)
+    data1 = 0.9*data1 + 0.05
+    data2 = 0.9*data2 + 0.05
+    cmap = mpl.colormaps[cmap_name](data1)
+    cmap += mpl.colormaps[cmap_name](data2)
+    cmap = 0.5*cmap
+    cmap[...,-1] = 1
+    plot = ax.imshow(cmap,**kwargs)
+
 def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**kwargs):
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
@@ -57,22 +72,33 @@ def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**
                  cax=cax,orientation='vertical')
     
 def contourbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    x,y = np.meshgrid(np.arange(A.shape[1]),np.arange(A.shape[0]))
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()
-    plot = ax.contour(A,cmap=cmap,**kwargs)
+    plot = ax.contour(x,y,A,cmap=cmap,**kwargs)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     return fig.colorbar(plot, cax=cax, orientation='vertical')
     
-def doubcontbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+def doubcont(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    x,y = np.meshgrid(np.arange(A1.shape[1]),np.arange(A1.shape[0]))
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
     ax.invert_yaxis()
-    plot1 = ax.contour(A1,cmap=cmap,**kwargs)
-    plot2 = ax.contour(A2,cmap=cmap,**kwargs)
+    plot1 = ax.contour(x,y,A1,cmap=cmap,**kwargs)
+    plot2 = ax.contour(x,y,A2,cmap=cmap,**kwargs)
+    
+def doubcontbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    x,y = np.meshgrid(np.arange(A1.shape[1]),np.arange(A1.shape[0]))
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+    ax.set_aspect('equal')
+    ax.invert_yaxis()
+    plot1 = ax.contour(x,y,A1,cmap=cmap,**kwargs)
+    plot2 = ax.contour(x,y,A2,cmap=cmap,**kwargs)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.05)
     fig.colorbar(plot1, cax=cax, orientation='vertical')

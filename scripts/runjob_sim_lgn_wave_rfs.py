@@ -28,8 +28,11 @@ def runjobs():
     parser.add_argument('--n_i', '-ni', help='number of inhibitory cells',type=int, default=4)
     parser.add_argument('--n_iter', '-niter', help='current iteration number',type=int, default=0)
     parser.add_argument('--max_iter', '-miter', help='max iteration number',type=int, default=100)
-    # parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=20)
+    parser.add_argument('--gain_e', '-ge', help='gain of excitatory cells',type=float, default=1.0)
+    parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
+    parser.add_argument('--wii_sum', '-wii', help='max sum of wii',type=float, default=0.25)
+    parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
+    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
@@ -41,7 +44,10 @@ def runjobs():
     n_i = int(args['n_i'])
     n_iter = int(args['n_iter'])
     max_iter = int(args['max_iter'])
-    # seed = int(args['seed'])
+    gain_e = args['gain_e']
+    gain_i = args['gain_i']
+    wii_sum = args['wii_sum']
+    seed = int(args['seed'])
     n_wave = int(args['n_wave'])
     n_grid = int(args['n_grid'])
     gb = int(args['gb'])
@@ -97,43 +103,40 @@ def runjobs():
 
     time.sleep(0.2)
     
-    seeds = range(5)
-
-    for seed in seeds:
+    #--------------------------------------------------------------------------
+    # Make SBTACH
+    inpath = currwd + "/sim_lgn_wave_rfs.py"
+    c1 = "{:s} -ne {:d} -ni {:d} -niter {:d} -miter {:d} -s {:d} -nw {:d} -ng {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f}".format(
+        inpath,n_e,n_i,n_iter,max_iter,seed,n_wave,n_grid,gain_e,gain_i,wii_sum)
     
-        #--------------------------------------------------------------------------
-        # Make SBTACH
-        inpath = currwd + "/sim_lgn_wave_rfs.py"
-        c1 = "{:s} -ne {:d} -ni {:d} -niter {:d} -miter {:d} -s {:d} -nw {:d} -ng {:d}".format(
-            inpath,n_e,n_i,n_iter,max_iter,seed,n_wave,n_grid)
-        
-        jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}'.format(seed,n_iter))
-        
-        if not args2.test:
-            jobnameDir=os.path.join(ofilesdir, jobname)
-            text_file=open(jobnameDir, "w");
-            os. system("chmod u+x "+ jobnameDir)
-            text_file.write("#!/bin/sh \n")
-            if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                text_file.write("#SBATCH --account=theory \n")
-            text_file.write("#SBATCH --job-name="+jobname+ "\n")
-            text_file.write("#SBATCH -t 0-01:59  \n")
-            text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-            text_file.write("#SBATCH --gres=gpu\n")
-            text_file.write("#SBATCH -c 1 \n")
-            text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-            text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-            text_file.write("python  -W ignore " + c1+" \n")
-            text_file.write("echo $PATH  \n")
-            text_file.write("exit 0  \n")
-            text_file.close()
+    jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}_ge_{:.1f}_gi_{:.1f}_wii_{:.2f}'.format(
+        seed,n_iter,gain_e,gain_i,wii_sum))
+    
+    if not args2.test:
+        jobnameDir=os.path.join(ofilesdir, jobname)
+        text_file=open(jobnameDir, "w");
+        os. system("chmod u+x "+ jobnameDir)
+        text_file.write("#!/bin/sh \n")
+        if cluster=='haba' or cluster=='moto' or cluster=='burg':
+            text_file.write("#SBATCH --account=theory \n")
+        text_file.write("#SBATCH --job-name="+jobname+ "\n")
+        text_file.write("#SBATCH -t 0-01:59  \n")
+        text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+        text_file.write("#SBATCH --gres=gpu\n")
+        text_file.write("#SBATCH -c 1 \n")
+        text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
+        text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
+        text_file.write("python  -W ignore " + c1+" \n")
+        text_file.write("echo $PATH  \n")
+        text_file.write("exit 0  \n")
+        text_file.close()
 
-            if cluster=='axon':
-                os.system("sbatch -p burst " +jobnameDir);
-            else:
-                os.system("sbatch " +jobnameDir);
+        if cluster=='axon':
+            os.system("sbatch -p burst " +jobnameDir);
         else:
-            print (c1)
+            os.system("sbatch " +jobnameDir);
+    else:
+        print (c1)
 
 
 

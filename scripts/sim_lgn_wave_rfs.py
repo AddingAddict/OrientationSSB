@@ -20,7 +20,10 @@ parser.add_argument('--n_i', '-ni', help='number of inhibitory cells',type=int, 
 parser.add_argument('--n_iter', '-niter', help='current iteration number',type=int, default=0)
 parser.add_argument('--max_iter', '-miter', help='max iteration number',type=int, default=100)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=20)
+parser.add_argument('--gain_e', '-ge', help='gain of excitatory cells',type=float, default=1.0)
+parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
+parser.add_argument('--wii_sum', '-wii', help='max sum of wii',type=float, default=0.25)
+parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 args = vars(parser.parse_args())
 n_e = int(args['n_e'])
@@ -30,9 +33,12 @@ max_iter = int(args['max_iter'])
 seed = int(args['seed'])
 n_wave = int(args['n_wave'])
 n_grid = int(args['n_grid'])
+gain_e = args['gain_e']
+gain_i = args['gain_i']
+wii_sum = args['wii_sum']
 
-n_batch = 26 # number of batches to collect weight changes before adjusting weights
-dt_stim = 0.25 # simulation time between stimuli
+n_batch = 33#26 # number of batches to collect weight changes before adjusting weights
+dt_stim = 0.1#0.25 # simulation time between stimuli
 
 max_spike_file = 50 # total number of lgn spike count files
 
@@ -41,14 +47,15 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'sim_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
+res_dir = res_dir + 'sim_lgn_wave_rfs_ne={:d}_ni={:d}_ge={:.1f}_gi={:.1f}_wii={:.2f}/'.format(
+    n_e,n_i,gain_e,gain_i,wii_sum)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 res_file = res_dir + 'seed={:d}_iter={:d}.pkl'.format(seed,n_iter)
 
 # Define where geniculate wave spikes are saved
-lgn_dir = './../results/' + 'lgn_wave_spikes_nw={:d}_ng={:d}/'.format(n_wave,n_grid)
+lgn_dir = './../results/' + 'lgn_vis_spikes_nw={:d}_ng={:d}/'.format(n_wave,n_grid)#'lgn_wave_spikes_nw={:d}_ng={:d}/'.format(n_wave,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -60,22 +67,30 @@ with open(lgn_file, 'rb') as handle:
 lgn_spikes = lgn_dict['spikes']
 n_lgn = lgn_spikes.shape[-1]
 n_stim = lgn_spikes.shape[0]
+print(n_lgn,'LGN cells')
 
 if n_iter==0: # starting a new simulation, must initialize the system
-    net = Model(n_e=n_e,n_i=n_i,n_lgn=n_lgn,seed=seed,rx_wave_start=lgn_spikes[26])
+    net = Model(n_e=n_e,n_i=n_i,n_lgn=n_lgn,seed=seed,
+                gain_e=gain_e,gain_i=gain_i,wii_sum=wii_sum,
+                rx_wave_start=lgn_spikes[16])#lgn_spikes[26])
 else:
     # load weights, inputs, rates, averages, and learning rates from previous iteration
     with open(res_dir + 'seed={:d}_iter={:d}.pkl'.format(seed,n_iter-1), 'rb') as handle:
         res_dict = pickle.load(handle)
         
-    net = Model(n_e=n_e,n_i=n_i,n_lgn=n_lgn,init_dict=res_dict)
+    net = Model(n_e=n_e,n_i=n_i,n_lgn=n_lgn,init_dict=res_dict,
+                gain_e=gain_e,gain_i=gain_i,wii_sum=wii_sum)
 
 start = time.process_time()
 for idx in range(n_stim-1):
     rx = lgn_spikes[idx]
+    if n_iter<10:
+        inh_mult = 0.1 + 0.09*n_iter + 0.09*idx/(n_stim-1)
+    else:
+        inh_mult = 1.0
     
     # update inputs and rates
-    net.update_inps(rx,dt_stim)
+    net.update_inps(rx,dt_stim,inh_mult)
     
     # update averages
     net.update_avgs(rx)
@@ -108,6 +123,9 @@ for idx in range(n_stim-1):
 
 res_dict = {}
 
+res_dict['gain_e'] = net.gain_e
+res_dict['gain_i'] = net.gain_i
+res_dict['wii_sum'] = net.wii_sum
 res_dict['wex'] = net.wex
 res_dict['wix'] = net.wix
 res_dict['wee'] = net.wee

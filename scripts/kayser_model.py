@@ -9,6 +9,9 @@ class Model:
         n_lgn: int=16,
         init_dict: dict=None,
         seed: int=None,
+        gain_e: float=1.0,
+        gain_i: float=2.0,
+        wii_sum: float=0.25,
         rx_wave_start: np.ndarray=None,
         ):
         self.n_e = n_e
@@ -20,23 +23,23 @@ class Model:
         self.wee_sum = 0.125
         self.wie_sum = 0.5
         self.wei_sum = 2.25
-        self.wii_sum = 0.25
+        self.wii_sum = wii_sum
 
         # presynaptic weight normalization
-        self.wlgn_sum = 0.0641025641025641
-        self.w4e_sum = 0.25
-        self.w4i_sum = 9.25
+        self.wlgn_sum = (self.n_e + self.n_i) * self.wff_sum / self.n_lgn
+        self.w4e_sum = self.wee_sum + self.n_i/self.n_e * self.wei_sum
+        self.w4i_sum = self.n_e/self.n_i * self.wee_sum + self.wii_sum
 
         # maximum allowed weights
         self.max_wff = 4*self.wff_sum / self.n_lgn
-        self.max_wee = 4*self.wee_sum / self.n_e
-        self.max_wei = 4*self.wei_sum / self.n_i
-        self.max_wie = 4*self.wie_sum / self.n_e
-        self.max_wii = 4*self.wii_sum / self.n_i
+        self.max_wee = 2*self.wee_sum / self.n_e
+        self.max_wei = 2*self.wei_sum / self.n_i
+        self.max_wie = 2*self.wie_sum / self.n_e
+        self.max_wii = 2*self.wii_sum / self.n_i
 
         # RELU gains
-        self.gain_e = 1
-        self.gain_i = 2
+        self.gain_e = gain_e
+        self.gain_i = gain_i
         self.gain_mat = np.diag(np.concatenate((self.gain_e*np.ones(self.n_e),self.gain_i*np.ones(self.n_i))))
         
         self.dt_dyn = 0.01 # timescale for voltage dynamics
@@ -65,9 +68,9 @@ class Model:
             self.wex_rate = 1e-6
             self.wix_rate = 1e-6
             self.wee_rate = 1e-6
-            self.wei_rate = 1e-6
+            self.wei_rate = 1e-7
             self.wie_rate = 1e-6
-            self.wii_rate = 1e-6
+            self.wii_rate = 1e-7
             
             # initialize average inputs and rates
             self.uee = np.zeros(n_e)
@@ -76,7 +79,7 @@ class Model:
             self.uii = np.zeros(n_i)
             
             # calculate average inputs and rates at the start of a geniculate wave
-            self.update_inps(rx_wave_start,100*self.dt_dyn)
+            self.update_inps(rx_wave_start,100*self.dt_dyn,0.1)
             
             self.uee_avg = np.ones(n_e)*np.mean(self.uee)
             self.uei_avg = np.ones(n_e)*np.mean(self.uei)
@@ -138,6 +141,7 @@ class Model:
         self,
         rx: np.ndarray,
         int_time: float,
+        inh_mult: float=1,
         ):
         
         # calculate feedforward inputs
@@ -145,7 +149,7 @@ class Model:
         h = np.concatenate((he,hi))
         
         # create full recurrent weight matrix
-        w = np.block([[self.wee,-self.wei],[self.wie,-self.wii]])
+        w = np.block([[self.wee,-inh_mult*self.wei],[self.wie,-inh_mult*self.wii]])
         
         # integrate dynamics
         sol = solve_ivp(self.ode_func,[0,int_time],np.concatenate((self.uee-self.uei,self.uie-self.uii)),args=(w,h),t_eval=[int_time],method='RK23')
@@ -191,10 +195,10 @@ class Model:
         rx: np.ndarray,
         ):
         
-        self.dwex += self.wex_rate * np.outer(self.ue - self.ue_avg,rx - 10*self.rx_avg)
-        self.dwix += self.wix_rate * np.outer(self.ui - self.ui_avg,rx - 10*self.rx_avg)
-        self.dwee += self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - 10*self.ue_avg)
-        self.dwie += self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - 10*self.ue_avg)
+        self.dwex += self.wex_rate * np.outer(self.ue - self.ue_avg,rx - self.rx_avg)
+        self.dwix += self.wix_rate * np.outer(self.ui - self.ui_avg,rx - self.rx_avg)
+        self.dwee += self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - self.ue_avg)
+        self.dwie += self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
         self.dwei += self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),np.fmax(self.ui - self.ui_avg,0)) -\
                                       np.outer(np.fmax(self.ue - self.ue_avg,0),np.fmax(self.ui - self.ui_avg,0)))
         self.dwii += self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),np.fmax(self.ui - self.ui_avg,0)) -\
@@ -233,6 +237,18 @@ class Model:
         # self.dwei *= self.wei_rate
         # self.dwie *= self.wie_rate
         # self.dwii *= self.wii_rate
+        if np.isnan(self.wex_rate):
+            self.wex_rate = 1e-6
+        if np.isnan(self.wix_rate):
+            self.wix_rate = 1e-6
+        if np.isnan(self.wee_rate):
+            self.wee_rate = 1e-6
+        if np.isnan(self.wei_rate):
+            self.wei_rate = 1e-6
+        if np.isnan(self.wie_rate):
+            self.wie_rate = 1e-6
+        if np.isnan(self.wii_rate):
+            self.wii_rate = 1e-6
         
     # update weights with collected changes, then clip and normalize weights
     def update_weights(
