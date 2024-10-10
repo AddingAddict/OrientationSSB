@@ -12,6 +12,7 @@ class Model:
         gain_e: float=1.0,
         gain_i: float=2.0,
         wii_sum: float=0.25,
+        hebb_wii: bool=False,
         rx_wave_start: np.ndarray=None,
         ):
         self.n_e = n_e
@@ -27,15 +28,20 @@ class Model:
 
         # presynaptic weight normalization
         self.wlgn_sum = (self.n_e + self.n_i) * self.wff_sum / self.n_lgn
-        self.w4e_sum = self.wee_sum + self.n_i/self.n_e * self.wei_sum
-        self.w4i_sum = self.n_e/self.n_i * self.wee_sum + self.wii_sum
+        self.w4e_sum = self.wee_sum + self.n_i/self.n_e * self.wie_sum
+        self.w4i_sum = self.n_e/self.n_i * self.wei_sum + self.wii_sum
+        
+        print(self.wlgn_sum,self.w4e_sum,self.w4i_sum)
 
         # maximum allowed weights
         self.max_wff = 4*self.wff_sum / self.n_lgn
-        self.max_wee = 2*self.wee_sum / self.n_e
-        self.max_wei = 2*self.wei_sum / self.n_i
-        self.max_wie = 2*self.wie_sum / self.n_e
-        self.max_wii = 2*self.wii_sum / self.n_i
+        self.max_wee = 4*self.wee_sum / self.n_e
+        self.max_wei = 4*self.wei_sum / self.n_i
+        self.max_wie = 4*self.wie_sum / self.n_e
+        self.max_wii = 4*self.wii_sum / self.n_i
+        
+        # whether to use Hebbian learning for wii
+        self.hebb_wii = hebb_wii
 
         # RELU gains
         self.gain_e = gain_e
@@ -68,9 +74,9 @@ class Model:
             self.wex_rate = 1e-6
             self.wix_rate = 1e-6
             self.wee_rate = 1e-6
-            self.wei_rate = 1e-7
+            self.wei_rate = 1e-6
             self.wie_rate = 1e-6
-            self.wii_rate = 1e-7
+            self.wii_rate = 1e-6
             
             # initialize average inputs and rates
             self.uee = np.zeros(n_e)
@@ -201,8 +207,13 @@ class Model:
         self.dwie += self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
         self.dwei += self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),np.fmax(self.ui - self.ui_avg,0)) -\
                                       np.outer(np.fmax(self.ue - self.ue_avg,0),np.fmax(self.ui - self.ui_avg,0)))
-        self.dwii += self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),np.fmax(self.ui - self.ui_avg,0)) -\
-                                      np.outer(np.fmax(self.ui - self.ui_avg,0),np.fmax(self.ui - self.ui_avg,0)))
+        if self.hebb_wii:
+            self.dwii += self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
+        else:
+            self.dwii += self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
+                                                   np.fmax(self.ui - self.ui_avg,0)) -\
+                                        np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                 np.fmax(self.ui - self.ui_avg,0)))
         
     def sum_norm_dw(
         self,

@@ -26,8 +26,9 @@ def runjobs():
     parser.add_argument("--cluster_", help=" String", default='burg')
     parser.add_argument('--n_e', '-ne', help='number of excitatory cells',type=int, default=16)
     parser.add_argument('--n_i', '-ni', help='number of inhibitory cells',type=int, default=4)
-    parser.add_argument('--n_iter', '-niter', help='current iteration number',type=int, default=0)
-    parser.add_argument('--max_iter', '-miter', help='max iteration number',type=int, default=100)
+    parser.add_argument('--init_iter', '-iit', help='initial iteration number',type=int, default=0)
+    parser.add_argument('--batch_iter', '-bit', help='number of iterations to run per batch',type=int, default=100)
+    parser.add_argument('--max_iter', '-mit', help='max iteration number',type=int, default=100)
     parser.add_argument('--gain_e', '-ge', help='gain of excitatory cells',type=float, default=1.0)
     parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
     parser.add_argument('--wii_sum', '-wii', help='max sum of wii',type=float, default=0.25)
@@ -42,7 +43,8 @@ def runjobs():
     cluster = str(args["cluster_"])
     n_e = int(args['n_e'])
     n_i = int(args['n_i'])
-    n_iter = int(args['n_iter'])
+    init_iter = int(args['init_iter'])
+    batch_iter = int(args['batch_iter'])
     max_iter = int(args['max_iter'])
     gain_e = args['gain_e']
     gain_i = args['gain_i']
@@ -106,11 +108,11 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_lgn_wave_rfs.py"
-    c1 = "{:s} -ne {:d} -ni {:d} -niter {:d} -miter {:d} -s {:d} -nw {:d} -ng {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f}".format(
-        inpath,n_e,n_i,n_iter,max_iter,seed,n_wave,n_grid,gain_e,gain_i,wii_sum)
+    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f}".format(
+        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_grid,gain_e,gain_i,wii_sum)
     
     jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}_ge_{:.1f}_gi_{:.1f}_wii_{:.2f}'.format(
-        seed,n_iter,gain_e,gain_i,wii_sum))
+        seed,init_iter,gain_e,gain_i,wii_sum))
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)
