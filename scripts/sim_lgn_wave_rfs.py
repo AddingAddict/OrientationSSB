@@ -187,5 +187,5 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_lgn_wave_rfs.py " + \
-        "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d}".format(
-            n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,seed,n_wave,n_grid))
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f} -hii {:d} -nw {:d} -ng {:d}".format(
+            n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,seed,gain_e,gain_i,wii_sum,hebb_wii,n_wave,n_grid))

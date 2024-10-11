@@ -32,6 +32,7 @@ def runjobs():
     parser.add_argument('--gain_e', '-ge', help='gain of excitatory cells',type=float, default=1.0)
     parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
     parser.add_argument('--wii_sum', '-wii', help='max sum of wii',type=float, default=0.25)
+    parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
     parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
     parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
@@ -49,6 +50,7 @@ def runjobs():
     gain_e = args['gain_e']
     gain_i = args['gain_i']
     wii_sum = args['wii_sum']
+    hebb_wii = int(args['hebb_wii']) > 0
     seed = int(args['seed'])
     n_wave = int(args['n_wave'])
     n_grid = int(args['n_grid'])
@@ -108,11 +110,11 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_lgn_wave_rfs.py"
-    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f}".format(
-        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_grid,gain_e,gain_i,wii_sum)
+    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -ge {:.1f} -gi {:.1f} -wii {:.2f} -hii {:d}".format(
+        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_grid,gain_e,gain_i,wii_sum,hebb_wii)
     
-    jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}_ge_{:.1f}_gi_{:.1f}_wii_{:.2f}'.format(
-        seed,init_iter,gain_e,gain_i,wii_sum))
+    jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}_ge_{:.1f}_gi_{:.1f}_wii_{:.2f}_hii_{:d}'.format(
+        seed,init_iter,gain_e,gain_i,wii_sum,hebb_wii))
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)
