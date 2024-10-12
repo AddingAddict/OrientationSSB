@@ -27,6 +27,7 @@ parser.add_argument('--wii_sum', '-wii', help='max sum of wii',type=float, defau
 parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
+parser.add_argument('--test', '-t', help='test?',type=int, default=0)
 args = vars(parser.parse_args())
 print(args)
 n_e = int(args['n_e'])
@@ -41,6 +42,7 @@ gain_e = args['gain_e']
 gain_i = args['gain_i']
 wii_sum = args['wii_sum']
 hebb_wii = int(args['hebb_wii']) > 0
+test = int(args['test']) > 0
 
 n_batch = 33#26 # number of batches to collect weight changes before adjusting weights
 dt_stim = 0.1#0.25 # simulation time between stimuli
@@ -52,8 +54,11 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'sim_lgn_wave_rfs_ne={:d}_ni={:d}_ge={:.1f}_gi={:.1f}_wii={:.2f}_hii{:d}/'.format(
-    n_e,n_i,gain_e,gain_i,wii_sum,hebb_wii)
+if test:
+    res_dir = res_dir + 'sim_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
+else:
+    res_dir = res_dir + 'sim_lgn_wave_rfs_ne={:d}_ni={:d}_ge={:.1f}_gi={:.1f}_wii={:.2f}_hii{:d}/'.format(
+        n_e,n_i,gain_e,gain_i,wii_sum,hebb_wii)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -130,10 +135,11 @@ def run_iter(
                 # print(net.wex_rate,net.wee_rate,net.wei_rate)
                 # print(net.wix_rate,net.wie_rate,net.wii_rate)
             
-            print('dwex rms = {:.2e}, dwee rms = {:.2e}, dwei rms = {:.2e}'.format(
-                np.sqrt(np.mean(net.dwex**2)),np.sqrt(np.mean(net.dwee**2)),np.sqrt(np.mean(net.dwei**2))))
-            print('dwix rms = {:.2e}, dwie rms = {:.2e}, dwii rms = {:.2e}'.format(
-                np.sqrt(np.mean(net.dwix**2)),np.sqrt(np.mean(net.dwie**2)),np.sqrt(np.mean(net.dwii**2))))
+            if ((idx+1)//n_batch - 1)%5==0:
+                print('dwex rms = {:.2e}, dwee rms = {:.2e}, dwei rms = {:.2e}'.format(
+                    np.sqrt(np.mean(net.dwex**2)),np.sqrt(np.mean(net.dwee**2)),np.sqrt(np.mean(net.dwei**2))))
+                print('dwix rms = {:.2e}, dwie rms = {:.2e}, dwii rms = {:.2e}'.format(
+                    np.sqrt(np.mean(net.dwix**2)),np.sqrt(np.mean(net.dwie**2)),np.sqrt(np.mean(net.dwii**2))))
             
             # update weights
             net.sum_norm_dw()

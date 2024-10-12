@@ -4,15 +4,13 @@ from scipy.integrate import solve_ivp
 class Model:
     def __init__(
         self,
-        n_e: int=16,
-        n_i: int=16,
-        n_lgn: int=16,
+        n_grid: int=20, # number of grid points per edge
+        n_e: int=1, # number of excitatory cells per grid point
+        n_i: int=1, # number of inhibitory cells per grid point
+        n_lgn: int=2, # number of LGN inputs per grid point
+        
         init_dict: dict=None,
         seed: int=None,
-        gain_e: float=1.0,
-        gain_i: float=2.0,
-        wii_sum: float=0.25,
-        hebb_wii: bool=False,
         rx_wave_start: np.ndarray=None,
         ):
         self.n_e = n_e
@@ -24,7 +22,7 @@ class Model:
         self.wee_sum = 0.125
         self.wie_sum = 0.5
         self.wei_sum = 2.25
-        self.wii_sum = wii_sum
+        self.wii_sum = 0.25
 
         # presynaptic weight normalization
         self.wlgn_sum = (self.n_e + self.n_i) * self.wff_sum / self.n_lgn
@@ -41,11 +39,10 @@ class Model:
         self.max_wii = 4*self.wii_sum / self.n_i
         
         # whether to use Hebbian learning for wii
-        self.hebb_wii = hebb_wii
 
         # RELU gains
-        self.gain_e = gain_e
-        self.gain_i = gain_i
+        self.gain_e = 1.0
+        self.gain_i = 2.5
         self.gain_mat = np.diag(np.concatenate((self.gain_e*np.ones(self.n_e),self.gain_i*np.ones(self.n_i))))
         
         self.dt_dyn = 0.01 # timescale for voltage dynamics
@@ -76,7 +73,7 @@ class Model:
             self.wee_rate = 1e-6
             self.wei_rate = 1e-6
             self.wie_rate = 1e-6
-            self.wii_rate = 5e-6
+            self.wii_rate = 1e-6
             
             # initialize average inputs and rates
             self.uee = np.zeros(n_e)
