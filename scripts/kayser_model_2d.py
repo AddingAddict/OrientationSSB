@@ -5,17 +5,31 @@ class Model:
     def __init__(
         self,
         n_grid: int=20, # number of grid points per edge
+        n_x: int=1, # number of LGN cells of each center type per grid point
         n_e: int=1, # number of excitatory cells per grid point
         n_i: int=1, # number of inhibitory cells per grid point
-        n_lgn: int=2, # number of LGN inputs per grid point
-        
+        s_x: float=0.10, # feedforward arbor decay length
+        s_e: float=0.10, # excitatory recurrent arbor decay length
+        s_i: float=0.05, # inhibitory recurrent arbor decay length
+        cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
         ):
-        self.n_e = n_e
-        self.n_i = n_i
-        self.n_lgn = n_lgn
+        # grid points and distances
+        self.n_grid = n_grid
+        self.xs,self.ys = np.meshgrid(np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid),
+                                      np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid))
+        self.xs,self.ys = self.xs.flatten(),self.ys.flatten()
+        self.dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-self.xs[None,:]),
+                                     1-np.abs(self.xs[:,None]-self.xs[None,:]))**2 +\
+                             np.fmin(np.abs(self.ys[:,None]-self.ys[None,:]),
+                                     1-np.abs(self.ys[:,None]-self.ys[None,:]))**2)
+
+        # number of cells
+        self.n_e = n_e*n_grid**2
+        self.n_i = n_i*n_grid**2
+        self.n_lgn = 2*n_x*n_grid**2
         
         # postsynaptic weight normalization
         self.wff_sum = 1.0
@@ -51,14 +65,34 @@ class Model:
         
         if init_dict is None:
             rng = np.random.default_rng(seed)
+
+            # initialize arbors
+            self.aex = np.exp(-self.dists**2/(2*s_x**2))
+            self.aex = np.concatenate((self.aex,self.aex),axis=1)
+            self.aix = np.exp(-self.dists**2/(2*s_x**2))
+            self.aix = np.concatenate((self.aix,self.aix),axis=1)
+            self.aee = np.exp(-self.dists**2/(2*s_e**2))
+            self.aei = np.exp(-self.dists**2/(2*s_i**2))
+            self.aie = np.exp(-self.dists**2/(2*s_e**2))
+            self.aii = np.exp(-self.dists**2/(2*s_i**2))
+            self.mask_x = (self.dists <= cut_lim*s_x).astype(int)
+            self.mask_x = np.concatenate((self.mask_x,self.mask_x),axis=1)
+            self.mask_e = (self.dists <= cut_lim*s_e).astype(int)
+            self.mask_i = (self.dists <= cut_lim*s_i).astype(int)
+            np.place(self.aex,self.mask_x==0,0)
+            np.place(self.aix,self.mask_x==0,0)
+            np.place(self.aee,self.mask_e==0,0)
+            np.place(self.aei,self.mask_i==0,0)
+            np.place(self.aie,self.mask_e==0,0)
+            np.place(self.aii,self.mask_i==0,0)
             
             # initialize weights
-            self.wex = rng.uniform(0.2,0.8,size=(self.n_e,self.n_lgn))
-            self.wix = rng.uniform(0.2,0.8,size=(self.n_i,self.n_lgn))
-            self.wee = rng.uniform(0.2,0.8,size=(self.n_e,self.n_e))
-            self.wei = rng.uniform(0.2,0.8,size=(self.n_e,self.n_i))
-            self.wie = rng.uniform(0.2,0.8,size=(self.n_i,self.n_e))
-            self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i))
+            self.wex = rng.uniform(0.2,0.8,size=(self.n_e,self.n_lgn)) * self.aex
+            self.wix = rng.uniform(0.2,0.8,size=(self.n_i,self.n_lgn)) * self.aix
+            self.wee = rng.uniform(0.2,0.8,size=(self.n_e,self.n_e)) * self.aee
+            self.wei = rng.uniform(0.2,0.8,size=(self.n_e,self.n_i)) * self.aei
+            self.wie = rng.uniform(0.2,0.8,size=(self.n_i,self.n_e)) * self.aie
+            self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i)) * self.aii
             
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
@@ -76,19 +110,21 @@ class Model:
             self.wii_rate = 1e-6
             
             # initialize average inputs and rates
-            self.uee = np.zeros(n_e)
-            self.uei = np.zeros(n_e)
-            self.uie = np.zeros(n_i)
-            self.uii = np.zeros(n_i)
+            self.uee = np.zeros(self.n_e)
+            self.uei = np.zeros(self.n_e)
+            self.uie = np.zeros(self.n_i)
+            self.uii = np.zeros(self.n_i)
             
+            if rx_wave_start is None:
+                rx_wave_start = np.ones(self.n_lgn)
             # calculate average inputs and rates at the start of a geniculate wave
             self.update_inps(rx_wave_start,100*self.dt_dyn,0.1)
             
-            self.uee_avg = np.ones(n_e)*np.mean(self.uee)
-            self.uei_avg = np.ones(n_e)*np.mean(self.uei)
-            self.uie_avg = np.ones(n_i)*np.mean(self.uie)
-            self.uii_avg = np.ones(n_i)*np.mean(self.uii)
-            self.rx_avg = np.ones(n_lgn)*np.mean(rx_wave_start)
+            self.uee_avg = np.ones(self.n_e)*np.mean(self.uee)
+            self.uei_avg = np.ones(self.n_e)*np.mean(self.uei)
+            self.uie_avg = np.ones(self.n_i)*np.mean(self.uie)
+            self.uii_avg = np.ones(self.n_i)*np.mean(self.uii)
+            self.rx_avg = np.ones(self.n_lgn)*np.mean(rx_wave_start)
             
             # x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
             # e_sum = np.sum(self.wee,axis=0,keepdims=True) + np.sum(self.wie,axis=0,keepdims=True)
@@ -96,6 +132,15 @@ class Model:
             # print(np.mean(x_sum),np.mean(e_sum),np.mean(i_sum))
             
         else:
+            self.aex = init_dict['aex']
+            self.aix = init_dict['aix']
+            self.aee = init_dict['aee']
+            self.aei = init_dict['aei']
+            self.aie = init_dict['aie']
+            self.aii = init_dict['aii']
+            self.mask_x = init_dict['mask_x']
+            self.mask_e = init_dict['mask_e']
+            self.mask_i = init_dict['mask_i']
             self.wex = init_dict['wex']
             self.wix = init_dict['wix']
             self.wee = init_dict['wee']
@@ -198,25 +243,30 @@ class Model:
         rx: np.ndarray,
         ):
         
-        self.dwex += self.wex_rate * np.outer(self.ue - self.ue_avg,rx - self.rx_avg)
-        self.dwix += self.wix_rate * np.outer(self.ui - self.ui_avg,rx - self.rx_avg)
-        self.dwee += self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - self.ue_avg)
-        self.dwie += self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
-        self.dwei += self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),np.fmax(self.ui - self.ui_avg,0)) -\
-                                      np.outer(np.fmax(self.ue - self.ue_avg,0),np.fmax(self.ui - self.ui_avg,0)))
+        self.dwex += self.aex * self.wex_rate * np.outer(self.ue - self.ue_avg,rx - self.rx_avg)
+        self.dwix += self.aix * self.wix_rate * np.outer(self.ui - self.ui_avg,rx - self.rx_avg)
+        self.dwee += self.aee * self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - self.ue_avg)
+        self.dwie += self.aie * self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
+        self.dwei += self.aei * self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),
+                                                          np.fmax(self.ui - self.ui_avg,0)) -\
+                                                 np.outer(np.fmax(self.ue - self.ue_avg,0),
+                                                          np.fmax(self.ui - self.ui_avg,0)))
         if self.hebb_wii:
-            self.dwii += self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
+            self.dwii += self.aii * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
         else:
-            self.dwii += self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
-                                                   np.fmax(self.ui - self.ui_avg,0)) -\
-                                        np.outer(np.fmax(self.ui - self.ui_avg,0),
-                                                 np.fmax(self.ui - self.ui_avg,0)))
+            self.dwii += self.aii * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
+                                                              np.fmax(self.ui - self.ui_avg,0)) -\
+                                                     np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                              np.fmax(self.ui - self.ui_avg,0)))
         
     def sum_norm_dw(
         self,
         ):
-        self.dwex -= np.mean(self.dwex,axis=1,keepdims=True)
-        self.dwix -= np.mean(self.dwix,axis=1,keepdims=True)
+        norm = np.sum(self.aex,axis=0,keepdims=True) + np.sum(self.aix,axis=0,keepdims=True)
+        norm = np.where(norm==0,1,norm)
+        eps = (np.sum(self.dwex,axis=0,keepdims=True) + np.sum(self.dwix,axis=0,keepdims=True)) / norm
+        self.dwex -= eps * self.aex
+        self.dwix -= eps * self.aix
         # self.dwee -= np.mean(self.dwee,axis=1,keepdims=True)
         # self.dwei -= np.mean(self.dwei,axis=1,keepdims=True)
         # self.dwie -= np.mean(self.dwie,axis=1,keepdims=True)
@@ -226,12 +276,12 @@ class Model:
     def update_learn_rates(
         self,
         ):
-        self.wex_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwex**2))
-        self.wix_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwix**2))
-        self.wee_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwee**2))
-        self.wei_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwei**2))
-        self.wie_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwie**2))
-        self.wii_rate *= self.targ_dw_rms / np.sqrt(np.mean(self.dwii**2))
+        self.wex_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_x==1,self.dwex**2)))
+        self.wix_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_x==1,self.dwix**2)))
+        self.wee_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_e==1,self.dwee**2)))
+        self.wei_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_i==1,self.dwei**2)))
+        self.wie_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_e==1,self.dwie**2)))
+        self.wii_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_i==1,self.dwii**2)))
         # self.wex_rate = self.targ_dw_rms / np.sqrt(np.mean(self.dwex**2))
         # self.wix_rate = self.targ_dw_rms / np.sqrt(np.mean(self.dwix**2))
         # self.wee_rate = self.targ_dw_rms / np.sqrt(np.mean(self.dwee**2))
@@ -272,12 +322,12 @@ class Model:
         # alternate clipping, presynaptic normalization, and postsynaptic normalization
         for _ in range(4):
             # clip weights
-            np.clip(self.wex,1e-10,self.max_wff,out=self.wex)
-            np.clip(self.wix,1e-10,self.max_wff,out=self.wix)
-            np.clip(self.wee,1e-10,self.max_wee,out=self.wee)
-            np.clip(self.wei,1e-10,self.max_wei,out=self.wei)
-            np.clip(self.wie,1e-10,self.max_wie,out=self.wie)
-            np.clip(self.wii,1e-10,self.max_wii,out=self.wii)
+            np.clip(self.wex,1e-10,self.max_wff*self.aex,out=self.wex)
+            np.clip(self.wix,1e-10,self.max_wff*self.aix,out=self.wix)
+            np.clip(self.wee,1e-10,self.max_wee*self.aee,out=self.wee)
+            np.clip(self.wei,1e-10,self.max_wei*self.aei,out=self.wei)
+            np.clip(self.wie,1e-10,self.max_wie*self.aie,out=self.wie)
+            np.clip(self.wii,1e-10,self.max_wii*self.aii,out=self.wii)
             
             # presynaptic normalization
             x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
@@ -291,12 +341,12 @@ class Model:
             self.wii *= self.w4i_sum / i_sum
             
             # clip weights
-            np.clip(self.wex,1e-10,self.max_wff,out=self.wex)
-            np.clip(self.wix,1e-10,self.max_wff,out=self.wix)
-            np.clip(self.wee,1e-10,self.max_wee,out=self.wee)
-            np.clip(self.wei,1e-10,self.max_wei,out=self.wei)
-            np.clip(self.wie,1e-10,self.max_wie,out=self.wie)
-            np.clip(self.wii,1e-10,self.max_wii,out=self.wii)
+            np.clip(self.wex,1e-10,self.max_wff*self.aex,out=self.wex)
+            np.clip(self.wix,1e-10,self.max_wff*self.aix,out=self.wix)
+            np.clip(self.wee,1e-10,self.max_wee*self.aee,out=self.wee)
+            np.clip(self.wei,1e-10,self.max_wei*self.aei,out=self.wei)
+            np.clip(self.wie,1e-10,self.max_wie*self.aie,out=self.wie)
+            np.clip(self.wii,1e-10,self.max_wii*self.aii,out=self.wii)
             
             # postsynaptic normalization
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)

@@ -10,7 +10,6 @@ import argparse
 import time
 
 import numpy as np
-from scipy.stats import poisson,zscore
 
 import burst_func as bf
 
@@ -48,7 +47,11 @@ ss,ts = ss.flatten(),ts.flatten()
 xs,ys = np.meshgrid(np.linspace(0.5/n_grid,1-0.5/n_grid,n_grid),np.linspace(0.5/n_grid,1-0.5/n_grid,n_grid))
 xs,ys = xs.flatten(),ys.flatten()
 
-dists = np.sqrt((xs[:,None]-xs[None,:])**2 + (ys[:,None]-ys[None,:])**2)
+dxs = np.abs(xs[:,None]-xs[None,:])
+dxs = np.fmin(dxs,1-dxs)
+dys = np.abs(ys[:,None]-ys[None,:])
+dys = np.fmin(dys,1-dys)
+dists = np.sqrt(dxs**2 + dys**2)
 dist_corrs = np.exp(-0.5*(dists/corr_len)**2)
 
 oris = rng.uniform(0,2*np.pi,n_vis)
@@ -85,6 +88,8 @@ spike_ls += rb * dt
 for widx in range(n_vis):
     for cidx in range(2*n_grid**2):
         for sidx in range(n_stim):
+            if np.isnan(burst_times[widx,sidx,cidx]):
+                continue
             spike_ls[:,cidx] += (rm-rb)*np.exp(-(np.abs(ts-burst_times[widx,sidx,cidx])/(0.5*dur))**2) * dt
 spike_ls = np.fmax(1e-5,spike_ls)
 
