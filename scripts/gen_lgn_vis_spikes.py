@@ -27,8 +27,8 @@ n_bar = 2*n_grid
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
-rm = 10 # Hz
-rb = 0.5 # Hz
+rm = 20 # Hz
+rb = 1 # Hz
 dt = 0.1 # s
 ibi = 3.3 # s
 dur = 1.1/2 # s
@@ -36,7 +36,7 @@ dur = 1.1/2 # s
 rs = 0
 ro = -1
 
-corr_len = 0.25
+corr_len = 0.05
 
 rng = np.random.default_rng(seed)
 
@@ -67,8 +67,8 @@ for idx,ori in enumerate(oris):
 
 burst_times = np.zeros((n_vis,2*n_in_rf))
 
-burst_times[:,:n_in_rf] = ibi*(5/12+1/6*pass_times - 1/12*leading_on[:,None] + np.arange(n_vis)[:,None])
-burst_times[:,n_in_rf:] = ibi*(5/12+1/6*pass_times + 1/12*leading_on[:,None] + np.arange(n_vis)[:,None])
+burst_times[:,:n_in_rf] = ibi*(5/12 + 1/6*pass_times - 1/12*leading_on[:,None] + np.arange(n_vis)[:,None])
+burst_times[:,n_in_rf:] = ibi*(5/12 + 1/6*pass_times + 1/12*leading_on[:,None] + np.arange(n_vis)[:,None])
     
 print('Generating burst times took',time.process_time() - start,'s\n')
 
@@ -102,8 +102,6 @@ for idx,l in enumerate(spike_ls):
     up_bnd = ns.T@ns / len(us)
 
     spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
-
-spike_rs = np.fmax(np.fmin(spike_rs,up_bnd),lo_bnd)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 

@@ -95,8 +95,6 @@ for idx,l in enumerate(spike_ls):
 
     spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
 
-spike_rs = np.fmax(np.fmin(spike_rs,up_bnd),lo_bnd)
-    
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
 start = time.process_time()

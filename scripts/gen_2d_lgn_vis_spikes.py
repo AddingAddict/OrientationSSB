@@ -24,7 +24,7 @@ n_grid = int(args['n_grid'])
 seed = int(args['seed'])
 
 n_bar = 2*n_grid
-n_stim = 4
+n_stim = 2
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
@@ -106,8 +106,6 @@ for idx,l in enumerate(spike_ls):
     up_bnd = ns.T@ns / len(us)
 
     spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
-
-spike_rs = np.fmax(np.fmin(spike_rs,up_bnd),lo_bnd)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
