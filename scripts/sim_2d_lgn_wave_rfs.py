@@ -59,8 +59,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(
-        n_e,n_i)
+    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_td={:.4f}/'.format(
+        n_e,n_i,s_x,s_e,s_i,gain_i,targ_rms)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -199,5 +199,6 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d}".format(
-            n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,seed,n_wave,n_grid))
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -td {:.4f}".format(
+            n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,seed,n_wave,n_grid,
+            s_x,s_e,s_i,gain_i,targ_rms))
