@@ -24,8 +24,8 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_e', '-ne', help='number of excitatory cells',type=int, default=16)
-    parser.add_argument('--n_i', '-ni', help='number of inhibitory cells',type=int, default=4)
+    parser.add_argument('--n_e', '-ne', help='number of excitatory cells',type=int, default=1)
+    parser.add_argument('--n_i', '-ni', help='number of inhibitory cells',type=int, default=1)
     parser.add_argument('--init_iter', '-iit', help='initial iteration number',type=int, default=0)
     parser.add_argument('--batch_iter', '-bit', help='number of iterations to run per batch',type=int, default=100)
     parser.add_argument('--max_iter', '-mit', help='max iteration number',type=int, default=100)
@@ -111,11 +111,11 @@ def runjobs():
     
     #--------------------------------------------------------------------------
     # Make SBTACH
-    inpath = currwd + "/sim_lgn_wave_rfs.py"
+    inpath = currwd + "/sim_2d_lgn_wave_rfs.py"
     c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -td {:.4f}".format(
         inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_grid,s_x,s_e,s_i,gain_i,targ_rms)
     
-    jobname="{:s}".format('sim_lgn_wave_rfs_s_{:d}_n_{:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_td={:.4f}'.format(
+    jobname="{:s}".format('sim_2d_lgn_wave_rfs_s_{:d}_n_{:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_td={:.4f}'.format(
         seed,init_iter,s_x,s_e,s_i,gain_i,targ_rms))
     
     if not args2.test:
@@ -126,7 +126,7 @@ def runjobs():
         if cluster=='haba' or cluster=='moto' or cluster=='burg':
             text_file.write("#SBATCH --account=theory \n")
         text_file.write("#SBATCH --job-name="+jobname+ "\n")
-        text_file.write("#SBATCH -t 0-01:59  \n")
+        text_file.write("#SBATCH -t 0-03:59  \n")
         text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
         text_file.write("#SBATCH --gres=gpu\n")
         text_file.write("#SBATCH -c 1 \n")
