@@ -33,6 +33,31 @@ class Model:
         self.n_i = n_i*n_grid**2
         self.n_lgn = 2*n_x*n_grid**2
         
+        # define arbors
+        self.aex = np.exp(-self.dists**2/(2*s_x**2))
+        self.aex = np.concatenate((self.aex,self.aex),axis=1)
+        self.aix = np.exp(-self.dists**2/(2*s_x**2))
+        self.aix = np.concatenate((self.aix,self.aix),axis=1)
+        self.aee = np.exp(-self.dists**2/(2*s_e**2))
+        self.aei = np.exp(-self.dists**2/(2*s_i**2))
+        self.aie = np.exp(-self.dists**2/(2*s_e**2))
+        self.aii = np.exp(-self.dists**2/(2*s_i**2))
+        self.mask_x = (self.dists <= cut_lim*s_x).astype(int)
+        self.mask_x = np.concatenate((self.mask_x,self.mask_x),axis=1)
+        self.mask_e = (self.dists <= cut_lim*s_e).astype(int)
+        self.mask_i = (self.dists <= cut_lim*s_i).astype(int)
+        np.place(self.aex,self.mask_x==0,0)
+        np.place(self.aix,self.mask_x==0,0)
+        np.place(self.aee,self.mask_e==0,0)
+        np.place(self.aei,self.mask_i==0,0)
+        np.place(self.aie,self.mask_e==0,0)
+        np.place(self.aii,self.mask_i==0,0)
+        
+        self.n_x_in_arb = np.sum(self.mask_x,axis=1)[0]
+        self.n_e_in_arb = np.sum(self.mask_e,axis=1)[0]
+        self.n_i_in_arb = np.sum(self.mask_i,axis=1)[0]
+        print(self.n_x_in_arb,self.n_e_in_arb,self.n_i_in_arb)
+        
         # postsynaptic weight normalization
         self.wff_sum = 1.0
         self.wee_sum = 0.125
@@ -48,11 +73,11 @@ class Model:
         print(self.wlgn_sum,self.w4e_sum,self.w4i_sum)
 
         # maximum allowed weights
-        self.max_wff = 4*self.wff_sum / self.n_lgn
-        self.max_wee = 4*self.wee_sum / self.n_e
-        self.max_wei = 4*self.wei_sum / self.n_i
-        self.max_wie = 4*self.wie_sum / self.n_e
-        self.max_wii = 4*self.wii_sum / self.n_i
+        self.max_wff = 4*self.wff_sum / self.n_x_in_arb
+        self.max_wee = 8*self.wee_sum / self.n_e_in_arb
+        self.max_wei = 8*self.wei_sum / self.n_i_in_arb
+        self.max_wie = 4*self.wie_sum / self.n_e_in_arb
+        self.max_wii = 4*self.wii_sum / self.n_i_in_arb
         
         # whether to use Hebbian learning for wii
 
@@ -67,26 +92,6 @@ class Model:
         
         if init_dict is None:
             rng = np.random.default_rng(seed)
-
-            # initialize arbors
-            self.aex = np.exp(-self.dists**2/(2*s_x**2))
-            self.aex = np.concatenate((self.aex,self.aex),axis=1)
-            self.aix = np.exp(-self.dists**2/(2*s_x**2))
-            self.aix = np.concatenate((self.aix,self.aix),axis=1)
-            self.aee = np.exp(-self.dists**2/(2*s_e**2))
-            self.aei = np.exp(-self.dists**2/(2*s_i**2))
-            self.aie = np.exp(-self.dists**2/(2*s_e**2))
-            self.aii = np.exp(-self.dists**2/(2*s_i**2))
-            self.mask_x = (self.dists <= cut_lim*s_x).astype(int)
-            self.mask_x = np.concatenate((self.mask_x,self.mask_x),axis=1)
-            self.mask_e = (self.dists <= cut_lim*s_e).astype(int)
-            self.mask_i = (self.dists <= cut_lim*s_i).astype(int)
-            np.place(self.aex,self.mask_x==0,0)
-            np.place(self.aix,self.mask_x==0,0)
-            np.place(self.aee,self.mask_e==0,0)
-            np.place(self.aei,self.mask_i==0,0)
-            np.place(self.aie,self.mask_e==0,0)
-            np.place(self.aii,self.mask_i==0,0)
             
             # initialize weights
             self.wex = rng.uniform(0.2,0.8,size=(self.n_e,self.n_lgn)) * self.aex
@@ -102,6 +107,13 @@ class Model:
             self.wei *= self.wei_sum / np.sum(self.wei,axis=1,keepdims=True)
             self.wie *= self.wie_sum / np.sum(self.wie,axis=1,keepdims=True)
             self.wii *= self.wii_sum / np.sum(self.wii,axis=1,keepdims=True)
+        
+            # print(np.all(self.wex <= self.max_wff*self.aex))
+            # print(np.all(self.wix <= self.max_wff*self.aix))
+            # print(np.all(self.wee <= self.max_wee*self.aee))
+            # print(np.all(self.wei <= self.max_wei*self.aei))
+            # print(np.all(self.wie <= self.max_wie*self.aie))
+            # print(np.all(self.wii <= self.max_wii*self.aii))
             
             # initialize learning rates
             self.wex_rate = 1e-6
@@ -128,21 +140,12 @@ class Model:
             self.uii_avg = np.ones(self.n_i)*np.mean(self.uii)
             self.rx_avg = np.ones(self.n_lgn)*np.mean(rx_wave_start)
             
-            # x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
-            # e_sum = np.sum(self.wee,axis=0,keepdims=True) + np.sum(self.wie,axis=0,keepdims=True)
-            # i_sum = np.sum(self.wei,axis=0,keepdims=True) + np.sum(self.wii,axis=0,keepdims=True)
-            # print(np.mean(x_sum),np.mean(e_sum),np.mean(i_sum))
+            x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
+            e_sum = np.sum(self.wee,axis=0,keepdims=True) + np.sum(self.wie,axis=0,keepdims=True)
+            i_sum = np.sum(self.wei,axis=0,keepdims=True) + np.sum(self.wii,axis=0,keepdims=True)
+            print(np.mean(x_sum),np.mean(e_sum),np.mean(i_sum))
             
         else:
-            self.aex = init_dict['aex']
-            self.aix = init_dict['aix']
-            self.aee = init_dict['aee']
-            self.aei = init_dict['aei']
-            self.aie = init_dict['aie']
-            self.aii = init_dict['aii']
-            self.mask_x = init_dict['mask_x']
-            self.mask_e = init_dict['mask_e']
-            self.mask_i = init_dict['mask_i']
             self.wex = init_dict['wex']
             self.wix = init_dict['wix']
             self.wee = init_dict['wee']
