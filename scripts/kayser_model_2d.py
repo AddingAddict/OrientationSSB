@@ -9,9 +9,11 @@ class Model:
         n_e: int=1, # number of excitatory cells per grid point
         n_i: int=1, # number of inhibitory cells per grid point
         s_x: float=0.10, # feedforward arbor decay length
-        s_e: float=0.10, # excitatory recurrent arbor decay length
+        s_e: float=0.05, # excitatory recurrent arbor decay length
         s_i: float=0.05, # inhibitory recurrent arbor decay length
+        targ_dw_rms: float=0.0005, # target root mean square weight change
         cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
+        gain_i: float=2.5, # gain of inhibitory cells
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -56,12 +58,12 @@ class Model:
 
         # RELU gains
         self.gain_e = 1.0
-        self.gain_i = 2.5
+        self.gain_i = gain_i
         self.gain_mat = np.diag(np.concatenate((self.gain_e*np.ones(self.n_e),self.gain_i*np.ones(self.n_i))))
         
         self.dt_dyn = 0.01 # timescale for voltage dynamics
         self.a_avg = 1/60 # smoothing factor for average inputs
-        self.targ_dw_rms = 0.0005 # target root mean square weight change
+        self.targ_dw_rms = targ_dw_rms # target root mean square weight change
         
         if init_dict is None:
             rng = np.random.default_rng(seed)
@@ -251,13 +253,13 @@ class Model:
                                                           np.fmax(self.ui - self.ui_avg,0)) -\
                                                  np.outer(np.fmax(self.ue - self.ue_avg,0),
                                                           np.fmax(self.ui - self.ui_avg,0)))
-        if self.hebb_wii:
-            self.dwii += self.aii * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
-        else:
-            self.dwii += self.aii * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
-                                                              np.fmax(self.ui - self.ui_avg,0)) -\
-                                                     np.outer(np.fmax(self.ui - self.ui_avg,0),
-                                                              np.fmax(self.ui - self.ui_avg,0)))
+        # if self.hebb_wii:
+        #     self.dwii += self.aii * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
+        # else:
+        self.dwii += self.aii * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
+                                                            np.fmax(self.ui - self.ui_avg,0)) -\
+                                                    np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                            np.fmax(self.ui - self.ui_avg,0)))
         
     def sum_norm_dw(
         self,

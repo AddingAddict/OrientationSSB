@@ -21,6 +21,11 @@ parser.add_argument('--init_iter', '-iit', help='initial iteration number',type=
 parser.add_argument('--batch_iter', '-bit', help='number of iterations to run per batch',type=int, default=100)
 parser.add_argument('--max_iter', '-mit', help='max iteration number',type=int, default=100)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
+parser.add_argument('--s_x', '-sx', help='feedforward arbor decay length',type=float, default=0.10)
+parser.add_argument('--s_e', '-se', help='feedforward arbor decay length',type=float, default=0.05)
+parser.add_argument('--s_i', '-si', help='feedforward arbor decay length',type=float, default=0.05)
+parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
+parser.add_argument('--targ_rms', '-td', help='target weight change rms',type=float, default=0.0005)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--test', '-t', help='test?',type=int, default=0)
@@ -32,6 +37,11 @@ init_iter = int(args['init_iter'])
 batch_iter = int(args['batch_iter'])
 max_iter = int(args['max_iter'])
 seed = int(args['seed'])
+s_x = args['s_x']
+s_e = args['s_e']
+s_i = args['s_i']
+gain_i = args['gain_i']
+targ_rms = args['targ_rms']
 n_wave = int(args['n_wave'])
 n_grid = int(args['n_grid'])
 test = int(args['test']) > 0
@@ -75,13 +85,16 @@ def init_net(
 
     if n_iter==0: # starting a new simulation, must initialize the system
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
+                    s_x=s_x,s_e=s_e,s_i=s_i,gain_i=gain_i,targ_rms=targ_rms,
                     rx_wave_start=lgn_spikes[15])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
         with open(res_dir + 'seed={:d}_iter={:d}.pkl'.format(seed,n_iter-1), 'rb') as handle:
             res_dict = pickle.load(handle)
             
-        net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,init_dict=res_dict)
+        net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,
+                    s_x=s_x,s_e=s_e,s_i=s_i,gain_i=gain_i,targ_dw_rms=targ_rms,
+                    init_dict=res_dict)
         
     return net
     
