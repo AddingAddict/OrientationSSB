@@ -36,6 +36,7 @@ def runjobs():
     parser.add_argument('--targ_rms', '-td', help='target weight change rms',type=float, default=0.0005)
     parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
     parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)
+    parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=6)
     
@@ -55,6 +56,7 @@ def runjobs():
     targ_rms = args['targ_rms']
     seed = int(args['seed'])
     n_wave = int(args['n_wave'])
+    n_stim = int(args['n_stim'])
     n_grid = int(args['n_grid'])
     gb = int(args['gb'])
     
@@ -112,8 +114,8 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_2d_lgn_wave_rfs.py"
-    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -td {:.4f}".format(
-        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_grid,s_x,s_e,s_i,gain_i,targ_rms)
+    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -td {:.4f}".format(
+        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_stim,n_grid,s_x,s_e,s_i,gain_i,targ_rms)
     
     jobname="{:s}".format('sim_2d_lgn_wave_rfs_s_{:d}_n_{:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_td={:.4f}'.format(
         seed,init_iter,s_x,s_e,s_i,gain_i,targ_rms))
