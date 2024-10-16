@@ -11,9 +11,10 @@ class Model:
         s_x: float=0.08, # feedforward arbor decay length
         s_e: float=0.08, # excitatory recurrent arbor decay length
         s_i: float=0.08, # inhibitory recurrent arbor decay length
-        targ_dw_rms: float=0.0005, # target root mean square weight change
         cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
         gain_i: float=2.5, # gain of inhibitory cells
+        hebb_wei: bool=False, # whether to use Hebbian learning for wei
+        hebb_wii: bool=False, # whether to use Hebbian learning for wii
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -73,6 +74,10 @@ class Model:
         self.max_wie = 4*self.wie_sum / self.n_e_in_arb
         self.max_wii = 4*self.wii_sum / self.n_i_in_arb
         
+        # whether to use Hebbian learning for wei and wii
+        self.hebb_wei = hebb_wei
+        self.hebb_wii = hebb_wii
+        
         # whether to use Hebbian learning for wii
 
         # RELU gains
@@ -82,7 +87,7 @@ class Model:
         
         self.dt_dyn = 0.01 # timescale for voltage dynamics
         self.a_avg = 1/60 # smoothing factor for average inputs
-        self.targ_dw_rms = targ_dw_rms # target root mean square weight change
+        self.targ_dw_rms = 0.0005 # target root mean square weight change
         
         if init_dict is None:
             rng = np.random.default_rng(seed)
@@ -239,17 +244,20 @@ class Model:
         self.dwix += self.ax * self.wix_rate * np.outer(self.ui - self.ui_avg,rx - self.rx_avg)
         self.dwee += self.ae * self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - self.ue_avg)
         self.dwie += self.ae * self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
-        self.dwei += self.ai * self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),
-                                                          np.fmax(self.ui - self.ui_avg,0)) -\
-                                                 np.outer(np.fmax(self.ue - self.ue_avg,0),
-                                                          np.fmax(self.ui - self.ui_avg,0)))
-        # if self.hebb_wii:
-        #     self.dwii += self.ai * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
-        # else:
-        self.dwii += self.ai * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
+        if self.hebb_wei:
+            self.dwei += self.ai * self.wei_rate * np.outer(self.ue - self.ue_avg,self.ui - self.ui_avg)
+        else:
+            self.dwei += self.ai * self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),
                                                             np.fmax(self.ui - self.ui_avg,0)) -\
-                                                    np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                    np.outer(np.fmax(self.ue - self.ue_avg,0),
                                                             np.fmax(self.ui - self.ui_avg,0)))
+        if self.hebb_wii:
+            self.dwii += self.ai * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
+        else:
+            self.dwii += self.ai * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
+                                                             np.fmax(self.ui - self.ui_avg,0)) -\
+                                                    np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                             np.fmax(self.ui - self.ui_avg,0)))
         
     def sum_norm_dw(
         self,

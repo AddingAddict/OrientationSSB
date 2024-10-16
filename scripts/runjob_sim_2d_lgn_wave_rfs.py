@@ -33,7 +33,8 @@ def runjobs():
     parser.add_argument('--s_e', '-se', help='feedforward arbor decay length',type=float, default=0.08)
     parser.add_argument('--s_i', '-si', help='feedforward arbor decay length',type=float, default=0.08)
     parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
-    parser.add_argument('--targ_rms', '-td', help='target weight change rms',type=float, default=0.0005)
+    parser.add_argument('--hebb_wei', '-hei', help='whether wei has Hebbian learning rule',type=int, default=0)
+    parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
     parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
     parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)
     parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
@@ -53,7 +54,8 @@ def runjobs():
     s_e = args['s_e']
     s_i = args['s_i']
     gain_i = args['gain_i']
-    targ_rms = args['targ_rms']
+    hebb_wei = int(args['hebb_wei'])
+    hebb_wii = int(args['hebb_wii'])
     seed = int(args['seed'])
     n_wave = int(args['n_wave'])
     n_stim = int(args['n_stim'])
@@ -114,11 +116,11 @@ def runjobs():
     #--------------------------------------------------------------------------
     # Make SBTACH
     inpath = currwd + "/sim_2d_lgn_wave_rfs.py"
-    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -td {:.4f}".format(
-        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_stim,n_grid,s_x,s_e,s_i,gain_i,targ_rms)
+    c1 = "{:s} -ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -gi {:.1f} -hei {:d} -hii {:d}".format(
+        inpath,n_e,n_i,init_iter,batch_iter,max_iter,seed,n_wave,n_stim,n_grid,s_x,s_e,s_i,gain_i,hebb_wei,hebb_wii)
     
-    jobname="{:s}".format('sim_2d_lgn_wave_rfs_s_{:d}_n_{:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_td={:.4f}'.format(
-        seed,init_iter,s_x,s_e,s_i,gain_i,targ_rms))
+    jobname="{:s}".format('sim_2d_lgn_wave_rfs_s_{:d}_n_{:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}_hei={:d}_hii={:d}'.format(
+        seed,init_iter,s_x,s_e,s_i,gain_i,hebb_wei,hebb_wii))
     
     if not args2.test:
         jobnameDir=os.path.join(ofilesdir, jobname)
