@@ -16,15 +16,16 @@ import burst_func as bf
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_vis', '-nw', help='number of geniculate viss',type=int, default=60)
+parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_vis = int(args['n_vis'])
+n_stim = int(args['n_stim'])
 n_grid = int(args['n_grid'])
 seed = int(args['seed'])
 
 n_bar = 2*n_grid
-n_stim = 2
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
@@ -129,7 +130,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + '2d_lgn_vis_spikes_nw={:d}_ng={:d}/'.format(n_vis,n_grid)
+res_dir = res_dir + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_ng={:d}/'.format(n_vis,n_stim,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
