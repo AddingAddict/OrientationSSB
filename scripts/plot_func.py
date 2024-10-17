@@ -139,7 +139,7 @@ def domcolbar(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
     if rlim is None:
         rlim = [None,None]
         rlim[0] = np.min(r)
-        rlim[1] = np.max(r)
+        rlim[1] = 1.1*np.max(r)
     elif rlim[0] is None:
         rlim[0] = np.min(r)
     elif rlim[1] is None:

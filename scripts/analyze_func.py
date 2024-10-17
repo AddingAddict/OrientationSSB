@@ -132,6 +132,15 @@ def calc_dc_ac_comp(A,axis=-1):
     
     return A0,A1mod,A1phs
 
+def calc_OPM(A):    
+    # calculate orientation DC, AC, and center from phase-averaged response
+    A0,A1,PO = calc_dc_ac_comp(A)
+    
+    # calculate OS from DC and AC of phase-averaged response
+    OS = np.where(A1==0,0,A1/A0)
+    
+    return OS * np.exp(1j*PO)
+
 def calc_OS_MR(A):
     noris = np.shape(A)[-2]
     
@@ -155,3 +164,40 @@ def calc_OS_MR(A):
     MR = np.where(F1==0,0,2*F1/F0)
     
     return OS,MR
+
+def layout_w(w,ngrid,rarb,nskip=0,pre=True):
+    # calculate arbor diameter
+    darb = 2*rarb+1
+    
+    # layout pre/postsynaptic weight of each shown cell in subsquares in larger grid
+    nshow = ngrid//(1+nskip)
+    w_laid = np.zeros((nshow*(darb+1)+1,nshow*(darb+1)+1))
+    for i in range(nshow):
+        for j in range(nshow):
+            if pre: # extract presynaptic weights for cell at (i,j)
+                this_w = w.reshape(ngrid,ngrid,ngrid,ngrid)[i*(1+nskip),j*(1+nskip),:,:]
+            else: # extract postsynaptic weights for cell at (i,j)
+                this_w = w.reshape(ngrid,ngrid,ngrid,ngrid)[:,:,i*(1+nskip),j*(1+nskip)]
+            
+            # place weights grid subsquare
+            w_laid[1+i*(darb+1):1+i*(darb+1)+darb,1+j*(darb+1):1+j*(darb+1)+darb] =\
+                np.roll(this_w,(rarb-i*(1+nskip),rarb-j*(1+nskip)),axis=(-2,-1))[:darb,:darb]
+    return w_laid
+
+def get_rf_fft_resps(rfs,ngrid,noris):
+    xs,ys = np.meshgrid(np.arange(1,ngrid+1)/ngrid - 0.5,np.arange(1,ngrid+1)/ngrid - 0.5)
+    xs = np.roll(xs,(ngrid//2+1,ngrid//2+1),axis=(0,1))
+    ys = np.roll(ys,(ngrid//2+1,ngrid//2+1),axis=(0,1))
+    
+    ang_bins = np.zeros((ngrid,ngrid),dtype=int)
+    ang_bins = np.digitize(np.arctan2(xs,ys),np.linspace(-0.5*np.pi/noris,np.pi-0.5*np.pi/noris,noris+1))
+    ang_bins[0,0] = 0
+    ang_bins[np.sqrt(xs**2 + ys**2) >= 0.5] = 0
+    
+    rf_ffts = np.abs(np.fft.fft2(rfs))
+    rf_fft_angs = np.zeros((ngrid,ngrid,noris))
+    
+    for idx in range(noris):
+        rf_fft_angs[:,:,idx] = np.max(rf_ffts[:,:,ang_bins==idx+1],-1)
+        
+    return rf_fft_angs

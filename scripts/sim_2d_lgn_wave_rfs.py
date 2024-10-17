@@ -22,8 +22,8 @@ parser.add_argument('--batch_iter', '-bit', help='number of iterations to run pe
 parser.add_argument('--max_iter', '-mit', help='max iteration number',type=int, default=100)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--s_x', '-sx', help='feedforward arbor decay length',type=float, default=0.08)
-parser.add_argument('--s_e', '-se', help='feedforward arbor decay length',type=float, default=0.08)
-parser.add_argument('--s_i', '-si', help='feedforward arbor decay length',type=float, default=0.08)
+parser.add_argument('--s_e', '-se', help='excitatory recurrent arbor decay length',type=float, default=0.08)
+parser.add_argument('--s_i', '-si', help='inhibitory recurrent arbor decay length',type=float, default=0.08)
 parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
 parser.add_argument('--hebb_wei', '-hei', help='whether wei has Hebbian learning rule',type=int, default=0)
 parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
@@ -63,8 +63,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}/'.format(
-        n_e,n_i,s_x,s_e,s_i,gain_i)
+    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}/'.format(
+        n_grid,n_e,n_i,s_x,s_e,s_i,gain_i)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -165,12 +165,6 @@ def run_iter(
     
         res_dict = {}
 
-        res_dict['aex'] = net.aex
-        res_dict['aix'] = net.aix
-        res_dict['aee'] = net.aee
-        res_dict['aei'] = net.aei
-        res_dict['aie'] = net.aie
-        res_dict['aii'] = net.aii
         res_dict['wex'] = net.wex
         res_dict['wix'] = net.wix
         res_dict['wee'] = net.wee
@@ -199,7 +193,7 @@ def run_iter(
 net = init_net(init_iter)
 
 for n_iter in range(init_iter,init_iter+batch_iter):
-    run_iter(n_iter,net,save=(n_iter+1)%5==0)
+    run_iter(n_iter,net,save=(n_iter+1)%10==0)
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \

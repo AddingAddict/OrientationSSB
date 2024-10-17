@@ -12,6 +12,9 @@ class Model:
         s_e: float=0.08, # excitatory recurrent arbor decay length
         s_i: float=0.08, # inhibitory recurrent arbor decay length
         cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
+        flat_x: bool=True, # whether to use flat feedforward arbors
+        flat_e: bool=True, # whether to use flat excitatory recurrent arbors
+        flat_i: bool=True, # whether to use flat inhibitory recurrent arbors
         gain_i: float=2.5, # gain of inhibitory cells
         hebb_wei: bool=False, # whether to use Hebbian learning for wei
         hebb_wii: bool=False, # whether to use Hebbian learning for wii
@@ -35,10 +38,19 @@ class Model:
         self.n_lgn = 2*n_x*n_grid**2
         
         # define arbors
-        self.ax = np.exp(-self.dists**2/(2*s_x**2))
+        if flat_x:
+            self.ax = np.ones_like(self.dists)
+        else:
+            self.ax = np.exp(-self.dists**2/(2*s_x**2))
         self.ax = np.concatenate((self.ax,self.ax),axis=1)
-        self.ae = np.exp(-self.dists**2/(2*s_e**2))
-        self.ai = np.exp(-self.dists**2/(2*s_i**2))
+        if flat_e:
+            self.ae = np.ones_like(self.dists)
+        else:
+            self.ae = np.exp(-self.dists**2/(2*s_e**2))
+        if flat_i:
+            self.ai = np.ones_like(self.dists)
+        else:
+            self.ai = np.exp(-self.dists**2/(2*s_i**2))
         self.mask_x = (self.dists <= cut_lim*s_x).astype(int)
         self.mask_x = np.concatenate((self.mask_x,self.mask_x),axis=1)
         self.mask_e = (self.dists <= cut_lim*s_e).astype(int)
@@ -68,17 +80,15 @@ class Model:
         print(self.wlgn_sum,self.w4e_sum,self.w4i_sum)
 
         # maximum allowed weights
-        self.max_wff = 4*self.wff_sum / self.n_x_in_arb
-        self.max_wee = 4*self.wee_sum / self.n_e_in_arb
-        self.max_wei = 4*self.wei_sum / self.n_i_in_arb
-        self.max_wie = 4*self.wie_sum / self.n_e_in_arb
-        self.max_wii = 4*self.wii_sum / self.n_i_in_arb
+        self.max_wff = 32*self.wff_sum / self.n_x_in_arb
+        self.max_wee = 32*self.wee_sum / self.n_e_in_arb
+        self.max_wei = 32*self.wei_sum / self.n_i_in_arb
+        self.max_wie = 32*self.wie_sum / self.n_e_in_arb
+        self.max_wii = 32*self.wii_sum / self.n_i_in_arb
         
         # whether to use Hebbian learning for wei and wii
         self.hebb_wei = hebb_wei
         self.hebb_wii = hebb_wii
-        
-        # whether to use Hebbian learning for wii
 
         # RELU gains
         self.gain_e = 1.0
@@ -87,7 +97,7 @@ class Model:
         
         self.dt_dyn = 0.01 # timescale for voltage dynamics
         self.a_avg = 1/60 # smoothing factor for average inputs
-        self.targ_dw_rms = 0.0005 # target root mean square weight change
+        self.targ_dw_rms = 0.002 # target root mean square weight change
         
         if init_dict is None:
             rng = np.random.default_rng(seed)
@@ -108,12 +118,12 @@ class Model:
             self.wii *= self.wii_sum / np.sum(self.wii,axis=1,keepdims=True)
             
             # initialize learning rates
-            self.wex_rate = 1e-6
-            self.wix_rate = 1e-6
-            self.wee_rate = 1e-6
-            self.wei_rate = 1e-6
-            self.wie_rate = 1e-6
-            self.wii_rate = 1e-6
+            self.wex_rate = 5e-6
+            self.wix_rate = 5e-6
+            self.wee_rate = 5e-6
+            self.wei_rate = 5e-6
+            self.wie_rate = 5e-6
+            self.wii_rate = 5e-6
             
             # initialize average inputs and rates
             self.uee = np.zeros(self.n_e)
