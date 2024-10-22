@@ -139,7 +139,7 @@ print('Calculating feedforward grating evoked responses took',time.process_time(
 # Compute firing rates to grating stimuli
 start = time.process_time()
 
-inh_mults = np.arange(1,11)/10
+inh_mults = np.arange(2,11,2)/10
 n_mult = len(inh_mults)
 
 resp_e = np.zeros((n_ori,n_phs,n_mult,n_grid,n_grid))
@@ -148,6 +148,11 @@ resp_i = np.zeros((n_ori,n_phs,n_mult,n_grid,n_grid))
 for ori_idx in range(n_ori):
     for phs_idx in range(n_phs):
         for mult_idx,inh_mult in enumerate(inh_mults):
+            net.uee[:] = 0
+            net.uei[:] = 0
+            net.uie[:] = 0
+            net.uii[:] = 0
+            
             # update inputs and rates
             net.update_inps(grate_rx[ori_idx,phs_idx],dt_stim,inh_mult)
             
@@ -189,6 +194,11 @@ for lgn_idx in range(max_spike_file):
     
     resp_e = np.zeros((n_stim,n_grid,n_grid))
     resp_i = np.zeros((n_stim,n_grid,n_grid))
+
+    net.uee[:] = 0
+    net.uei[:] = 0
+    net.uie[:] = 0
+    net.uii[:] = 0
 
     start = time.process_time()
     for idx in range(n_stim):
