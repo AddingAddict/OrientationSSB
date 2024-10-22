@@ -53,7 +53,7 @@ n_phs = int(args['n_phs'])
 test = int(args['test']) > 0
 
 max_spike_file = 50 # total number of lgn spike count files
-dt_stim = 0.5#0.25 # simulation time between stimuli
+dt_stim = 0.25#0.25 # simulation time between stimuli
 
 # Define where to save results
 res_dir = './../results/'
@@ -139,19 +139,23 @@ print('Calculating feedforward grating evoked responses took',time.process_time(
 # Compute firing rates to grating stimuli
 start = time.process_time()
 
-resp_e = np.zeros((n_ori,n_phs,n_grid,n_grid))
-resp_i = np.zeros((n_ori,n_phs,n_grid,n_grid))
+inh_mults = np.arange(1,11)/10
+n_mult = len(inh_mults)
+
+resp_e = np.zeros((n_ori,n_phs,n_mult,n_grid,n_grid))
+resp_i = np.zeros((n_ori,n_phs,n_mult,n_grid,n_grid))
 
 for ori_idx in range(n_ori):
     for phs_idx in range(n_phs):
-        # update inputs and rates
-        net.update_inps(grate_rx[ori_idx,phs_idx],dt_stim)
-        
-        resp_e[ori_idx,phs_idx] = np.fmax(net.uee - net.uei,0).reshape((n_grid,n_grid))
-        resp_i[ori_idx,phs_idx] = np.fmax(net.uie - net.uii,0).reshape((n_grid,n_grid))
+        for mult_idx,inh_mult in enumerate(inh_mults):
+            # update inputs and rates
+            net.update_inps(grate_rx[ori_idx,phs_idx],dt_stim,inh_mult)
+            
+            resp_e[ori_idx,phs_idx,mult_idx] = np.fmax(net.uee - net.uei,0).reshape((n_grid,n_grid))
+            resp_i[ori_idx,phs_idx,mult_idx] = np.fmax(net.uie - net.uii,0).reshape((n_grid,n_grid))
 
-opm_e,mr_e = af.calc_OPM_MR(resp_e.transpose(2,3,0,1))
-opm_i,mr_i = af.calc_OPM_MR(resp_i.transpose(2,3,0,1))
+opm_e,mr_e = af.calc_OPM_MR(resp_e.transpose(2,3,4,0,1))
+opm_i,mr_i = af.calc_OPM_MR(resp_i.transpose(2,3,4,0,1))
 
 res_dict['resp_e'] = resp_e
 res_dict['opm_e'] = opm_e
