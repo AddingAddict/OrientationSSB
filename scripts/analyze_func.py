@@ -8,7 +8,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
-def get_fps(A,axes=None,zero_mean=True):
+def get_fps(A,axes=None,zero_mean=True,calc_err=False):
     if axes is None:
         Nax = A.shape[-2]
     else:
@@ -18,14 +18,21 @@ def get_fps(A,axes=None,zero_mean=True):
     else:
         fft = np.abs(np.fft.fftshift(np.fft.fft2(A)))
     fps = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
+    if calc_err:
+        fps_err = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
 
     grid = np.arange(-Nax//2,Nax//2)
     x,y = np.meshgrid(grid,grid)
     bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(Nax//2*np.sqrt(2)))+0.5)
     for idx in range(0,int(np.ceil(Nax//2*np.sqrt(2)))):
         fps[idx] = np.mean(fft[bin_idxs == idx])
+        if calc_err:
+            fps_err[idx] = np.std(fft[bin_idxs == idx]) / np.sqrt(np.sum(bin_idxs == idx))
     
-    return fft,fps
+    if calc_err:
+        return fft,fps,fps_err
+    else:
+        return fft,fps
 
 def get_ori_sel(opm,calc_fft=True):
     N4 = opm.shape[0]
@@ -140,6 +147,30 @@ def calc_OPM(A):
     OS = np.where(A1==0,0,A1/A0)
     
     return OS * np.exp(1j*PO)
+
+def calc_OPM_MR(A):
+    noris = np.shape(A)[-2]
+    
+    # calculate phase DC and AC per orientation
+    F0,F1,_ = calc_dc_ac_comp(A)
+    
+    # calculate orientation DC, AC, and center from phase-averaged response
+    A0,A1,PO = calc_dc_ac_comp(F0)
+    
+    # calculate OS from DC and AC of phase-averaged response
+    OPM = np.where(A1==0,0,A1/A0) * np.exp(1j*PO)
+    
+    # infer index of preferred orientation
+    PO += np.pi/noris
+    PO = np.where(PO<0,2*np.pi + PO,PO)
+    PO = np.array(PO / (2*np.pi) * noris).astype(int)
+    
+    # calculate MR at preferred orientation
+    # pref_F0,pref_F1 = np.zeros(np.shape(A)[:-2]),np.zeros(np.shape(A)[:-2])
+    F0,F1 = np.take_along_axis(F0,PO[...,None],-1)[...,0],np.take_along_axis(F1,PO[...,None],-1)[...,0]
+    MR = np.where(F1==0,0,2*F1/F0)
+    
+    return OPM,MR
 
 def calc_OS_MR(A):
     noris = np.shape(A)[-2]
