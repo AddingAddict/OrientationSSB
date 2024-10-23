@@ -139,7 +139,7 @@ print('Calculating feedforward grating evoked responses took',time.process_time(
 # Compute firing rates to grating stimuli
 start = time.process_time()
 
-inh_mults = np.arange(2,11,2)/10
+inh_mults = np.arange(0,11,2)/10
 n_mult = len(inh_mults)
 
 resp_e = np.zeros((n_ori,n_phs,n_mult,n_grid,n_grid))
