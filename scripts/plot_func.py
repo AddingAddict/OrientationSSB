@@ -3,19 +3,19 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import ListedColormap,hsv_to_rgb
-from hsluv import hsluv_to_rgb
+from hsluv import hpluv_to_rgb
 
-def hsluv_to_rgb_vec(H,S,V):
+def hpluv_to_rgb_vec(H,S,V):
     RGB = np.zeros(H.shape + (3,))
     it = np.nditer(H,flags=['multi_index'])
     for _ in it:
         idx = it.multi_index
-        RGB[idx] = hsluv_to_rgb((360*H[idx],100*S[idx],100*V[idx]))
+        RGB[idx] = hpluv_to_rgb((360*H[idx],100*S[idx],100*V[idx]))
     return RGB
 
-hue_cmap = ListedColormap(hsluv_to_rgb_vec(np.linspace(0,1,100),np.ones(100),0.5*np.ones(100)))
-lit_cmap = ListedColormap(hsluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspace(0,1,100)))
-    
+hue_cmap = ListedColormap(hpluv_to_rgb_vec(np.linspace(0,1,100),np.ones(100),0.7*np.ones(100)))
+lit_cmap = ListedColormap(hpluv_to_rgb_vec(np.zeros(100),np.zeros(100),np.linspace(0,1,100)))
+
 def ytitle(ax,text,xloc=-0.25,**kwargs):
     ax.text(xloc,0.5,text,horizontalalignment='left',verticalalignment='center',
         rotation='vertical',transform=ax.transAxes,**kwargs)
@@ -122,10 +122,10 @@ def domcol(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
         alim[0] = -np.pi
         alim[1] = np.pi
     r = (r - rlim[0]) / (rlim[1] - rlim[0])
-    S = 0.05 + 0.9 * np.sin(0.5 * np.pi * r)
-    V = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
+    S = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
+    V = 0.05 + 0.9 * np.sin(0.5 * np.pi * r)
     # rgb = hsv_to_rgb(np.dstack((H,S,V)))
-    rgb = hsluv_to_rgb_vec(H,np.ones_like(H),1-r)#S,V)
+    rgb = hpluv_to_rgb_vec(H,np.ones_like(H),r)#S,V)
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.imshow(rgb,**kwargs)
@@ -152,7 +152,7 @@ def domcolbar(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
     S = 0.05 + 0.9 * np.cos(0.5 * np.pi * r)
     V = 0.05 + 0.9 * np.sin(0.5 * np.pi * r)
     # rgb = hsv_to_rgb(np.dstack((H,S,V)))
-    rgb = hsluv_to_rgb_vec(H,np.ones_like(H),r)#S,V)
+    rgb = hpluv_to_rgb_vec(H,np.ones_like(H),r)#S,V)
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     cbars = [None,None]
