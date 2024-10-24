@@ -298,7 +298,7 @@ L4_rate_rm = np.mean(np.mean(L4_rates,2),(0,1))
 L4_rate_rV = np.mean(np.var(L4_rates,2),(0,1))
 
 L23_rate_r0 = np.mean(L23_rate_binned,(0,1))
-L23_rate_opm,L23_rate_mr = af.calc_OPM_MR(L23_rate_binned.transpose(2,3,0,1))
+L23_rate_opm,L23_rate_mr = af.calc_OPM_MR(L23_rate_binned.transpose(2,3,4,0,1))
 L23_rate_os = np.abs(L23_rate_opm)
 L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
 L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
