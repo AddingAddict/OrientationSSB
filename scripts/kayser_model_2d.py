@@ -11,10 +11,12 @@ class Model:
         s_x: float=0.08, # feedforward arbor decay length
         s_e: float=0.08, # excitatory recurrent arbor decay length
         s_i: float=0.08, # inhibitory recurrent arbor decay length
+        s_s: float=0.00, # retinotopic scatter decay length
         cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
         flat_x: bool=True, # whether to use flat feedforward arbors
-        flat_e: bool=True, # whether to use flat excitatory recurrent arbors
-        flat_i: bool=True, # whether to use flat inhibitory recurrent arbors
+        flat_e: bool=False, # whether to use flat excitatory recurrent arbors
+        flat_i: bool=False, # whether to use flat inhibitory recurrent arbors
+        flat_s: bool=False, # whether to sample ret scat from uniform distribution
         gain_i: float=2.5, # gain of inhibitory cells
         hebb_wei: bool=False, # whether to use Hebbian learning for wei
         hebb_wii: bool=False, # whether to use Hebbian learning for wii
@@ -27,10 +29,30 @@ class Model:
         self.xs,self.ys = np.meshgrid(np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid),
                                       np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid))
         self.xs,self.ys = self.xs.flatten(),self.ys.flatten()
+        
+        # retinotopic scatter
+        if s_s < 1e-10:
+            self.ret_scat_xs = np.zeros_like(self.xs)
+            self.ret_scat_ys = np.zeros_like(self.ys)
+        else:
+            rng = np.random.default_rng(0)
+            if flat_s:
+                rads = s_s*np.sqrt(rng.uniform(0,1,size=self.xs.size))
+                thts = 2*np.pi*rng.uniform(0,1,size=self.xs.size)
+                self.ret_scat_xs = rads*np.cos(thts)
+                self.ret_scat_ys = rads*np.sin(thts)
+            else:
+                self.ret_scat_xs = rng.normal(0,s_s,size=self.xs.size)
+                self.ret_scat_ys = rng.normal(0,s_s,size=self.ys.size)
+        
         self.dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-self.xs[None,:]),
                                      1-np.abs(self.xs[:,None]-self.xs[None,:]))**2 +\
                              np.fmin(np.abs(self.ys[:,None]-self.ys[None,:]),
                                      1-np.abs(self.ys[:,None]-self.ys[None,:]))**2)
+        self.scat_dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-(self.xs+self.ret_scat_xs)[None,:]),
+                                     1-np.abs(self.xs[:,None]-(self.xs+self.ret_scat_xs)[None,:]))**2 +\
+                             np.fmin(np.abs(self.ys[:,None]-(self.ys+self.ret_scat_ys)[None,:]),
+                                     1-np.abs(self.ys[:,None]-(self.ys+self.ret_scat_ys)[None,:]))**2)
 
         # number of cells
         self.n_e = n_e*n_grid**2
@@ -41,7 +63,7 @@ class Model:
         if flat_x:
             self.ax = np.ones_like(self.dists)
         else:
-            self.ax = np.exp(-self.dists**2/(2*s_x**2))
+            self.ax = np.exp(-self.scat_dists**2/(2*s_x**2))
         self.ax = np.concatenate((self.ax,self.ax),axis=1)
         if flat_e:
             self.ae = np.ones_like(self.dists)
@@ -51,7 +73,7 @@ class Model:
             self.ai = np.ones_like(self.dists)
         else:
             self.ai = np.exp(-self.dists**2/(2*s_i**2))
-        self.mask_x = (self.dists <= cut_lim*s_x).astype(int)
+        self.mask_x = (self.scat_dists <= cut_lim*s_x).astype(int)
         self.mask_x = np.concatenate((self.mask_x,self.mask_x),axis=1)
         self.mask_e = (self.dists <= cut_lim*s_e).astype(int)
         self.mask_i = (self.dists <= cut_lim*s_i).astype(int)
