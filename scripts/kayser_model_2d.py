@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy import stats
 
 class Model:
     def __init__(
@@ -36,14 +37,14 @@ class Model:
             self.ret_scat_ys = np.zeros_like(self.ys)
         else:
             rng = np.random.default_rng(0)
+            thts = 2*np.pi*rng.uniform(0,1,size=self.xs.size)
             if flat_s:
-                rads = s_s*np.sqrt(rng.uniform(0,1,size=self.xs.size))
-                thts = 2*np.pi*rng.uniform(0,1,size=self.xs.size)
-                self.ret_scat_xs = rads*np.cos(thts)
-                self.ret_scat_ys = rads*np.sin(thts)
+                rads = s_s*np.sqrt(rng.uniform(0,cut_lim,size=self.xs.size))
             else:
-                self.ret_scat_xs = rng.normal(0,s_s,size=self.xs.size)
-                self.ret_scat_ys = rng.normal(0,s_s,size=self.ys.size)
+                ray = stats.rayleigh()
+                rads = s_s*ray.ppf(rng.uniform(size=self.xs.size)*ray.cdf(cut_lim))
+            self.ret_scat_xs = rads*np.cos(thts)
+            self.ret_scat_ys = rads*np.sin(thts)
         
         self.dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-self.xs[None,:]),
                                      1-np.abs(self.xs[:,None]-self.xs[None,:]))**2 +\
