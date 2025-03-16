@@ -64,8 +64,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_gi={:.1f}/'.format(
-        n_grid,n_e,n_i,s_x,s_e,s_i,gain_i)
+    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}/'.format(
+        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
