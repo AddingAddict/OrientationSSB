@@ -21,6 +21,7 @@ class Model:
         gain_i: float=2.5, # gain of inhibitory cells
         hebb_wei: bool=False, # whether to use Hebbian learning for wei
         hebb_wii: bool=False, # whether to use Hebbian learning for wii
+        prune: bool=False, # whether to prune weights
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -82,7 +83,7 @@ class Model:
         np.place(self.ae,self.mask_e==0,0)
         np.place(self.ai,self.mask_i==0,0)
         
-        self.n_x_in_arb = np.sum(self.ax,axis=1)[0]
+        self.n_x_in_arb = np.mean(np.sum(self.ax,axis=1),axis=0)
         self.n_e_in_arb = np.sum(self.ae,axis=1)[0]
         self.n_i_in_arb = np.sum(self.ai,axis=1)[0]
         print(self.n_x_in_arb,self.n_e_in_arb,self.n_i_in_arb)
@@ -103,15 +104,18 @@ class Model:
         print(self.wlgn_sum,self.w4e_sum,self.w4i_sum)
 
         # maximum allowed weights
-        self.max_wff = 32*self.wff_sum / self.n_x_in_arb
-        self.max_wee = 32*self.wee_sum / self.n_e_in_arb
-        self.max_wei = 32*self.wei_sum / self.n_i_in_arb
-        self.max_wie = 32*self.wie_sum / self.n_e_in_arb
-        self.max_wii = 32*self.wii_sum / self.n_i_in_arb
+        self.max_wff = 16*self.wff_sum / self.n_x_in_arb
+        self.max_wee = 16*self.wee_sum / self.n_e_in_arb
+        self.max_wei = 16*self.wei_sum / self.n_i_in_arb
+        self.max_wie = 16*self.wie_sum / self.n_e_in_arb
+        self.max_wii = 16*self.wii_sum / self.n_i_in_arb
         
         # whether to use Hebbian learning for wei and wii
         self.hebb_wei = hebb_wei
         self.hebb_wii = hebb_wii
+        
+        # whether to prune weights
+        self.prune = prune
 
         # RELU gains
         self.gain_e = 1.0
@@ -291,7 +295,7 @@ class Model:
                                                              np.fmax(self.ui - self.ui_avg,0)) -\
                                                     np.outer(np.fmax(self.ui - self.ui_avg,0),
                                                              np.fmax(self.ui - self.ui_avg,0)))
-        
+
     def sum_norm_dw(
         self,
         ):
@@ -351,6 +355,11 @@ class Model:
         self.wei += self.dwei
         self.wie += self.dwie
         self.wii += self.dwii
+        
+        if self.prune:
+            # implement pruning by amplifying larger weights
+            self.wex = self.wex**(1.01)
+            self.wix = self.wix**(1.01)
         
         # alternate clipping, presynaptic normalization, and postsynaptic normalization
         for _ in range(4):
