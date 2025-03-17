@@ -50,10 +50,10 @@ class Model:
                                      1-np.abs(self.xs[:,None]-self.xs[None,:]))**2 +\
                              np.fmin(np.abs(self.ys[:,None]-self.ys[None,:]),
                                      1-np.abs(self.ys[:,None]-self.ys[None,:]))**2)
-        self.scat_dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-(self.xs+self.ret_scat_xs)[None,:]),
-                                     1-np.abs(self.xs[:,None]-(self.xs+self.ret_scat_xs)[None,:]))**2 +\
-                             np.fmin(np.abs(self.ys[:,None]-(self.ys+self.ret_scat_ys)[None,:]),
-                                     1-np.abs(self.ys[:,None]-(self.ys+self.ret_scat_ys)[None,:]))**2)
+        self.scat_dists = np.sqrt(np.fmin(np.abs((self.xs+self.ret_scat_xs)[:,None]-self.xs[None,:]),
+                                     1-np.abs((self.xs+self.ret_scat_xs)[:,None]-self.xs[None,:]))**2 +\
+                             np.fmin(np.abs((self.ys+self.ret_scat_ys)[:,None]-self.ys[None,:]),
+                                     1-np.abs((self.ys+self.ret_scat_ys)[:,None]-self.ys[None,:]))**2)
 
         # number of cells
         self.n_e = n_e*n_grid**2
