@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy.special import erf
 from scipy import stats
 
 class Model:
@@ -358,8 +359,7 @@ class Model:
         
         if self.prune:
             # implement pruning by amplifying larger weights
-            self.wex = self.wex**(1.01)
-            self.wix = self.wix**(1.01)
+            self.wex *= 0.5+0.5*erf(100*(self.wex-self.max_wff/16)/self.max_wff)
         
         # alternate clipping, presynaptic normalization, and postsynaptic normalization
         for _ in range(4):
