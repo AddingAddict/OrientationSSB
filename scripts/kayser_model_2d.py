@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.integrate import solve_ivp
-from scipy.special import erf
 from scipy import stats
 
 class Model:
@@ -144,6 +143,9 @@ class Model:
             self.wei *= self.wei_sum / np.sum(self.wei,axis=1,keepdims=True)
             self.wie *= self.wie_sum / np.sum(self.wie,axis=1,keepdims=True)
             self.wii *= self.wii_sum / np.sum(self.wii,axis=1,keepdims=True)
+            
+            if self.prune:
+                self.prune_weights()
             
             # initialize learning rates
             self.wex_rate = 5e-6
@@ -346,6 +348,15 @@ class Model:
         if np.isnan(self.wii_rate):
             self.wii_rate = 1e-6
         
+    def prune_weights(
+        self,
+        max_prop_thresh: float=0.4,
+        ):
+        # implement pruning by setting small weights to zero
+        thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
+        self.wex *= np.heaviside(self.wex-thresh,0)
+        self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
+        
     # update weights with collected changes, then clip and normalize weights
     def update_weights(
         self,
@@ -358,8 +369,7 @@ class Model:
         self.wii += self.dwii
         
         if self.prune:
-            # implement pruning by amplifying larger weights
-            self.wex *= 0.5+0.5*erf(100*(self.wex-self.max_wff/16)/self.max_wff)
+            self.prune_weights()
         
         # alternate clipping, presynaptic normalization, and postsynaptic normalization
         for _ in range(4):
