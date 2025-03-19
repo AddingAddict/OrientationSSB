@@ -352,10 +352,14 @@ class Model:
         self,
         max_prop_thresh: float=0.4,
         ):
-        # implement pruning by setting small weights to zero
+        # implement pruning by setting halving small weights
         thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
-        self.wex *= np.heaviside(self.wex-thresh,0)
+        self.wex *= np.heaviside(self.wex,0)*(0.5+0.5*np.heaviside(self.wex-thresh,0))
         self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
+        
+        thresh = np.max(self.wix,axis=1,keepdims=True) * max_prop_thresh
+        self.wix *= np.heaviside(self.wix,0)*(0.5+0.5*np.heaviside(self.wix-thresh,0))
+        self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
         
     # update weights with collected changes, then clip and normalize weights
     def update_weights(
