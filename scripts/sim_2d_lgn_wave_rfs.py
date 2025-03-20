@@ -25,9 +25,10 @@ parser.add_argument('--s_e', '-se', help='excitatory recurrent arbor decay lengt
 parser.add_argument('--s_i', '-si', help='inhibitory recurrent arbor decay length',type=float, default=0.08)
 parser.add_argument('--s_s', '-ss', help='retinotopic scatter decay length',type=float, default=0.08)
 parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=float, default=2.0)
-parser.add_argument('--hebb_wei', '-hei', help='whether wei has Hebbian learning rule',type=int, default=0)
-parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
+# parser.add_argument('--hebb_wei', '-hei', help='whether wei has Hebbian learning rule',type=int, default=0)
+# parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
 parser.add_argument('--prune', '-p', help='whether to prune feedforward weights',type=int, default=0)
+parser.add_argument('--rec_plast' '-r', help='whether recurrent weights are plastic',type=int, default=0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
@@ -45,9 +46,10 @@ s_e = args['s_e']
 s_i = args['s_i']
 s_s = args['s_s']
 gain_i = args['gain_i']
-hebb_wei = int(args['hebb_wei']) > 0
-hebb_wii = int(args['hebb_wii']) > 0
+# hebb_wei = int(args['hebb_wei']) > 0
+# hebb_wii = int(args['hebb_wii']) > 0
 prune = int(args['prune']) > 0
+rec_plast = int(args['rec_plast']) > 0
 n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
 n_grid = int(args['n_grid'])
@@ -66,8 +68,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}/'.format(
-        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i)
+    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}/'.format(
+        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -92,7 +94,8 @@ def init_net(
 
     if n_iter==0: # starting a new simulation, must initialize the system
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
-                    s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,hebb_wei=hebb_wei,hebb_wii=hebb_wii, prune=prune,
+                    s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
+                    prune=prune,rec_plast=rec_plast,
                     rx_wave_start=lgn_spikes[15])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
@@ -100,7 +103,8 @@ def init_net(
             res_dict = pickle.load(handle)
             
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,
-                    s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,hebb_wei=hebb_wei,hebb_wii=hebb_wii, prune=prune,
+                    s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
+                    prune=prune,rec_plast=rec_plast,
                     init_dict=res_dict)
         
     return net
@@ -200,7 +204,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -hei {:d} -hii {:d} -p {:d}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
             seed,n_wave,n_stim,n_grid,
-            s_x,s_e,s_i,s_s,gain_i,hebb_wei,hebb_wii,prune))
+            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast))
