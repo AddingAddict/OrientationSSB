@@ -105,11 +105,11 @@ class Model:
         print(self.wlgn_sum,self.w4e_sum,self.w4i_sum)
 
         # maximum allowed weights
-        self.max_wff = 8*self.wff_sum / self.n_x_in_arb
-        self.max_wee = 8*self.wee_sum / self.n_e_in_arb
-        self.max_wei = 8*self.wei_sum / self.n_i_in_arb
-        self.max_wie = 8*self.wie_sum / self.n_e_in_arb
-        self.max_wii = 8*self.wii_sum / self.n_i_in_arb
+        self.max_wff = 6*self.wff_sum / self.n_x_in_arb
+        self.max_wee = 6*self.wee_sum / self.n_e_in_arb
+        self.max_wei = 6*self.wei_sum / self.n_i_in_arb
+        self.max_wie = 6*self.wie_sum / self.n_e_in_arb
+        self.max_wii = 6*self.wii_sum / self.n_i_in_arb
         
         # whether to use Hebbian learning for wei and wii
         self.hebb_wei = hebb_wei
