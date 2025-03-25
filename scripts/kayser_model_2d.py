@@ -15,8 +15,8 @@ class Model:
         s_s: float=0.00, # retinotopic scatter decay length
         cut_lim: float=1.5, # arbor cutoff distance in terms of decay lengths
         flat_x: bool=True, # whether to use flat feedforward arbors
-        flat_e: bool=False, # whether to use flat excitatory recurrent arbors
-        flat_i: bool=False, # whether to use flat inhibitory recurrent arbors
+        flat_e: bool=True, # whether to use flat excitatory recurrent arbors
+        flat_i: bool=True, # whether to use flat inhibitory recurrent arbors
         flat_s: bool=False, # whether to sample ret scat from uniform distribution
         gain_i: float=2.5, # gain of inhibitory cells
         hebb_wei: bool=False, # whether to use Hebbian learning for wei
@@ -357,7 +357,7 @@ class Model:
         
     def prune_weights(
         self,
-        max_prop_thresh: float=0.4,
+        max_prop_thresh: float=0.35,
         ):
         # implement pruning by setting halving small weights
         thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
