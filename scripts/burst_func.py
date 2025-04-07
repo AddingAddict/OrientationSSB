@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.stats import norm,bernoulli,poisson
-    
-unif_vec = np.linspace(0,1,1001)[1:-1]
+
+unif_vec = np.linspace(0,1,801)[1:]#1001)[1:-1]
+unif_vec -= 0.5*(unif_vec[1]-unif_vec[0])
 
 def bin_corr_bnds(
     prob_vec: np.ndarray,
@@ -121,6 +122,7 @@ def gen_corr_pois_vars(
     
     # calculate lower and upper bounds on Poisson correlations
     lo_corr,up_corr = pois_corr_bnds(expec_vec)
+    corr_mat = np.fmax(np.fmin(corr_mat,up_corr),lo_corr)
     
     # compute exponential fit coeffs for relationship between desired and actual correlations under NORTA
     # assuming rho_{pois} = a*[exp(b * rho_{norm}) - 1]

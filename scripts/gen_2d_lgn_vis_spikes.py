@@ -100,19 +100,19 @@ spike_rs = np.block([[rs*dist_corrs,ro*dist_corrs],
 np.fill_diagonal(spike_rs,1)
 spike_rs = spike_rs[None,:,:] * np.ones((len(ts),1,1))
 
-us = np.linspace(0,1,501)[1:-1]
-ns = np.zeros((len(us),2*n_grid**2))
+# us = np.linspace(0,1,501)[1:-1]
+# ns = np.zeros((len(us),2*n_grid**2))
 
-for idx,l in enumerate(spike_ls):
-    ns[:] = poisson.ppf(us[:,None],l[None,:])
-    ns[:] = zscore(ns,axis=0)
+# for idx,l in enumerate(spike_ls):
+#     ns[:] = poisson.ppf(us[:,None],l[None,:])
+#     ns[:] = zscore(ns,axis=0)
 
-    # lo_bnd = np.einsum('ijk,ijl->jkl',ns,ns[::-1,:,:]) / len(us)
-    # up_bnd = np.einsum('ijk,ijl->jkl',ns,ns) / len(us)
-    lo_bnd = ns.T@ns[::-1,:] / len(us)
-    up_bnd = ns.T@ns / len(us)
+#     # lo_bnd = np.einsum('ijk,ijl->jkl',ns,ns[::-1,:,:]) / len(us)
+#     # up_bnd = np.einsum('ijk,ijl->jkl',ns,ns) / len(us)
+#     lo_bnd = ns.T@ns[::-1,:] / len(us)
+#     up_bnd = ns.T@ns / len(us)
 
-    spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
+#     spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
