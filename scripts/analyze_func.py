@@ -139,7 +139,7 @@ def calc_dc_ac_comp(A,axis=-1):
     
     return A0,A1mod,A1phs
 
-def calc_OPM(A):    
+def calc_OPM(A):
     # calculate orientation DC, AC, and center from phase-averaged response
     A0,A1,PO = calc_dc_ac_comp(A)
     

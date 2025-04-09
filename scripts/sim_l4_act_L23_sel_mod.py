@@ -310,7 +310,7 @@ _,z_fps = af.get_fps(L23_rate_opm[0])
 z_hc,_ = af.calc_hypercol_size(z_fps,N)
 z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(L23_rate_opm[0],0.5*z_hc,1.5*z_hc))
 z_pwd = z_pwcnt/(N/z_hc)**2
-    
+
 Lam = z_hc
 npws,pwpts = z_pwcnt,z_pwpts
 

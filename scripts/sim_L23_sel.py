@@ -11,44 +11,51 @@ import time
 
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.stats import qmc
+from scipy.special import ive
 import matplotlib.pyplot as plt
 
 import util_func as uf
+import analyze_func as af
 
 import dev_ori_sel_RF
 from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
-parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
+parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=4)
+parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=5)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.1)
-parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
+parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--maxos', '-m', help='maximum input selectivity',type=float, default=1.0)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
+n_phs = int(args['n_phs'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
-ksel = args['ksel']
-lker = args['lker']
+dens = args['dens']
 grec = args['grec']
-maxos = args['maxos']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
 
-lker2 = lker**2
-
-# Define where to save results
 res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L23_sel_ksel={:.3f}_lker={:.3f}_grec={:.3f}_maxos={:.1f}/'.format(ksel,lker,grec,maxos)
+# Get L4 orientation map from previous simulation
+with open(res_dir + 'L4_act_L23_sel_mod_dens={:.4f}_grec={:.3f}/seed={:d}.pkl'.format(
+        dens,grec,seed), 'wb') as handle:
+    res_dict = pickle.load(handle)
+L4_rate_opm = res_dict['L4_rate_opm']
+rm = np.mean(res_dict['L4_rate_rm'])
+meanCV = np.mean(np.sqrt(res_dict['L4_rate_rV'])/res_dict['L4_rate_rm'])
+
+# Define where to save results
+res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}/'.format(
+    dens,grec)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -56,9 +63,11 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
-# Define parameters for L2/3 input from data
-avg_OS = 0.15
-avg_CV = 0.4
+# Define parameters for L2/3 input from databgnd_min = 0.05
+bgnd_min = 0.00
+bgnd_max = 0.3
+meanOS = 0.18
+maxOS = 0.6
 
 # Create heterogeneous recurrent connectivity
 config_name = "big_hetero"
@@ -74,108 +83,45 @@ start = time.process_time()
 
 H = 0.7
 try:
-    Wrec = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
+    WL23 = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
 except:
-    Wrec,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),Wrec)
+    WL23,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
+    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),WL23)
 
 print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
-# Define functions to calculate effect of clipping on orientation selectivity
-def clip_r0(OSs):
-    out = np.ones_like(OSs)
-    out[OSs > 0.5] = (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
-    
-def clip_r1(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
+# Define functions to model feedforward inputs with given orientation selectivity
+def elong_inp(ksig,ori):
+    return np.exp(-(ksig*np.sin(ori))**2/2) / ive(0,ksig**2/4)
 
-def clip_OS(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/\
-        (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))
-    return out
+def elong_os(ksig):
+    return ive(1,ksig**2/4) / ive(0,ksig**2/4)
 
-# Precalculate and interpolate clipping effect
-OSs = np.linspace(0.0,10000.0,20001)
+ksigs = np.linspace(0,2.5,251)
+oss = elong_os(ksigs)
 
-thy_clip_OSs = clip_OS(OSs)
-thy_clip_r0s = clip_r0(OSs)
-thy_clip_r1s = clip_r1(OSs)
+ksig_os_itp = interp1d(oss,ksigs,fill_value='extrapolate')
 
-clip_r0_itp = interp1d(OSs,thy_clip_r0s,fill_value='extrapolate')
-inv_r1_itp = interp1d(thy_clip_r1s,OSs,fill_value='extrapolate')
-inv_OS_itp = interp1d(thy_clip_OSs,OSs,fill_value='extrapolate')
+del ksigs,oss
 
-# Define function to create activity with desired orientation selectivity
-def gen_clip_act(ori,z):
-    etas = inv_OS_itp(np.abs(z))
-    return np.fmax(0,1 + 2*etas*np.real(np.exp(-1j*ori*2*np.pi/180) * z/np.abs(z))) / clip_r0_itp(etas)
+ksmap = ksig_os_itp(np.abs(L4_rate_opm))
 
 start = time.process_time()
-
-# Define function to build S&P OPM
-def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
-    rng = np.random.default_rng(seed)
-    
-    z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
-    z *= rng.gamma(shape=shape,scale=r1/shape,size=(N,N))
-    
-    return z
-
-snp_z = gen_sp_opm(avg_OS,ksel,seed)
-
-res_dict['snp_z'] = snp_z
-
-# Calculate distance from all pairs of grid points
-xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
-dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
-dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
-dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
-dys[dys > 0.5] = 1 - dys[dys > 0.5]
-ds2 = dxs**2 + dys**2
-ds = np.sqrt(ds2)
-
-# Smooth S&P OPM with Gaussian kernel
-if lker != 0.0:
-    gauss = np.exp(-0.5*ds2/lker2)
-else:
-    gauss = (ds2 == 0.0).astype(float)
-    
-z = np.einsum('ijkl,kl->ij',gauss,snp_z)
-
-# scale magnitude of z field until its mean selectivity matches data
-while np.abs(np.mean(np.fmin(maxos,clip_OS(np.abs(z)))) - avg_OS) > 1e-3:
-    z *= 1 - (np.mean(np.fmin(maxos,clip_OS(np.abs(z)))) - avg_OS)
-
-z *= np.fmin(maxos,clip_OS(np.abs(z))) / np.fmax(1e-12,np.abs(z))
-
-res_dict['z'] = z
-
-print('Creating input orientation map took',time.process_time() - start,'s\n')
 
 # Create inputs
 start = time.process_time()
 
-oris = np.repeat(np.arange(n_ori)/n_ori * 180,n_rpt)
-mean_inps = np.zeros((n_inp,N,N))
-inps = np.zeros((n_inp,2,N,N))
+pos = np.angle(L4_rate_opm)/2
+inp_oris = np.arange(n_ori)/n_ori * np.pi
+inps = np.zeros((n_ori,n_rpt,N,N))
 
 rng = np.random.default_rng(seed)
-for inp_idx in range(n_inp):
-    ori = oris[inp_idx]
-    mean_inps[inp_idx,:,:] = gen_clip_act(ori,z)
-    shape = 1/avg_CV**2
-    scale = mean_inps[inp_idx,:,:]/shape
-    # scale = avg_FF
-    # shape = mean_inps[inp_idx,:,:]/avg_FF
-    for pop_idx in range(2):
-        inps[inp_idx,pop_idx,:,:] = rng.gamma(shape=shape,scale=scale)
-
-# res_dict['mean_inps'] = mean_inps
-# res_dict['inps'] = inps
+for ori_idx,ori in enumerate(inp_oris):
+    mean_inp = rm * elong_inp(ksmap,ori-pos)
+    shape = 1/meanCV**2
+    scale = mean_inp/shape
+    for rpt_idx in range(n_rpt):
+        inps[ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
     
 print('Creating input patterns took',time.process_time() - start,'s\n')
 
@@ -187,159 +133,77 @@ def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
     arg = gamma_rec * np.dot(Wrec,y) + gamma_ff * inp_ff.flatten()
     return 1./tau*( -y + fio_rect(arg))
 
-def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
+def integrate(y0,inp,dt,Nt,Wrec,gamma_rec=1.02):
     y = y0
     for t_idx in range(Nt):
         out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,1.0)
         dy = out
         y = y + dt*dy
-    return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
+    if len(y)==N**2:
+        return y.reshape((N,N))
+    else:
+        return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
 
 # Integrate to get firing rates
-rates = np.zeros_like(inps)
+L23_rates = np.zeros((n_ori,n_rpt,2,N,N))
 
 start = time.process_time()
 
-for inp_idx in range(n_inp):
-    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1)),0.25,n_int,grec)
+for ori_idx,ori in enumerate(inp_oris):
+    for rpt_idx in range(n_rpt):
+        L23_inp = np.concatenate((inps[ori_idx,rpt_idx].flatten(),
+                                    inps[ori_idx,rpt_idx].flatten()))
+        L23_rates[ori_idx,rpt_idx] = integrate(np.ones(2*N**2),
+            L23_inp,0.25,n_int,WL23,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 if saverates:
-    res_dict['rates'] = rates
+    res_dict['inputs'] = inps
+    res_dict['rates'] = L23_rates
 
 # Calculate z_fields from inputs and rates
-ori_binned = oris.reshape(-1,n_rpt).mean(1)
-inp_binned = inps.reshape(-1,n_rpt,2,N,N).mean((1,2))
-rate_binned = rates.reshape(-1,n_rpt,2,N,N).mean(1)
-
-rate_r0 = np.mean(rate_binned,0)
-rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
-rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
-rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
-rate_rm = np.mean(np.mean(rates.reshape(-1,n_rpt,2,N,N),1),0)
-rate_rV = np.mean(np.var(rates.reshape(-1,n_rpt,2,N,N),1),0)
+inp_binned = inps.mean(1)
+L23_rate_binned = L23_rates.mean(1)
 
 inp_r0 = np.mean(inp_binned,0)
-inp_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
-inp_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
-inp_r1 = np.sqrt(inp_rs**2 + inp_rc**2)
-inp_rm = np.mean(np.mean(inps.reshape(-1,n_rpt,2,N,N),1),0)
-inp_rV = np.mean(np.var(inps.reshape(-1,n_rpt,2,N,N),1),0)
+inp_opm = af.calc_OPM(inp_binned.transpose(1,2,0))
+inp_os = np.abs(inp_opm)
+inp_po = np.angle(inp_opm)*180/(2*np.pi)
+inp_r1 = inp_os*inp_r0
+inp_rm = np.mean(np.mean(inps,1),0)
+inp_rV = np.mean(np.var(inps,1),0)
 
-rate_pref_ori = np.arctan2(rate_rs,rate_rc)*180/(2*np.pi)
-rate_pref_ori[rate_pref_ori > 90] -= 180
-rate_alt_pref_ori = ori_binned[rate_binned.argmax(0)]
-rate_alt_pref_ori[rate_alt_pref_ori > 90] -= 180
-rate_ori_sel = rate_r1/rate_r0
+L23_rate_r0 = np.mean(L23_rate_binned,0)
+L23_rate_opm = af.calc_OPM(L23_rate_binned.transpose(1,2,3,0))
+L23_rate_os = np.abs(L23_rate_opm)
+L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
+L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
+L23_rate_rm = np.mean(np.mean(L23_rates,1),0)
+L23_rate_rV = np.mean(np.var(L23_rates,1),0)
 
-inp_pref_ori = np.arctan2(inp_rs,inp_rc)*180/(2*np.pi)
-inp_pref_ori[inp_pref_ori > 90] -= 180
-inp_alt_pref_ori = ori_binned[inp_binned.argmax(0)]
-inp_alt_pref_ori[inp_alt_pref_ori > 90] -= 180
-inp_ori_sel = inp_r1/inp_r0
+# Calculate hypercolumn size and number of pinwheels
+_,z_fps = af.get_fps(L23_rate_opm[0])
+z_hc,_ = af.calc_hypercol_size(z_fps,N)
+z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(L23_rate_opm[0],0.5*z_hc,1.5*z_hc))
+z_pwd = z_pwcnt/(N/z_hc)**2
 
-rate_z = rate_ori_sel * np.exp(1j*rate_pref_ori*2*np.pi/180)
-inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
+Lam = z_hc
+npws,pwpts = z_pwcnt,z_pwpts
 
-# Calculate hypercolumn size
-z_unit = rate_z[0] / rate_ori_sel[0]
-z_fft = np.abs(np.fft.fftshift(np.fft.fft2(rate_z[0] - np.nanmean(rate_z[0]))))
-z_unit_fft = np.abs(np.fft.fftshift(np.fft.fft2(z_unit - np.nanmean(z_unit))))
-
-z_fps = np.zeros(N//2)
-z_unit_fps = np.zeros(N//2)
-
-grid = np.arange(-N//2,N//2)
-x,y = np.meshgrid(grid,grid)
-bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(N//2*np.sqrt(2)))+0.5)
-for idx in range(N//2):
-    z_fps[idx] = np.mean(z_fft[bin_idxs == idx])
-    z_unit_fps[idx] = np.mean(z_unit_fft[bin_idxs == idx])
-    
-freqs = np.arange(N//2)/N
-Lam = 1/freqs[np.argmax(z_fps)]
-
-# Calculate number of pinwheels
-def ccw(A,B,C):
-    return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
-
-def intersect(A,B,C,D):
-    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
-
-def cross(A,B):
-    return A[0]*B[1] - A[1]*B[0]
-
-def intersectpt(A,B,C,D):
-    qmp = [C[0]-A[0],C[1]-A[1]]
-    r = [B[0]-A[0],B[1]-A[1]]
-    s = [D[0]-C[0],D[1]-C[1]]
-    rxs = cross(r,s)
-    
-    t = cross(qmp,s)/rxs
-#     u = cross(qmp,r)/rxs
-    
-    return [A[0]+t*r[0],A[1]+t*r[1]]
-
-def calc_pinwheels(A):
-    rcont = plt.contour(np.real(A),levels=[0],colors="C0")
-    icont = plt.contour(np.imag(A),levels=[0],colors="C1")
-
-    rsegpts = []
-    for pts in rcont.allsegs[0]:
-        for i in range(len(pts)-1):
-            rsegpts.append([pts[i],pts[i+1]])
-    rsegpts = np.array(rsegpts)
-
-    isegpts = []
-    for pts in icont.allsegs[0]:
-        for i in range(len(pts)-1):
-            isegpts.append([pts[i],pts[i+1]])
-    isegpts = np.array(isegpts)
-    
-    pwcnt = 0
-    pwpts = []
-
-    for rsegpt in rsegpts:
-        for isegpt in isegpts:
-            if intersect(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]):
-                pwcnt += 1
-                pwpts.append(intersectpt(rsegpt[0],rsegpt[1],isegpt[0],isegpt[1]))
-    pwpts = np.array(pwpts)
-    
-    return pwcnt,pwpts
-
-npws,pwpts = calc_pinwheels(rate_z[0])
-
-res_dict['rate_r0'] = rate_r0
-res_dict['rate_r1'] = rate_r1
-res_dict['rate_rs'] = rate_rs
-res_dict['rate_rc'] = rate_rc
-res_dict['rate_rm'] = rate_rm
-res_dict['rate_rV'] = rate_rV
 res_dict['inp_r0'] = inp_r0
 res_dict['inp_r1'] = inp_r1
-res_dict['inp_rs'] = inp_rs
-res_dict['inp_rc'] = inp_rc
 res_dict['inp_rm'] = inp_rm
 res_dict['inp_rV'] = inp_rV
+res_dict['inp_opm'] = inp_opm
 
-res_dict['rate_z'] = rate_z
-res_dict['inp_z'] = inp_z
-
-res_dict['inp_OS'] = np.mean(inp_ori_sel)
-res_dict['E_rate_OS'] = np.mean(rate_ori_sel[0])
-res_dict['I_rate_OS'] = np.mean(rate_ori_sel[1])
-
-opm_mismatch = np.abs(inp_pref_ori - rate_pref_ori)
-opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
-
-res_dict['opm_mismatch'] = opm_mismatch
-res_dict['E_mismatch'] = np.mean(opm_mismatch[0])
-res_dict['I_mismatch'] = np.mean(opm_mismatch[1])
+res_dict['L23_rate_r0'] = L23_rate_r0
+res_dict['L23_rate_r1'] = L23_rate_r1
+res_dict['L23_rate_rm'] = L23_rate_rm
+res_dict['L23_rate_rV'] = L23_rate_rV
+res_dict['L23_rate_opm'] = L23_rate_opm
 
 res_dict['z_fps'] = z_fps
-res_dict['z_unit_fps'] = z_unit_fps
 res_dict['Lam'] = Lam
 res_dict['npws'] = npws
 res_dict['pwpts'] = pwpts

@@ -30,7 +30,7 @@ bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
 rm = 10 # Hz
-rb = 1 # Hz
+rb = 0.5 # Hz
 dt = 0.1 # s
 ibi = 3 # s
 dur = 1/(2*n_stim) # s
@@ -60,39 +60,59 @@ oris = rng.uniform(0,2*np.pi,n_vis)
 start_poss = rng.uniform(0,1,(n_vis,n_stim,2))
 leading_on = rng.choice([1,-1],(n_vis,n_stim))
 
+pass_times = np.zeros((n_vis,n_stim,n_grid**2))
+
+for idx,ori,pos in zip(range(n_vis),oris,start_poss):
+    for sidx in range(n_stim):
+        bar_to_box = bf.gen_mov_bar(pos[sidx],ori,bar_len,bar_len)
+        bar_pos = bar_to_box(ss,ts)
+        pass_times[idx,sidx] = bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res)
+
+burst_times = np.zeros((n_vis,n_stim,2*n_grid**2))
+
+for sidx in range(n_stim):
+    burst_times[:,sidx,:n_grid**2] = ibi*(1/3 - 1/(12*n_stim) + sidx/(3*n_stim) +\
+        1/(6*n_stim)*pass_times[:,sidx,:] - \
+        1/(12*n_stim)*leading_on[:,sidx,None] + np.arange(n_vis)[:,None])
+    burst_times[:,sidx,n_grid**2:] = ibi*(1/3 - 1/(12*n_stim) + sidx/(3*n_stim) +\
+        1/(6*n_stim)*pass_times[:,sidx,:] + \
+        1/(12*n_stim)*leading_on[:,sidx,None] + np.arange(n_vis)[:,None])
+    
+print('Generating burst times took',time.process_time() - start,'s\n')
+
+start = time.process_time()
+
+ts = np.linspace(0,ibi*n_vis,int(np.round(ibi*n_vis/dt))+1)
+
 spike_ls = np.zeros((len(ts),2*n_grid**2))
 spike_ls += rb * dt
 
 for widx in range(n_vis):
-	for sidx in range(n_stim):
-		for tidx in range(int(dur/dt)+1):
-			time_idx = int(ibi/dt)*widx + int((ibi-1)/2/dt) + int(dur/dt)*sidx + tidx
-			print(time_idx)
-			edge_fact = 0.5 if tidx==0 or tidx==int(dur/dt) else 1
-			vel = bar_len * np.array([np.cos(oris[widx]),np.sin(oris[widx])])
-			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)+0.25*leading_on[widx,sidx])*vel,
-				oris[widx],bar_len,bar_len)
-			bar_pos = bar_to_box(ss,ts)
-			n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)-0.25*leading_on[widx,sidx])*vel,
-				oris[widx],bar_len,bar_len)
-			bar_pos = bar_to_box(ss,ts)
-			f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-			for cidx in range(n_grid**2):
-				if np.isnan(n_pass_times[cidx]):
-					continue
-				spike_ls[time_idx,cidx] += edge_fact*(rm-rb)*\
-                    np.exp(-(np.abs(n_pass_times[cidx])/(0.3))**3) * dt
-				spike_ls[time_idx,n_grid**2+cidx] -= 0.5*edge_fact*(rm-rb)*\
-                    np.exp(-(np.abs(n_pass_times[cidx])/(0.3))**3) * dt
-			for cidx in range(n_grid**2):
-				if np.isnan(f_pass_times[cidx]):
-					continue
-				spike_ls[time_idx,n_grid**2+cidx] += edge_fact*(rm-rb)*\
-                    np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
-				spike_ls[time_idx,cidx] -= 0.5*edge_fact*(rm-rb)*\
-                    np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
+    for cidx in range(2*n_grid**2):
+        for sidx in range(n_stim):
+            if np.isnan(burst_times[widx,sidx,cidx]):
+                continue
+            spike_ls[:,cidx] += (rm-rb)*np.exp(-(np.abs(ts-burst_times[widx,sidx,cidx])/(0.5*dur))**2) * dt
 spike_ls = np.fmax(1e-5,spike_ls)
+
+spike_rs = np.block([[rs*dist_corrs,ro*dist_corrs],
+                     [ro*dist_corrs,rs*dist_corrs]])
+np.fill_diagonal(spike_rs,1)
+spike_rs = spike_rs[None,:,:] * np.ones((len(ts),1,1))
+
+# us = np.linspace(0,1,501)[1:-1]
+# ns = np.zeros((len(us),2*n_grid**2))
+
+# for idx,l in enumerate(spike_ls):
+#     ns[:] = poisson.ppf(us[:,None],l[None,:])
+#     ns[:] = zscore(ns,axis=0)
+
+#     # lo_bnd = np.einsum('ijk,ijl->jkl',ns,ns[::-1,:,:]) / len(us)
+#     # up_bnd = np.einsum('ijk,ijl->jkl',ns,ns) / len(us)
+#     lo_bnd = ns.T@ns[::-1,:] / len(us)
+#     up_bnd = ns.T@ns / len(us)
+
+#     spike_rs[idx] = np.fmax(np.fmin(spike_rs[idx],up_bnd),lo_bnd)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
@@ -100,9 +120,7 @@ start = time.process_time()
 
 spikes = np.zeros((len(ts),2*n_grid**2),np.ushort)
 
-for idx,l in zip(range(len(ts)),spike_ls):
-    r = np.block([[rs*dist_corrs,ro*dist_corrs],
-                  [ro*dist_corrs,rs*dist_corrs]])
+for idx,l,r in zip(range(len(ts)),spike_ls,spike_rs):
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]
     
 print('Generating spike counts took',time.process_time() - start,'s\n')
@@ -120,6 +138,7 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
+res_dict['burst_times'] = burst_times
 # res_dict['spike_ls'] = spike_ls
 # res_dict['spike_rs'] = spike_rs
 res_dict['spikes'] = spikes
