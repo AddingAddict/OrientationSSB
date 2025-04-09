@@ -28,10 +28,9 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps',type=in
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
+parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=True)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
-n_phs = int(args['n_phs'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
@@ -47,7 +46,7 @@ if not os.path.exists(res_dir):
 
 # Get L4 orientation map from previous simulation
 with open(res_dir + 'L4_act_L23_sel_mod_dens={:.4f}_grec={:.3f}/seed={:d}.pkl'.format(
-        dens,grec,seed), 'wb') as handle:
+        dens,1.05,seed), 'rb') as handle:
     res_dict = pickle.load(handle)
 L4_rate_opm = res_dict['L4_rate_opm']
 rm = np.mean(res_dict['L4_rate_rm'])

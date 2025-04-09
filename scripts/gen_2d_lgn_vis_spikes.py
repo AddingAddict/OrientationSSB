@@ -92,7 +92,7 @@ for widx in range(n_vis):
                     np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
 				spike_ls[time_idx,cidx] -= 0.5*edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
-spike_ls = np.fmax(1e-5,spike_ls)
+spike_ls = np.fmax(1e-2,spike_ls)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
