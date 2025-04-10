@@ -29,8 +29,8 @@ n_bar = 2*n_grid
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
-rm = 10 # Hz
-rb = 1 # Hz
+rm = 8 # Hz
+rb = 2 # Hz
 dt = 0.1 # s
 ibi = 3 # s
 dur = 1/(2*n_stim) # s
@@ -60,14 +60,13 @@ oris = rng.uniform(0,2*np.pi,n_vis)
 start_poss = rng.uniform(0,1,(n_vis,n_stim,2))
 leading_on = rng.choice([1,-1],(n_vis,n_stim))
 
-spike_ls = np.zeros((len(ts),2*n_grid**2))
+spike_ls = np.zeros((int(np.round(ibi*n_vis/dt)),2*n_grid**2))
 spike_ls += rb * dt
 
 for widx in range(n_vis):
 	for sidx in range(n_stim):
 		for tidx in range(int(dur/dt)+1):
 			time_idx = int(ibi/dt)*widx + int((ibi-1)/2/dt) + int(dur/dt)*sidx + tidx
-			print(time_idx)
 			edge_fact = 0.5 if tidx==0 or tidx==int(dur/dt) else 1
 			vel = bar_len * np.array([np.cos(oris[widx]),np.sin(oris[widx])])
 			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)+0.25*leading_on[widx,sidx])*vel,
