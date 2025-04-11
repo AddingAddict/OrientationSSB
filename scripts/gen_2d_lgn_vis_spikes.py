@@ -29,8 +29,8 @@ n_bar = 2*n_grid
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
-rm = 8 # Hz
-rb = 2 # Hz
+rm = 36 # Hz
+rb = 6 # Hz
 dt = 0.1 # s
 ibi = 3 # s
 dur = 1/(2*n_stim) # s
@@ -38,7 +38,7 @@ dur = 1/(2*n_stim) # s
 rs = 0
 ro = -1
 
-corr_len = 0.05
+corr_len = 0.5
 
 rng = np.random.default_rng(seed)
 
@@ -91,13 +91,13 @@ for widx in range(n_vis):
                     np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
 				spike_ls[time_idx,cidx] -= 0.5*edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(0.3))**3) * dt
-spike_ls = np.fmax(1e-2,spike_ls)
+spike_ls = np.fmax(1*dt,spike_ls)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 
 start = time.process_time()
 
-spikes = np.zeros((len(ts),2*n_grid**2),np.ushort)
+spikes = np.zeros((int(np.round(ibi*n_vis/dt)),2*n_grid**2),np.ushort)
 
 for idx,l in zip(range(len(ts)),spike_ls):
     r = np.block([[rs*dist_corrs,ro*dist_corrs],
