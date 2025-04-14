@@ -22,7 +22,8 @@ class Model:
         hebb_wei: bool=False, # whether to use Hebbian learning for wei
         hebb_wii: bool=False, # whether to use Hebbian learning for wii
         prune: bool=False, # whether to prune weights
-        rec_plast: bool=True, # whether recurrent weights are plastic
+        rec_e_plast: bool=True, # whether recurrent weights are plastic
+        rec_i_plast: bool=True, # whether recurrent weights are plastic
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -119,7 +120,8 @@ class Model:
         self.prune = prune
         
         # whether recurrent weights are plastic
-        self.rec_plast = rec_plast
+        self.rec_e_plast = rec_e_plast
+        self.rec_i_plast = rec_i_plast
 
         # RELU gains
         self.gain_e = 1.0
@@ -140,6 +142,14 @@ class Model:
             self.wei = rng.uniform(0.2,0.8,size=(self.n_e,self.n_i)) * self.ai
             self.wie = rng.uniform(0.2,0.8,size=(self.n_i,self.n_e)) * self.ae
             self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i)) * self.ai
+            
+            # randomly choose some L4 cells to be more on/off dominated
+            on_dom = rng.choose([1,-1],size=(self.n_e,))
+            self.wex[:,:self.n_lng//2] *= 1+0.2*on_dom[:,None]
+            self.wex[:,self.n_lng//2:] *= 1-0.2*on_dom[:,None]
+            on_dom = rng.choose([1,-1],size=(self.n_i,))
+            self.wix[:,:self.n_lng//2] *= 1+0.2*on_dom[:,None]
+            self.wix[:,self.n_lng//2:] *= 1-0.2*on_dom[:,None]
             
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
@@ -286,9 +296,10 @@ class Model:
         
         self.dwex += self.ax * self.wex_rate * np.outer(self.ue - self.ue_avg,rx - self.rx_avg)
         self.dwix += self.ax * self.wix_rate * np.outer(self.ui - self.ui_avg,rx - self.rx_avg)
-        if self.rec_plast:
+        if self.rec_e_plast:
             self.dwee += self.ae * self.wee_rate * np.outer(self.ue - self.ue_avg,self.ue - self.ue_avg)
             self.dwie += self.ae * self.wie_rate * np.outer(self.ui - self.ui_avg,self.ue - self.ue_avg)
+        if self.rec_i_plast:
             if self.hebb_wei:
                 self.dwei += self.ai * self.wei_rate * np.outer(self.ue - self.ue_avg,self.ui - self.ui_avg)
             else:
@@ -323,10 +334,11 @@ class Model:
         ):
         self.wex_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_x==1,self.dwex**2)))
         self.wix_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_x==1,self.dwix**2)))
-        if self.rec_plast:
+        if self.rec_e_plast:
             self.wee_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_e==1,self.dwee**2)))
-            self.wei_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_i==1,self.dwei**2)))
             self.wie_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_e==1,self.dwie**2)))
+        if self.rec_i_plast:
+            self.wei_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_i==1,self.dwei**2)))
             self.wii_rate *= self.targ_dw_rms / np.sqrt(np.mean(np.extract(self.mask_i==1,self.dwii**2)))
         # self.wex_rate = self.targ_dw_rms / np.sqrt(np.mean(self.dwex**2))
         # self.wix_rate = self.targ_dw_rms / np.sqrt(np.mean(self.dwix**2))
@@ -345,27 +357,28 @@ class Model:
             self.wex_rate = 1e-6
         if np.isnan(self.wix_rate):
             self.wix_rate = 1e-6
-        if self.rec_plast:
+        if self.rec_e_plast:
             if np.isnan(self.wee_rate):
                 self.wee_rate = 1e-6
-            if np.isnan(self.wei_rate):
-                self.wei_rate = 1e-6
             if np.isnan(self.wie_rate):
                 self.wie_rate = 1e-6
+        if self.rec_i_plast:
+            if np.isnan(self.wei_rate):
+                self.wei_rate = 1e-6
             if np.isnan(self.wii_rate):
                 self.wii_rate = 1e-6
         
     def prune_weights(
         self,
-        max_prop_thresh: float=0.35,
+        max_prop_thresh: float=0.33,
         ):
         # implement pruning by shrinking small weights
         thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
-        self.wex *= np.heaviside(self.wex,0)*(0.8+0.2*np.heaviside(self.wex-thresh,0))
+        self.wex *= np.heaviside(self.wex,0)*(0.99+0.01*np.heaviside(self.wex-thresh,0))
         self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
         
         thresh = np.max(self.wix,axis=1,keepdims=True) * max_prop_thresh
-        self.wix *= np.heaviside(self.wix,0)*(0.8+0.2*np.heaviside(self.wix-thresh,0))
+        self.wix *= np.heaviside(self.wix,0)*(0.99+0.01*np.heaviside(self.wix-thresh,0))
         self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
         
     # update weights with collected changes, then clip and normalize weights
@@ -374,10 +387,11 @@ class Model:
         ):
         self.wex += self.dwex
         self.wix += self.dwix
-        if self.rec_plast:
+        if self.rec_e_plast:
             self.wee += self.dwee
-            self.wei += self.dwei
             self.wie += self.dwie
+        if self.rec_i_plast:
+            self.wei += self.dwei
             self.wii += self.dwii
         
         if self.prune:
@@ -388,20 +402,22 @@ class Model:
             # clip weights
             np.clip(self.wex,1e-10,self.max_wff*self.ax,out=self.wex)
             np.clip(self.wix,1e-10,self.max_wff*self.ax,out=self.wix)
-            if self.rec_plast:
+            if self.rec_e_plast:
                 np.clip(self.wee,1e-10,self.max_wee*self.ae,out=self.wee)
-                np.clip(self.wei,1e-10,self.max_wei*self.ai,out=self.wei)
                 np.clip(self.wie,1e-10,self.max_wie*self.ae,out=self.wie)
+            if self.rec_i_plast:
+                np.clip(self.wei,1e-10,self.max_wei*self.ai,out=self.wei)
                 np.clip(self.wii,1e-10,self.max_wii*self.ai,out=self.wii)
             
             # presynaptic normalization
             x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
             self.wex *= self.wlgn_sum / x_sum
             self.wix *= self.wlgn_sum / x_sum
-            if self.rec_plast:
+            if self.rec_e_plast:
                 e_sum = np.sum(self.wee,axis=0,keepdims=True) + np.sum(self.wie,axis=0,keepdims=True)
                 self.wee *= self.w4e_sum / e_sum
                 self.wie *= self.w4e_sum / e_sum
+            if self.rec_i_plast:
                 i_sum = np.sum(self.wei,axis=0,keepdims=True) + np.sum(self.wii,axis=0,keepdims=True)
                 self.wei *= self.w4i_sum / i_sum
                 self.wii *= self.w4i_sum / i_sum
@@ -409,17 +425,19 @@ class Model:
             # clip weights
             np.clip(self.wex,1e-10,self.max_wff*self.ax,out=self.wex)
             np.clip(self.wix,1e-10,self.max_wff*self.ax,out=self.wix)
-            if self.rec_plast:
+            if self.rec_e_plast:
                 np.clip(self.wee,1e-10,self.max_wee*self.ae,out=self.wee)
-                np.clip(self.wei,1e-10,self.max_wei*self.ai,out=self.wei)
                 np.clip(self.wie,1e-10,self.max_wie*self.ae,out=self.wie)
+            if self.rec_i_plast:
+                np.clip(self.wei,1e-10,self.max_wei*self.ai,out=self.wei)
                 np.clip(self.wii,1e-10,self.max_wii*self.ai,out=self.wii)
             
             # postsynaptic normalization
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
-            if self.rec_plast:
+            if self.rec_e_plast:
                 self.wee *= self.wee_sum / np.sum(self.wee,axis=1,keepdims=True)
-                self.wei *= self.wei_sum / np.sum(self.wei,axis=1,keepdims=True)
                 self.wie *= self.wie_sum / np.sum(self.wie,axis=1,keepdims=True)
+            if self.rec_i_plast:
+                self.wei *= self.wei_sum / np.sum(self.wei,axis=1,keepdims=True)
                 self.wii *= self.wii_sum / np.sum(self.wii,axis=1,keepdims=True)

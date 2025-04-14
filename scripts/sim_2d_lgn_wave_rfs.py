@@ -95,7 +95,7 @@ def init_net(
     if n_iter==0: # starting a new simulation, must initialize the system
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_plast=rec_plast,
+                    prune=prune,rec_e_plast=rec_plast,
                     rx_wave_start=lgn_spikes[15])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
@@ -104,7 +104,7 @@ def init_net(
             
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_plast=rec_plast,
+                    prune=prune,rec_e_plast=rec_plast,
                     init_dict=res_dict)
         
     return net
