@@ -99,7 +99,7 @@ start = time.process_time()
 
 spikes = np.zeros((int(np.round(ibi*n_vis/dt)),2*n_grid**2),np.ushort)
 
-for idx,l in zip(range(len(ts)),spike_ls):
+for idx,l in zip(int(np.round(ibi*n_vis/dt)),spike_ls):
     r = np.block([[rs*dist_corrs,ro*dist_corrs],
                   [ro*dist_corrs,rs*dist_corrs]])
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]
