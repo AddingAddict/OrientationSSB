@@ -92,7 +92,7 @@ class Model:
         print(np.sum(self.mask_x,axis=1)[0],np.sum(self.mask_e,axis=1)[0],np.sum(self.mask_e,axis=1)[0])
         
         # postsynaptic weight normalization
-        self.wff_sum = 1.0
+        self.wff_sum = 0.3#1.0
         self.wee_sum = 0.125
         self.wie_sum = 0.5
         self.wei_sum = 2.25
@@ -358,14 +358,14 @@ class Model:
         if np.isnan(self.wix_rate):
             self.wix_rate = 1e-6
         if self.rec_e_plast:
-            if np.isnan(self.wee_rate):
+            if np.isnan(self.wee_rate) or np.isinf(self.wee_rate):
                 self.wee_rate = 1e-6
-            if np.isnan(self.wie_rate):
+            if np.isnan(self.wie_rate) or np.isinf(self.wie_rate):
                 self.wie_rate = 1e-6
         if self.rec_i_plast:
-            if np.isnan(self.wei_rate):
+            if np.isnan(self.wei_rate) or np.isinf(self.wei_rate):
                 self.wei_rate = 1e-6
-            if np.isnan(self.wii_rate):
+            if np.isnan(self.wii_rate) or np.isinf(self.wii_rate):
                 self.wii_rate = 1e-6
         
     def prune_weights(

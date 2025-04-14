@@ -127,10 +127,10 @@ def run_iter(
     print(n_lgn,'LGN cells')
 
     start = time.process_time()
-    for idx in range(n_stim-1):
+    for idx in range(n_stim):
         rx = lgn_spikes[idx]
         if n_iter<10:
-            inh_mult = 0.1 + 0.09*n_iter + 0.09*idx/(n_stim-1)
+            inh_mult = 0.1 + 0.09*n_iter + 0.09*idx/n_stim
         else:
             inh_mult = 1.0
         

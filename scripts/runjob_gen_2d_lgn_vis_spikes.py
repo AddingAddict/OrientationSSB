@@ -26,6 +26,7 @@ def runjobs():
     parser.add_argument('--n_vis', '-nw', help='number of geniculate vis stims',type=int, default=60)
     parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
+    parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=int, default=1)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=100)
     
     args2 = parser.parse_args()
@@ -35,6 +36,7 @@ def runjobs():
     n_vis = int(args['n_vis'])
     n_stim = int(args['n_stim'])
     n_grid = int(args['n_grid'])
+    n_shrink = int(args['n_shrink'])
     gb = int(args['gb'])
 
     
@@ -95,11 +97,11 @@ def runjobs():
         #--------------------------------------------------------------------------
         # Make SBTACH
         inpath = currwd + "/gen_2d_lgn_vis_spikes.py"
-        c1 = "{:s} -s {:d} -nw {:d} -ns {:d} -ng {:d}".format(
-            inpath,seed,n_vis,n_stim,n_grid)
+        c1 = "{:s} -s {:d} -nw {:d} -ns {:d} -ng {:d} -nh {:d}".format(
+            inpath,seed,n_vis,n_stim,n_grid,n_shrink)
         
-        jobname="{:s}_nw={:d}_ns={:d}_ng={:d}_seed={:d}".format(
-            'gen_2d_lgn_vis_spikes',n_vis,n_stim,n_grid,seed)
+        jobname="{:s}_nw={:d}_ns={:d}_ng={:d}_nh={:d}_seed={:d}".format(
+            'gen_2d_lgn_vis_spikes',n_vis,n_stim,n_grid,n_shrink,seed)
         
         if not args2.test:
             jobnameDir=os.path.join(ofilesdir, jobname)
