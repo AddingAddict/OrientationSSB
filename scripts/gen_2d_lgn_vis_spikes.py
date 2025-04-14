@@ -17,17 +17,17 @@ import burst_func as bf
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_vis', '-nw', help='number of geniculate viss',type=int, default=60)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
-parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=int, default=1)
+parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_vis = int(args['n_vis'])
 n_stim = int(args['n_stim'])
-n_shrink = int(args['n_shrink'])
+n_shrink = args['n_shrink']
 n_grid = int(args['n_grid'])
 seed = int(args['seed'])
 
-n_bar = 2*n_grid
+n_bar = int(np.round(2*n_grid*n_shrink))
 bar_len = 0.99/np.sqrt(2) / n_shrink
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
@@ -72,7 +72,7 @@ for widx in range(n_vis):
 	for sidx in range(n_stim):
 		for tidx in range(int(np.round(dur/dt))+1):
 			time_idx = int(np.round(ibi/dt))*widx + int(np.round((ibi-1)/2/dt)) + int(np.round(dur/dt))*sidx + tidx - 1
-			edge_fact = 0.5 if tidx==0 or tidx==int(dur/dt) else 1
+			edge_fact = 0.5 if tidx==0 or tidx==int(np.round(dur/dt)) else 1
 			vel = bar_len * np.array([np.cos(oris[widx]),np.sin(oris[widx])])
 			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)+offset*leading_on[widx,sidx])*vel,
 				oris[widx],bar_len,bar_len)
@@ -116,7 +116,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_nh={:d}_ng={:d}/'.format(n_vis,n_stim,n_shrink,n_grid)
+res_dir = res_dir + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(n_vis,n_stim,n_shrink,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 

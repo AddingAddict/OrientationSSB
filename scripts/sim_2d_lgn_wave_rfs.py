@@ -31,7 +31,7 @@ parser.add_argument('--prune', '-p', help='whether to prune feedforward weights'
 parser.add_argument('--rec_plast', '-r', help='whether recurrent weights are plastic',type=int, default=0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
-parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=int, default=1)
+parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--test', '-t', help='test?',type=int, default=0)
 args = vars(parser.parse_args())
@@ -53,7 +53,7 @@ prune = int(args['prune']) > 0
 rec_plast = int(args['rec_plast']) > 0
 n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
-n_shrink = int(args['n_shrink'])
+n_shrink = args['n_shrink']
 n_grid = int(args['n_grid'])
 test = int(args['test']) > 0
 
@@ -76,7 +76,7 @@ if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 # Define where geniculate wave spikes are saved
-lgn_dir = './../results/' + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_nh={:d}_ng={:d}/'.format(n_wave,n_stim,n_shrink,n_grid)
+lgn_dir = './../results/' + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(n_wave,n_stim,n_shrink,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
     
@@ -98,7 +98,7 @@ def init_net(
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
                     prune=prune,rec_e_plast=rec_plast,
-                    rx_wave_start=lgn_spikes[15])#lgn_spikes[26])
+                    rx_wave_start=lgn_spikes[13])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
         with open(res_dir + 'seed={:d}_iter={:d}.pkl'.format(seed,n_iter-1), 'rb') as handle:
@@ -206,7 +206,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
             seed,n_wave,n_stim,n_shrink,n_grid,
             s_x,s_e,s_i,s_s,gain_i,prune,rec_plast))
