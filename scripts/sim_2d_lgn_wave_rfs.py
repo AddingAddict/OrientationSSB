@@ -31,6 +31,7 @@ parser.add_argument('--prune', '-p', help='whether to prune feedforward weights'
 parser.add_argument('--rec_plast', '-r', help='whether recurrent weights are plastic',type=int, default=0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)#20)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
+parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=int, default=1)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
 parser.add_argument('--test', '-t', help='test?',type=int, default=0)
 args = vars(parser.parse_args())
@@ -52,10 +53,11 @@ prune = int(args['prune']) > 0
 rec_plast = int(args['rec_plast']) > 0
 n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
+n_shrink = int(args['n_shrink'])
 n_grid = int(args['n_grid'])
 test = int(args['test']) > 0
 
-n_batch = 30#26 # number of batches to collect weight changes before adjusting weights
+n_batch = 36#26 # number of batches to collect weight changes before adjusting weights
 dt_stim = 0.1#0.25 # simulation time between stimuli
 
 max_spike_file = 50 # total number of lgn spike count files
@@ -74,7 +76,7 @@ if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 # Define where geniculate wave spikes are saved
-lgn_dir = './../results/' + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_ng={:d}/'.format(n_wave,n_stim,n_grid)
+lgn_dir = './../results/' + '2d_lgn_vis_spikes_nw={:d}_ns={:d}_nh={:d}_ng={:d}/'.format(n_wave,n_stim,n_shrink,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
     
@@ -123,14 +125,14 @@ def run_iter(
         lgn_dict = pickle.load(handle)
     lgn_spikes = lgn_dict['spikes']
     n_lgn = lgn_spikes.shape[-1]
-    n_stim = lgn_spikes.shape[0]
+    n_frame = lgn_spikes.shape[0]
     print(n_lgn,'LGN cells')
 
     start = time.process_time()
-    for idx in range(n_stim):
+    for idx in range(n_frame):
         rx = lgn_spikes[idx]
         if n_iter<10:
-            inh_mult = 0.1 + 0.09*n_iter + 0.09*idx/n_stim
+            inh_mult = 0.1 + 0.09*n_iter + 0.09*idx/n_frame
         else:
             inh_mult = 1.0
         
@@ -204,7 +206,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:d} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
-            seed,n_wave,n_stim,n_grid,
+            seed,n_wave,n_stim,n_shrink,n_grid,
             s_x,s_e,s_i,s_s,gain_i,prune,rec_plast))
