@@ -144,7 +144,7 @@ def integrate(y0,inp,dt,Nt,Wrec,gamma_rec=1.02):
         return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
 
 # Integrate to get firing rates
-L23_rates = np.zeros((n_ori,n_rpt,2,N,N))
+L23_rates = np.zeros((n_ori,n_rpt,2,N,N,n_int//100))
 
 start = time.process_time()
 
@@ -152,8 +152,11 @@ for ori_idx,ori in enumerate(inp_oris):
     for rpt_idx in range(n_rpt):
         L23_inp = np.concatenate((inps[ori_idx,rpt_idx].flatten(),
                                     inps[ori_idx,rpt_idx].flatten()))
-        L23_rates[ori_idx,rpt_idx] = integrate(np.ones(2*N**2),
-            L23_inp,0.25,n_int,WL23,grec)
+        L23_rates[ori_idx,rpt_idx,0] = integrate(np.ones(2*N**2),
+            L23_inp,0.25,100,WL23,grec)
+        for i in range(1,n_int//100):
+            L23_rates[ori_idx,rpt_idx,i] = integrate(L23_rates[ori_idx,rpt_idx,i-1],
+                L23_inp,0.25,100,WL23,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
@@ -174,7 +177,7 @@ inp_rm = np.mean(np.mean(inps,1),0)
 inp_rV = np.mean(np.var(inps,1),0)
 
 L23_rate_r0 = np.mean(L23_rate_binned,0)
-L23_rate_opm = af.calc_OPM(L23_rate_binned.transpose(1,2,3,0))
+L23_rate_opm = af.calc_OPM(L23_rate_binned.transpose(1,2,3,4,0))
 L23_rate_os = np.abs(L23_rate_opm)
 L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
 L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
@@ -182,13 +185,13 @@ L23_rate_rm = np.mean(np.mean(L23_rates,1),0)
 L23_rate_rV = np.mean(np.var(L23_rates,1),0)
 
 # Calculate hypercolumn size and number of pinwheels
-_,z_fps = af.get_fps(L23_rate_opm[0])
-z_hc,_ = af.calc_hypercol_size(z_fps,N)
-z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(L23_rate_opm[0],0.5*z_hc,1.5*z_hc))
-z_pwd = z_pwcnt/(N/z_hc)**2
+# _,z_fps = af.get_fps(L23_rate_opm[0])
+# z_hc,_ = af.calc_hypercol_size(z_fps,N)
+# z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(L23_rate_opm[0],0.5*z_hc,1.5*z_hc))
+# z_pwd = z_pwcnt/(N/z_hc)**2
 
-Lam = z_hc
-npws,pwpts = z_pwcnt,z_pwpts
+# Lam = z_hc
+# npws,pwpts = z_pwcnt,z_pwpts
 
 res_dict['inp_r0'] = inp_r0
 res_dict['inp_r1'] = inp_r1
@@ -202,10 +205,10 @@ res_dict['L23_rate_rm'] = L23_rate_rm
 res_dict['L23_rate_rV'] = L23_rate_rV
 res_dict['L23_rate_opm'] = L23_rate_opm
 
-res_dict['z_fps'] = z_fps
-res_dict['Lam'] = Lam
-res_dict['npws'] = npws
-res_dict['pwpts'] = pwpts
+# res_dict['z_fps'] = z_fps
+# res_dict['Lam'] = Lam
+# res_dict['npws'] = npws
+# res_dict['pwpts'] = pwpts
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
