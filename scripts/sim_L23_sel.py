@@ -152,10 +152,10 @@ for ori_idx,ori in enumerate(inp_oris):
     for rpt_idx in range(n_rpt):
         L23_inp = np.concatenate((inps[ori_idx,rpt_idx].flatten(),
                                     inps[ori_idx,rpt_idx].flatten()))
-        L23_rates[ori_idx,rpt_idx,0] = integrate(np.ones(2*N**2),
+        L23_rates[ori_idx,rpt_idx,:,:,:,0] = integrate(np.ones(2*N**2),
             L23_inp,0.25,100,WL23,grec)
         for i in range(1,n_int//100):
-            L23_rates[ori_idx,rpt_idx,i] = integrate(L23_rates[ori_idx,rpt_idx,i-1],
+            L23_rates[ori_idx,rpt_idx,:,:,:,i] = integrate(L23_rates[ori_idx,rpt_idx,:,:,:,i-1].flatten(),
                 L23_inp,0.25,100,WL23,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')

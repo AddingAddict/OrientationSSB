@@ -144,12 +144,12 @@ class Model:
             self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i)) * self.ai
             
             # randomly choose some L4 cells to be more on/off dominated
-            on_dom = rng.choose([1,-1],size=(self.n_e,))
-            self.wex[:,:self.n_lng//2] *= 1+0.2*on_dom[:,None]
-            self.wex[:,self.n_lng//2:] *= 1-0.2*on_dom[:,None]
-            on_dom = rng.choose([1,-1],size=(self.n_i,))
-            self.wix[:,:self.n_lng//2] *= 1+0.2*on_dom[:,None]
-            self.wix[:,self.n_lng//2:] *= 1-0.2*on_dom[:,None]
+            on_dom = rng.choice([1,-1],size=(self.n_e,))
+            self.wex[:,:self.n_lgn//2] *= 1+0.2*on_dom[:,None]
+            self.wex[:,self.n_lgn//2:] *= 1-0.2*on_dom[:,None]
+            on_dom = rng.choice([1,-1],size=(self.n_i,))
+            self.wix[:,:self.n_lgn//2] *= 1+0.2*on_dom[:,None]
+            self.wix[:,self.n_lgn//2:] *= 1-0.2*on_dom[:,None]
             
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
