@@ -145,11 +145,11 @@ class Model:
             
             # randomly choose some L4 cells to be more on/off dominated
             on_dom = rng.choice([1,-1],size=(self.n_e,))
-            self.wex[:,:self.n_lgn//2] *= 1+0.2*on_dom[:,None]
-            self.wex[:,self.n_lgn//2:] *= 1-0.2*on_dom[:,None]
+            self.wex[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
+            self.wex[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
             on_dom = rng.choice([1,-1],size=(self.n_i,))
-            self.wix[:,:self.n_lgn//2] *= 1+0.2*on_dom[:,None]
-            self.wix[:,self.n_lgn//2:] *= 1-0.2*on_dom[:,None]
+            self.wix[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
+            self.wix[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
             
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
@@ -370,15 +370,15 @@ class Model:
         
     def prune_weights(
         self,
-        max_prop_thresh: float=0.33,
+        max_prop_thresh: float=0.35,
         ):
         # implement pruning by shrinking small weights
         thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
-        self.wex *= np.heaviside(self.wex,0)*(0.99+0.01*np.heaviside(self.wex-thresh,0))
+        self.wex *= np.heaviside(self.wex,0)*(0.97+0.03*np.heaviside(self.wex-thresh,0))
         self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
         
         thresh = np.max(self.wix,axis=1,keepdims=True) * max_prop_thresh
-        self.wix *= np.heaviside(self.wix,0)*(0.99+0.01*np.heaviside(self.wix-thresh,0))
+        self.wix *= np.heaviside(self.wix,0)*(0.97+0.03*np.heaviside(self.wix-thresh,0))
         self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
         
     # update weights with collected changes, then clip and normalize weights
