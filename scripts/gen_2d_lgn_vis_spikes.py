@@ -37,10 +37,10 @@ dt = 0.1 # s
 ibi = 3.6 # s
 dur = 1.2/(2*n_stim) # s
 
-rs = 0
+rs = -0.1
 ro = -1
 
-corr_len = 0.5
+corr_len = 0.1
 
 rng = np.random.default_rng(seed)
 
