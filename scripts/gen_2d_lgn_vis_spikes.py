@@ -15,7 +15,7 @@ from scipy.stats import poisson,zscore
 import burst_func as bf
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_vis', '-nw', help='number of geniculate viss',type=int, default=60)
+parser.add_argument('--n_vis', '-nw', help='number of head sweeps',type=int, default=60)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
@@ -69,32 +69,32 @@ offset = 0.125/n_shrink
 width = 0.3/n_shrink
 
 for widx in range(n_vis):
-	for sidx in range(n_stim):
-		for tidx in range(int(np.round(dur/dt))+1):
-			time_idx = int(np.round(ibi/dt))*widx + int(np.round((ibi-1)/2/dt)) + int(np.round(dur/dt))*sidx + tidx - 1
-			edge_fact = 0.5 if tidx==0 or tidx==int(np.round(dur/dt)) else 1
-			vel = bar_len * np.array([np.cos(oris[widx]),np.sin(oris[widx])])
-			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)+offset*leading_on[widx,sidx])*vel,
-				oris[widx],bar_len,bar_len)
-			bar_pos = bar_to_box(ss,ts)
-			n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-			bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)-offset*leading_on[widx,sidx])*vel,
-				oris[widx],bar_len,bar_len)
-			bar_pos = bar_to_box(ss,ts)
-			f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-			for cidx in range(n_grid**2):
-				if np.isnan(n_pass_times[cidx]):
-					continue
-				spike_ls[time_idx,cidx] += edge_fact*(rm-rb)*\
+    for sidx in range(n_stim):
+        for tidx in range(int(np.round(dur/dt))+1):
+            time_idx = int(np.round(ibi/dt))*widx + int(np.round((ibi-1)/2/dt)) + int(np.round(dur/dt))*sidx + tidx - 1
+            edge_fact = 0.5 if tidx==0 or tidx==int(np.round(dur/dt)) else 1
+            vel = bar_len * np.array([np.cos(oris[widx]),np.sin(oris[widx])])
+            bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)+offset*leading_on[widx,sidx])*vel,
+                oris[widx],bar_len,bar_len)
+            bar_pos = bar_to_box(ss,ts)
+            n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
+            bar_to_box = bf.gen_mov_bar(start_poss[widx,sidx]+(tidx/int(dur/dt)-offset*leading_on[widx,sidx])*vel,
+                oris[widx],bar_len,bar_len)
+            bar_pos = bar_to_box(ss,ts)
+            f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
+            for cidx in range(n_grid**2):
+                if np.isnan(n_pass_times[cidx]):
+                    continue
+                spike_ls[time_idx,cidx] += edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(n_pass_times[cidx])/(width))**3) * dt
-				spike_ls[time_idx,n_grid**2+cidx] -= 0.5*edge_fact*(rm-rb)*\
+                spike_ls[time_idx,n_grid**2+cidx] -= 0.5*edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(n_pass_times[cidx])/(width))**3) * dt
-			for cidx in range(n_grid**2):
-				if np.isnan(f_pass_times[cidx]):
-					continue
-				spike_ls[time_idx,n_grid**2+cidx] += edge_fact*(rm-rb)*\
+            for cidx in range(n_grid**2):
+                if np.isnan(f_pass_times[cidx]):
+                    continue
+                spike_ls[time_idx,n_grid**2+cidx] += edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(width))**3) * dt
-				spike_ls[time_idx,cidx] -= 0.5*edge_fact*(rm-rb)*\
+                spike_ls[time_idx,cidx] -= 0.5*edge_fact*(rm-rb)*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(width))**3) * dt
 spike_ls = np.fmax(1*dt,spike_ls)
 
