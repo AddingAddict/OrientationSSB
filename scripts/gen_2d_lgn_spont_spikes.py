@@ -27,14 +27,14 @@ n_bar = int(np.round(2*n_grid))
 bar_len = 0.99/np.sqrt(2)
 res = 1.001*bar_len/n_bar/np.sqrt(2)
 
-rm = 16 # Hz
+rm = 12 # Hz
 rb = 0 # Hz
 dt = 0.1 # s
 ibi = 14.4 # s
 dur = 14.4 # s
 
 rs = 0.00
-ro = -0.35
+ro = -1.00
 
 corr_len = 0.1
 

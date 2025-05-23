@@ -34,18 +34,19 @@ res = 1.001*bar_len/n_bar/np.sqrt(2)
 
 dt = 0.1 # s
 
-spnt_rb = 4 # Hz
+spnt_rb = 0 # Hz
 spnt_rm = 12 # Hz
 spnt_ibi = 14.4 # s
 spnt_dur = 14.4 # s
 
-vis_rb = 4 # Hz
+vis_rb = 8 # Hz
 vis_rm = 24
 vis_ibi = 3.6 # s
-vis_dur = 1.2/(2*n_stim) # s
+vis_dur = 1.2
+vis_stim_dur = vis_dur/(2*n_stim) # s
 
 rs = 0.00
-ro = -0.35
+ro = -1.00
 
 corr_len = 0.1
 
@@ -66,6 +67,9 @@ dists = np.sqrt(dxs**2 + dys**2)
 dist_corrs = np.exp(-0.5*(dists/corr_len)**2)
 
 spike_ls = np.zeros((int(np.round(spnt_ibi*n_wave/dt)),2*n_grid**2))
+times = np.arange(len(spike_ls)) * dt
+sweeping = (np.mod(times,vis_ibi) > vis_dur) & (np.mod(times,vis_ibi) < 2*vis_dur)
+
 spike_ls += spnt_rb * dt
 
 spnt_oris = rng.uniform(0,2*np.pi,n_wave)
@@ -76,6 +80,8 @@ spnt_width = 0.25
 for widx in range(n_wave):
     for tidx in range(int(np.round(spnt_dur/dt))):
         time_idx = int(np.round(spnt_ibi/dt))*widx + tidx
+        if sweeping[time_idx]:
+            continue
         edge_fact = 0.5 if tidx==0 or tidx==int(np.round(spnt_dur/dt))-1 else 1
         vel = bar_len * np.array([np.cos(spnt_oris[widx]),np.sin(spnt_oris[widx])])
         bar_to_box = bf.gen_mov_bar(spnt_start_poss[widx]+(tidx/int(spnt_dur/dt))*vel,
