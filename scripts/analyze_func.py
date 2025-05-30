@@ -5,6 +5,7 @@ sys.path.insert(0, './..')
 import pickle
 from math import floor, ceil
 import numpy as np
+from scipy.interpolate import griddata
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
@@ -14,9 +15,9 @@ def get_fps(A,axes=None,zero_mean=True,calc_err=False):
     else:
         Nax = A.shape[axes[0]]
     if zero_mean:
-        fft = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A))))
+        fft = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A))))**2
     else:
-        fft = np.abs(np.fft.fftshift(np.fft.fft2(A)))
+        fft = np.abs(np.fft.fftshift(np.fft.fft2(A)))**2
     fps = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
     if calc_err:
         fps_err = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
@@ -232,3 +233,48 @@ def get_rf_fft_resps(rfs,ngrid,noris):
         rf_fft_angs[:,:,idx] = np.max(rf_ffts[:,:,ang_bins==idx+1],-1)
         
     return rf_fft_angs
+
+def scat_map_to_grid(scat_map,xs,ys,ngrid,per_pad=None,indexing='xy',method='linear'):
+    # Given map on uneven grid, interpolate to regular grid
+    # scat_map, xs, ys must all be 2D arrays of the same shape
+    if per_pad is None:
+        per_pad = int(np.round(ngrid/4))
+        
+    scat_map_extended = np.block([
+        [scat_map[-per_pad:,-per_pad:],scat_map[-per_pad:,:],scat_map[-per_pad:,:per_pad]],
+        [scat_map[:,-per_pad:],scat_map,scat_map[:,:per_pad]],
+        [scat_map[:per_pad,-per_pad:],scat_map[:per_pad,:],scat_map[:per_pad,:per_pad]]
+    ])
+    
+    if indexing == 'xy':
+        xs_extended = np.block([
+            [xs[-per_pad:,-per_pad:]-1,xs[-per_pad:,:],xs[-per_pad:,:per_pad]+1],
+            [xs[:,-per_pad:]-1,xs,xs[:,:per_pad]+1],
+            [xs[:per_pad,-per_pad:]-1,xs[:per_pad,:],xs[:per_pad,:per_pad]+1]
+        ])
+        ys_extended = np.block([
+            [ys[-per_pad:,-per_pad:]-1,ys[-per_pad:,:]-1,ys[-per_pad:,:per_pad]-1],
+            [ys[:,-per_pad:],ys,ys[:,:per_pad]],
+            [ys[:per_pad,-per_pad:]+1,ys[:per_pad,:]+1,ys[:per_pad,:per_pad]+1]
+        ])
+    elif indexing == 'ij':
+        xs_extended = np.block([
+            [xs[-per_pad:,-per_pad:]-1,xs[-per_pad:,:]-1,xs[-per_pad:,:per_pad]-1],
+            [xs[:,-per_pad:],xs,xs[:,:per_pad]],
+            [xs[:per_pad,-per_pad:]+1,xs[:per_pad,:]+1,xs[:per_pad,:per_pad]+1]
+        ])
+        ys_extended = np.block([
+            [ys[-per_pad:,-per_pad:]-1,ys[-per_pad:,:],ys[-per_pad:,:per_pad]+1],
+            [ys[:,-per_pad:]-1,ys,ys[:,:per_pad]+1],
+            [ys[:per_pad,-per_pad:]-1,ys[:per_pad,:],ys[:per_pad,:per_pad]+1]
+        ])
+    else:
+        raise ValueError("indexing must be 'xy' or 'ij'")
+    
+    # interpolate to grid
+    grid_xs,grid_ys = np.meshgrid(np.linspace(0.5/ngrid,1-0.5/ngrid,ngrid),
+                                  np.linspace(0.5/ngrid,1-0.5/ngrid,ngrid),indexing=indexing)
+    grid_map = griddata((xs_extended.flatten(),ys_extended.flatten()),
+                        scat_map_extended.flatten(),(grid_xs,grid_ys),method=method)
+    
+    return grid_map

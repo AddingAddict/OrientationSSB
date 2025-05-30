@@ -46,7 +46,8 @@ vis_dur = 1.2
 vis_stim_dur = vis_dur/(2*n_stim) # s
 
 rs = 0.00
-ro = -1.00
+spnt_ro = -0.30
+vis_ro = -1.00
 
 corr_len = 0.1
 
@@ -142,8 +143,12 @@ start = time.process_time()
 spikes = np.zeros((int(np.round(spnt_ibi*n_wave/dt)),2*n_grid**2),np.ushort)
 
 for idx,l in enumerate(spike_ls):
-    r = np.block([[rs*dist_corrs,ro*dist_corrs],
-                  [ro*dist_corrs,rs*dist_corrs]])
+    if sweeping[idx]:
+        r = np.block([[rs*dist_corrs,vis_ro*dist_corrs],
+                    [vis_ro*dist_corrs,rs*dist_corrs]])
+    else:
+        r = np.block([[rs*dist_corrs,spnt_ro*dist_corrs],
+                    [spnt_ro*dist_corrs,rs*dist_corrs]])
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]
     
 print('Generating spike counts took',time.process_time() - start,'s\n')
