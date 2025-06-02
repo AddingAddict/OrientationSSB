@@ -35,18 +35,18 @@ res = 1.001*bar_len/n_bar/np.sqrt(2)
 dt = 0.1 # s
 
 spnt_rb = 0 # Hz
-spnt_rm = 10 # Hz
+spnt_rm = 16 # Hz
 spnt_ibi = 14.4 # s
 spnt_dur = 14.4 # s
 
-vis_rb = 8 # Hz
-vis_rm = 32 # Hz
+vis_rb = 12 # Hz
+vis_rm = 54 # Hz
 vis_ibi = 3.6 # s
 vis_dur = 1.2 # s
 vis_stim_dur = vis_dur/(2*n_stim) # s
 
 rs = 0.00
-spnt_ro = -0.10
+spnt_ro = -0.20
 vis_ro = -1.00
 
 corr_len = 0.1
