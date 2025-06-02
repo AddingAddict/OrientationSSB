@@ -39,8 +39,8 @@ spnt_rm = 16 # Hz
 spnt_ibi = 14.4 # s
 spnt_dur = 14.4 # s
 
-vis_rb = 12 # Hz
-vis_rm = 54 # Hz
+vis_rb = 8 # Hz
+vis_rm = 36 # Hz
 vis_ibi = 3.6 # s
 vis_dur = 1.2 # s
 vis_stim_dur = vis_dur/n_stim # s
