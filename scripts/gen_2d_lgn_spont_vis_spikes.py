@@ -15,7 +15,7 @@ from scipy.stats import poisson,zscore
 import burst_func as bf
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=20)
+parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=15)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
@@ -45,8 +45,9 @@ vis_ibi = 3.6 # s
 vis_dur = 1.2 # s
 vis_stim_dur = vis_dur/n_stim # s
 
-rs = 0.00
+spnt_rs = 0.00
 spnt_ro = -0.10
+vis_rs = -0.10
 vis_ro = -1.00
 
 corr_len = 0.1
@@ -146,11 +147,11 @@ spikes = np.zeros((int(np.round(spnt_ibi*n_wave/dt)),2*n_grid**2),np.ushort)
 
 for idx,l in enumerate(spike_ls):
     if sweeping[idx]:
-        r = np.block([[rs*dist_corrs,vis_ro*dist_corrs],
-                    [vis_ro*dist_corrs,rs*dist_corrs]])
+        r = np.block([[vis_rs*dist_corrs,vis_ro*dist_corrs],
+                    [vis_ro*dist_corrs,vis_rs*dist_corrs]])
     else:
-        r = np.block([[rs*dist_corrs,spnt_ro*dist_corrs],
-                    [spnt_ro*dist_corrs,rs*dist_corrs]])
+        r = np.block([[spnt_rs*dist_corrs,spnt_ro*dist_corrs],
+                    [spnt_ro*dist_corrs,spnt_rs*dist_corrs]])
     spikes[idx] = bf.gen_corr_pois_vars(l,r,rng)[:,0]
     
 print('Generating spike counts took',time.process_time() - start,'s\n')
