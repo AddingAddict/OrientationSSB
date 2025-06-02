@@ -22,7 +22,7 @@ parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',typ
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_wave = int(args['n_wave'])
-n_vis = 3*n_wave
+n_vis = 4*n_wave
 n_stim = int(args['n_stim'])
 n_shrink = args['n_shrink']
 n_grid = int(args['n_grid'])
@@ -43,10 +43,10 @@ vis_rb = 12 # Hz
 vis_rm = 54 # Hz
 vis_ibi = 3.6 # s
 vis_dur = 1.2 # s
-vis_stim_dur = vis_dur/(2*n_stim) # s
+vis_stim_dur = vis_dur/n_stim # s
 
 rs = 0.00
-spnt_ro = -0.20
+spnt_ro = -0.10
 vis_ro = -1.00
 
 corr_len = 0.1
@@ -69,7 +69,8 @@ dist_corrs = np.exp(-0.5*(dists/corr_len)**2)
 
 spike_ls = np.zeros((int(np.round(spnt_ibi*n_wave/dt)),2*n_grid**2))
 times = np.arange(len(spike_ls)) * dt
-sweeping = (np.mod(times,vis_ibi) > vis_dur) & (np.mod(times,vis_ibi) < 2*vis_dur)
+sweeping = (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) >= np.round(vis_dur/dt)) \
+    & (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) <= 2*np.round(vis_dur/dt))
 
 spike_ls += spnt_rb * dt
 
@@ -83,7 +84,7 @@ for widx in range(n_wave):
         time_idx = int(np.round(spnt_ibi/dt))*widx + tidx
         if sweeping[time_idx]:
             continue
-        edge_fact = 0.5 if tidx==0 or tidx==int(np.round(spnt_dur/dt))-1 else 1
+        edge_fact = 1
         vel = bar_len * np.array([np.cos(spnt_oris[widx]),np.sin(spnt_oris[widx])])
         bar_to_box = bf.gen_mov_bar(spnt_start_poss[widx]+(tidx/int(spnt_dur/dt))*vel,
             spnt_oris[widx],bar_len,bar_len)
@@ -106,15 +107,16 @@ vis_width = 0.3/n_shrink
 
 for widx in range(n_vis):
     for sidx in range(n_stim):
-        for tidx in range(int(np.round(vis_dur/dt))+1):
-            time_idx = int(np.round(vis_ibi/dt))*widx + int(np.round((vis_ibi-1)/2/dt)) + int(np.round(vis_dur/dt))*sidx + tidx - 1
-            edge_fact = 0.5 if tidx==0 or tidx==int(np.round(vis_dur/dt)) else 1
+        for tidx in range(int(np.round(vis_stim_dur/dt))+1):
+            time_idx = int(np.round(vis_ibi/dt))*widx + int(np.round((vis_ibi-1)/2/dt)) \
+                + int(np.round(vis_stim_dur/dt))*sidx + tidx - 1
+            edge_fact = 0.5 if tidx==0 or tidx==int(np.round(vis_stim_dur/dt)) else 1
             vel = bar_len * np.array([np.cos(vis_oris[widx]),np.sin(vis_oris[widx])])
-            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_dur/dt)+vis_offset*vis_leading_on[widx,sidx])*vel,
+            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)+vis_offset*vis_leading_on[widx,sidx])*vel,
                 vis_oris[widx],bar_len,bar_len)
             bar_pos = bar_to_box(ss,ts)
             n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_dur/dt)-vis_offset*vis_leading_on[widx,sidx])*vel,
+            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)-vis_offset*vis_leading_on[widx,sidx])*vel,
                 vis_oris[widx],bar_len,bar_len)
             bar_pos = bar_to_box(ss,ts)
             f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
