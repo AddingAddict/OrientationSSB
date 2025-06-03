@@ -28,6 +28,8 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps',type=in
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
+parser.add_argument('--htro', '-ht', help='L2/3 recurrent weight heterogeneity',type=float, default=0.7)
+parser.add_argument('--map', '-m', help='L4 orientation map type',type=str, default='act')
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=True)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -36,6 +38,8 @@ n_int= int(args['n_int'])
 seed = int(args['seed'])
 dens = args['dens']
 grec = args['grec']
+htro = args['htro']
+map_type = args['map']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
@@ -44,13 +48,56 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-# Get L4 orientation map from previous simulation
+# Create heterogeneous recurrent connectivity
+config_name = "big_hetero"
+Version = -1
+config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
+
+conn = connectivity.Connectivity_2pop((N,N),(N,N),\
+                                    (N,N), (N,N),\
+                                    random_seed=seed,\
+                                    Nvert=1, verbose=True)
+
+start = time.process_time()
+
+H = htro
+try:
+    WL23 = np.load('./../notebooks/hetero_W_N={:d}_H={:.2f}_seed={:d}.npy'.format(N,H,seed))
+except:
+    WL23,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
+    np.save('./../notebooks/hetero_W_N={:d}_H={:.2f}_seed={:d}'.format(N,H,seed),WL23)
+
+print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
+
+# Create L4 orientation map
 with open(res_dir + 'L4_act_L23_sel_mod_dens={:.4f}_grec={:.3f}/seed={:d}.pkl'.format(
         dens,1.05,seed), 'rb') as handle:
     res_dict = pickle.load(handle)
-L4_rate_opm = res_dict['L4_rate_opm']
 rm = np.mean(res_dict['L4_rate_rm'])
 meanCV = np.mean(np.sqrt(res_dict['L4_rate_rV'])/res_dict['L4_rate_rm'])
+if map_type == 'act':
+    # Get L4 orientation map from previous simulation
+    L4_rate_opm = res_dict['L4_rate_opm']
+else:
+    rng = np.random.default_rng(seed+1234)
+    opm_fft = rng.normal(size=(N,N)) + 1j * rng.normal(size=(N,N))
+    opm_fft[0,0] = 0 # remove DC component
+    freqs = np.fft.fftfreq(N,1/N)
+    freqs = np.sqrt(freqs[:,None]**2 + freqs[None,:]**2)
+    if 'band' in map_type:
+        # assume map_type == 'per_{freq}_{width}'
+        _,freq,width = map_type.split('_')
+        freq = float(freq)
+        width = float(width)
+        opm_fft *= np.heaviside(0.5*width - np.abs(freqs-freq),0.5)
+    elif 'low' in map_type:
+        # assume map_type == 'low_{decay}'
+        _,decay = map_type.split('_')
+        decay = float(decay)
+        opm_fft *= np.exp(-freqs/decay)
+    else:
+        raise ValueError('Unknown map type: {}'.format(map_type))
+    L4_rate_opm = np.fft.ifft2(opm_fft).real
 
 # Define where to save results
 res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}/'.format(
@@ -67,27 +114,6 @@ bgnd_min = 0.00
 bgnd_max = 0.3
 meanOS = 0.18
 maxOS = 0.6
-
-# Create heterogeneous recurrent connectivity
-config_name = "big_hetero"
-Version = -1
-config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
-
-conn = connectivity.Connectivity_2pop((N,N),(N,N),\
-                                    (N,N), (N,N),\
-                                    random_seed=seed,\
-                                    Nvert=1, verbose=True)
-
-start = time.process_time()
-
-H = 0.7
-try:
-    WL23 = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
-except:
-    WL23,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),WL23)
-
-print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
 
 # Define functions to model feedforward inputs with given orientation selectivity
 def elong_inp(ksig,ori):
@@ -121,6 +147,14 @@ for ori_idx,ori in enumerate(inp_oris):
     scale = mean_inp/shape
     for rpt_idx in range(n_rpt):
         inps[ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
+        
+n_spnt = 100
+spnt_inps = np.zeros((n_spnt,N,N))
+for spnt_idx in range(n_spnt):
+    mean_inp = rm
+    shape = 1/meanCV**2
+    scale = mean_inp/shape
+    spnt_inps[spnt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
     
 print('Creating input patterns took',time.process_time() - start,'s\n')
 
@@ -143,10 +177,10 @@ def integrate(y0,inp,dt,Nt,Wrec,gamma_rec=1.02):
     else:
         return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
 
+start = time.process_time()
+
 # Integrate to get firing rates
 L23_rates = np.zeros((n_ori,n_rpt,2,N,N,n_int//100))
-
-start = time.process_time()
 
 for ori_idx,ori in enumerate(inp_oris):
     for rpt_idx in range(n_rpt):
@@ -157,12 +191,31 @@ for ori_idx,ori in enumerate(inp_oris):
         for i in range(1,n_int//100):
             L23_rates[ori_idx,rpt_idx,:,:,:,i] = integrate(L23_rates[ori_idx,rpt_idx,:,:,:,i-1].flatten(),
                 L23_inp,0.25,100,WL23,grec)
+            
+L23_spnt_rates = np.zeros((n_spnt,2,N,N,n_int//100))
+for spnt_idx in range(n_rpt):
+    L23_inp = np.concatenate((spnt_inps[spnt_idx].flatten(),
+                                spnt_inps[spnt_idx].flatten()))
+    L23_spnt_rates[spnt_idx,:,:,:,0] = integrate(np.ones(2*N**2),
+        L23_inp,0.25,100,WL23,grec)
+    for i in range(1,n_int//100):
+        L23_spnt_rates[spnt_idx,:,:,:,i] = integrate(L23_spnt_rates[spnt_idx,:,:,:,i-1].flatten(),
+            L23_inp,0.25,100,WL23,grec)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 if saverates:
     res_dict['inputs'] = inps
     res_dict['rates'] = L23_rates
+    
+# calculate spontaneous dimensionality
+L23_spnt_dim = np.zeros(n_int//100)
+for i in range(n_int//100):
+    mean_sub_rate = L23_spnt_rates[:,0,:,:,i].reshape((n_spnt,-1))
+    mean_sub_rate -= np.mean(mean_sub_rate,0)
+    rates_cov_mat = np.einsum('ij,ik->jk',mean_sub_rate,mean_sub_rate) / n_spnt
+    cov_evals = np.linalg.eigvalsh(rates_cov_mat)
+    L23_spnt_dim[i] = np.sum(cov_evals)**2/np.sum(cov_evals**2)
 
 # Calculate z_fields from inputs and rates
 inp_binned = inps.mean(1)
@@ -198,6 +251,8 @@ res_dict['inp_r1'] = inp_r1
 res_dict['inp_rm'] = inp_rm
 res_dict['inp_rV'] = inp_rV
 res_dict['inp_opm'] = inp_opm
+
+res_dict['L23_spnt_dim'] = L23_spnt_dim
 
 res_dict['L23_rate_r0'] = L23_rate_r0
 res_dict['L23_rate_r1'] = L23_rate_r1
