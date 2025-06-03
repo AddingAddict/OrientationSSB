@@ -78,6 +78,8 @@ meanCV = np.mean(np.sqrt(res_dict['L4_rate_rV'])/res_dict['L4_rate_rm'])
 if map_type == 'act':
     # Get L4 orientation map from previous simulation
     L4_rate_opm = res_dict['L4_rate_opm']
+    res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}_htro={:.2f}/'.format(
+        dens,grec,htro)
 else:
     rng = np.random.default_rng(seed+1234)
     opm_fft = rng.normal(size=(N,N)) + 1j * rng.normal(size=(N,N))
@@ -99,10 +101,12 @@ else:
         raise ValueError('Unknown map type: {}'.format(map_type))
     L4_rate_opm = np.fft.ifft2(opm_fft)
     L4_rate_opm *= 0.5 / np.max(np.abs(L4_rate_opm)) # normalize to 0.5
+    res_dir = res_dir + 'L23_sel_map={:s}_grec={:.3f}_htro={:.2f}/'.format(
+        map_type,grec,htro)
+    
+    "L23_sel_dens=0.0141_grec=1.050_htro=0.70_map=act" "L23_sel_dens=0.0141_grec=0.990_htro=0.70_map=act" "L23_sel_dens=0.0141_grec=1.100_htro=0.70_map=act" "L23_sel_dens=0.0141_grec=1.100_htro=0.80_map=act" "L23_sel_dens=0.0141_grec=1.100_htro=0.75_map=act" "L23_sel_dens=0.0141_grec=1.050_htro=0.80_map=act" "L23_sel_dens=0.0141_grec=0.990_htro=0.75_map=act" "L23_sel_dens=0.0141_grec=0.990_htro=0.80_map=act" "L23_sel_dens=0.0141_grec=1.050_htro=0.75_map=act"
 
 # Define where to save results
-res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}_htro={:.2f}_map={:s}/'.format(
-    dens,grec,htro,map_type)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
