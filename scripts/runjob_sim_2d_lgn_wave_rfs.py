@@ -39,7 +39,7 @@ def runjobs():
     parser.add_argument('--prune', '-p', help='whether to prune feedforward weights',type=int, default=0)
     parser.add_argument('--rec_plast', '-r', help='whether recurrent weights are plastic',type=int, default=0)
     parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=60)
+    parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=15)
     parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
     parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
