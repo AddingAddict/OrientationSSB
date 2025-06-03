@@ -24,8 +24,8 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
-    parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
+    parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=8)
+    parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=8)
     parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=20)
     
