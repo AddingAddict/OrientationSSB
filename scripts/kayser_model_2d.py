@@ -118,6 +118,7 @@ class Model:
         
         # whether to prune weights
         self.prune = prune
+        if self.prune: self.max_prop_thresh = 0.4
         
         # whether recurrent weights are plastic
         self.rec_e_plast = rec_e_plast
@@ -370,14 +371,22 @@ class Model:
         
     def prune_weights(
         self,
-        max_prop_thresh: float=0.42,
         ):
+        # update pruning threshold
+        max_norm_wex = self.wex/np.max(self.wex,axis=1,keepdims=True)
+        max_norm_wex = max_norm_wex[max_norm_wex > 1e-7 / np.mean(np.max(self.wex,axis=1))]
+        max_norm_wix = self.wix/np.max(self.wix,axis=1,keepdims=True)
+        max_norm_wix = max_norm_wix[max_norm_wix > 1e-7 / np.mean(np.max(self.wix,axis=1))]
+        new_thresh = np.quantile(np.concatenate((max_norm_wex,max_norm_wix)),0.1)
+        self.max_prop_thresh += self.a_avg * (new_thresh - self.max_prop_thresh)
+        # print("new threshold:",self.max_prop_thresh)
+        
         # implement pruning by shrinking small weights
-        thresh = np.max(self.wex,axis=1,keepdims=True) * max_prop_thresh
+        thresh = np.max(self.wex,axis=1,keepdims=True) * self.max_prop_thresh
         self.wex *= np.heaviside(self.wex,0)*(0.93+0.07*np.heaviside(self.wex-thresh,0))
         self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
         
-        thresh = np.max(self.wix,axis=1,keepdims=True) * max_prop_thresh
+        thresh = np.max(self.wix,axis=1,keepdims=True) * self.max_prop_thresh
         self.wix *= np.heaviside(self.wix,0)*(0.93+0.07*np.heaviside(self.wix-thresh,0))
         self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)
         
