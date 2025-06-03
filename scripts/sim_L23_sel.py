@@ -101,8 +101,8 @@ else:
     L4_rate_opm *= 0.5 / np.max(np.abs(L4_rate_opm)) # normalize to 0.5
 
 # Define where to save results
-res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}/'.format(
-    dens,grec)
+res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}_htro={:.2f}_map={:s}/'.format(
+    dens,grec,htro,map_type)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
