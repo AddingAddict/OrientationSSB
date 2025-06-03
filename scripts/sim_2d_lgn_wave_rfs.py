@@ -195,6 +195,8 @@ def run_iter(
         res_dict['uie_avg'] = net.uie_avg
         res_dict['uii_avg'] = net.uii_avg
         res_dict['rx_avg'] = net.rx_avg
+        res_dict['rx_avg'] = net.rx_avg
+        res_dict['max_prop_thresh'] = net.max_prop_thresh
 
         with open(res_file, 'wb') as handle:
             pickle.dump(res_dict,handle)

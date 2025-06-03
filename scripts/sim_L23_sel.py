@@ -52,6 +52,9 @@ if not os.path.exists(res_dir):
 config_name = "big_hetero"
 Version = -1
 config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
+config_dict["W4to4_params"]["mean_eccentricity"] *= htro / 0.7
+config_dict["W4to4_params"]["SD_eccentricity"] *= htro / 0.7
+config_dict["W4to4_params"]["SD_size"] *= htro / 0.7
 
 conn = connectivity.Connectivity_2pop((N,N),(N,N),\
                                     (N,N), (N,N),\
