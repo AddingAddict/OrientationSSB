@@ -97,7 +97,8 @@ else:
         opm_fft *= np.exp(-freqs/decay)
     else:
         raise ValueError('Unknown map type: {}'.format(map_type))
-    L4_rate_opm = np.fft.ifft2(opm_fft).real
+    L4_rate_opm = np.fft.ifft2(opm_fft)
+    L4_rate_opm *= 0.5 / np.max(np.abs(L4_rate_opm)) # normalize to 0.5
 
 # Define where to save results
 res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}/'.format(
