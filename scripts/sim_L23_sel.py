@@ -157,7 +157,7 @@ for ori_idx,ori in enumerate(inp_oris):
 n_spnt = 100
 spnt_inps = np.zeros((n_spnt,N,N))
 for spnt_idx in range(n_spnt):
-    mean_inp = rm
+    mean_inp = rm*np.ones((N,N))
     shape = 1/meanCV**2
     scale = mean_inp/shape
     spnt_inps[spnt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
