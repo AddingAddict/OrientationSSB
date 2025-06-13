@@ -5,8 +5,10 @@ sys.path.insert(0, './..')
 import pickle
 from math import floor, ceil
 import numpy as np
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata,interp1d
+from scipy.integrate import quad
 from scipy.optimize import curve_fit
+from scipy.special import erf
 import matplotlib.pyplot as plt
 
 def get_fps(A,axes=None,zero_mean=True,calc_err=False):
@@ -15,25 +17,25 @@ def get_fps(A,axes=None,zero_mean=True,calc_err=False):
     else:
         Nax = A.shape[axes[0]]
     if zero_mean:
-        fft = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A))))**2
+        fps = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A))))**2
     else:
-        fft = np.abs(np.fft.fftshift(np.fft.fft2(A)))**2
-    fps = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
+        fps = np.abs(np.fft.fftshift(np.fft.fft2(A)))**2
+    raps = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
     if calc_err:
-        fps_err = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
+        raps_err = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
 
     grid = np.arange(-Nax//2,Nax//2)
     x,y = np.meshgrid(grid,grid)
     bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(Nax//2*np.sqrt(2)))+0.5)
     for idx in range(0,int(np.ceil(Nax//2*np.sqrt(2)))):
-        fps[idx] = np.mean(fft[bin_idxs == idx])
+        raps[idx] = np.mean(fps[bin_idxs == idx])
         if calc_err:
-            fps_err[idx] = np.std(fft[bin_idxs == idx]) / np.sqrt(np.sum(bin_idxs == idx))
+            raps_err[idx] = np.std(fps[bin_idxs == idx]) / np.sqrt(np.sum(bin_idxs == idx))
     
     if calc_err:
-        return fft,fps,fps_err
+        return fps,raps,raps_err
     else:
-        return fft,fps
+        return fps,raps
 
 def get_ori_sel(opm,calc_fft=True):
     N4 = opm.shape[0]
@@ -108,6 +110,32 @@ def calc_pinwheels(A):
     pwpts = np.array(pwpts)
     
     return pwcnt,pwpts
+
+def raps_fn(k,alf,a0,a1,a2):
+    return a0*k*np.exp(-0.5*(k-a1)**2/a2**2) * 0.5*(1+erf(alf*(k-a1)/(np.sqrt(2)*a2)))
+
+def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False):        
+    if continuous:
+        # raps_itp = interp1d(freqs,raps,kind='linear',bounds_error=False,fill_value=0)
+        
+        peak_idx = np.argmax(np.concatenate(([0,0],raps[2:])))
+
+        popt,pcov = curve_fit(raps_fn,freqs,raps,
+                              p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
+                              bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+        raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
+        
+        norm = quad(raps_itp,0,np.inf)[0]
+        if return_fit:
+            return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
+                / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi, popt
+        else:
+            return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
+                / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi
+    else:
+        norm = np.sum(raps)
+        return np.sum(freqs**3 * raps / norm) \
+            / np.sum(freqs * raps / norm)**3 * np.pi
 
 def bandpass_filter(A,ll,lu):
     Nax = A.shape[0]

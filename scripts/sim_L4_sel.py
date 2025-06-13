@@ -10,55 +10,159 @@ import argparse
 import time
 
 import numpy as np
-from scipy.integrate import quad
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
+from scipy.stats import qmc
 
-import util_func as uf
-
-import dev_ori_sel_RF
-from dev_ori_sel_RF import connectivity
+import analyze_func as af
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=4)
-parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=10)
-parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
-parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
+parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=16)
+parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=16)
+# parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=5)
+parser.add_argument('--n_int', '-nt', help='number of integration steps between phases',type=int, default=5)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--bgnd', '-b', help='amplitude of background selectivity',type=float, default=0.0001)
-parser.add_argument('--ksel', '-k', help='selectivity shape',type=float, default=0.001)
-parser.add_argument('--lker', '-l', help='arbor length from L4 to L2/3',type=float, default=0.01)
-parser.add_argument('--Wlker_fact', '-w', help='ratio of arbor length from L4 to L2/3 vs correlation length scale of L4 map',type=float, default=1.0)
-parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.8)
-parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=0.5)
-parser.add_argument('--eta', '-e', help='input noise level',type=float, default=0.01)
+parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
+parser.add_argument('--grec', '-g', help='L4 recurrent weight strength',type=float, default=0.95)
+parser.add_argument('--lrec', '-l', help='L4 recurrent weight length',type=float, default=0.8)
+parser.add_argument('--thresh', '-th', help='L4 activation threshold',type=float, default=1.0)
+parser.add_argument('--actpow', '-p', help='L4 activation power',type=float, default=1.0)
+parser.add_argument('--map', '-m', help='L4 orientation map type',type=str, default='act')
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
 n_phs = int(args['n_phs'])
-n_rpt = int(args['n_rpt'])
+# n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
-bgnd = args['bgnd']
-ksel = args['ksel']
-lker = args['lker']
-Wlker_fact = args['Wlker_fact']
+dens = args['dens']
 grec = args['grec']
+lrec = args['lrec']
 thresh = args['thresh']
-eta = args['eta']
+actpow = args['actpow']
+map_type = args['map']
 saverates = args['saverates']
 
-freq = 4
+N = 60
 
-lker2 = lker**2
+bgnd_min = 0.02
+bgnd_max = 0.3
+clst_min = 0.3
+clst_max = 0.6
+meanOS = 0.20
+
+# Define function to generate clustered L4 input orientation map
+def gen_maps(N,dens,bgnd_min,bgnd_max,clst_min,clst_max,meanOS,seed=0,bgnd_scale=4,areaCV=0,bgnd_pow=1,
+             cont_oris=False,cont_sels=False):
+    rng = np.random.default_rng(seed)
+    
+    bgndOS = (bgnd_min+bgnd_pow*bgnd_max)/(bgnd_pow+1)
+    clstOS = (clst_min+clst_max)/2
+
+    nclstr = np.round(N**2*dens).astype(int)
+    sig2 = (meanOS - bgndOS)/(((clstOS) - bgndOS)*dens*np.pi) / N**2
+
+    rng = np.random.default_rng(seed)
+
+    clstr_pts = qmc.Halton(d=2,scramble=False,seed=seed).random(nclstr)
+    
+    oris = 2*np.pi*rng.random(nclstr)
+    
+    if np.isclose(areaCV,0):
+        sig2s = sig2*np.ones(nclstr)
+        rng.gamma(shape=1,scale=1,size=nclstr)
+    else:
+        shape = 1/areaCV**2
+        scale = sig2/shape
+        sig2s = rng.gamma(shape=shape,scale=scale,size=nclstr)
+    
+    xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
+    dxs = np.abs(xs[None,:,:] - clstr_pts[:,0,None,None])
+    dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
+    dys = np.abs(ys[None,:,:] - clstr_pts[:,1,None,None])
+    dys[dys > 0.5] = 1 - dys[dys > 0.5]
+    ds2s = dxs**2 + dys**2
+
+    omap = np.zeros((N,N),dtype='complex64')
+    holes = np.zeros((N,N),dtype='float64')
+    
+    for i in range(nclstr):
+        omap += np.heaviside(1.01*sig2s[i]-ds2s[i],1)*np.exp(1j*oris[i])
+        holes += np.heaviside(1.01*sig2s[i]-ds2s[i],1)
+    holes = np.clip(holes,0,1)
+            
+    true_clstr_size = np.sum(np.abs(omap))
+    omap *= clstOS*nclstr*np.pi*sig2*N**2/true_clstr_size
+
+    ks = np.arange(N)/N
+    ks[ks > 0.5] = ks[ks > 0.5] - 1
+    kxs,kys = np.meshgrid(ks*N,ks*N)
+
+    bgnd_ofield = np.fft.ifft2(np.exp(-0.5*(kxs**2+kys**2)*sig2*bgnd_scale**2)*\
+        np.fft.fft2(np.exp(1j*2*np.pi*rng.random((N,N)))))
+    bgnd_ofield /= np.abs(bgnd_ofield)
+    bgnd_sfield = bgnd_min+(bgnd_max-bgnd_min)*rng.random((N,N))**bgnd_pow
+    clst_sfield = clst_min+(clst_max-clst_min)*rng.random((N,N))
+    clst_sfield *= nclstr*np.pi*sig2*N**2/true_clstr_size
+    if cont_sels:
+        min_clstr_dists = np.min(ds2s,0)
+        min_dist = np.min(min_clstr_dists[holes==0])
+        max_dist = np.max(min_clstr_dists[holes==0])
+        min_clstr_dists[holes==1] = min_dist + (max_dist-min_dist)*rng.random(np.count_nonzero(holes))
+        bgnd_sfield = bgnd_sfield.flatten()
+        bgnd_sfield[np.argsort(min_clstr_dists.flatten())[::-1]] = np.sort(bgnd_sfield).flatten()
+        bgnd_sfield = bgnd_sfield.reshape(N,N)
+        
+        min_clstr_dists = np.min(ds2s,0)
+        min_dist = np.min(min_clstr_dists[holes==1])
+        max_dist = np.max(min_clstr_dists[holes==1])
+        clst_sfield = clst_sfield.flatten()
+        min_clstr_dists[holes==0] = min_dist + (max_dist-min_dist)*rng.random(np.count_nonzero(1-holes))
+        clst_sfield[np.argsort(min_clstr_dists.flatten())[::-1]] = np.sort(clst_sfield).flatten()
+        clst_sfield = clst_sfield.reshape(N,N)
+    if cont_oris:
+        omap = (bgnd_sfield*(1-holes)+clst_sfield*holes)*bgnd_ofield
+    else:
+        omap += bgnd_sfield*bgnd_ofield*(1-holes)
+    
+    return omap
+
+# compute characteristic L4 length scale, derived from cluster density
+sig2 = (meanOS - 0.5*(bgnd_min+bgnd_max))/((0.5*(clst_min+clst_max) - 0.5*(bgnd_min+bgnd_max))*dens*np.pi) / N**2
+sig = np.sqrt(sig2)
 
 # Define where to save results
 res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_sel_bgnd={:.4f}_ksel={:.4f}_lker={:.3f}_Wlker_fact={:.1f}_grec={:.3f}_thresh={:.2f}_eta={:.3f}/'.format(
-        bgnd,ksel,lker,Wlker_fact,grec,thresh,eta)
+if map_type == 'act':
+    res_dir = res_dir + 'L4_sel_dens={:.4f}_grec={:.2f}_lrec={:.1f}_thresh={:.3f}_actpow={:.2f}/'.format(
+        dens,grec,lrec,thresh,actpow)
+    L4_inp_opm = gen_maps(N,dens,bgnd_min,bgnd_max,clst_min,clst_max,meanOS,
+                          seed,bgnd_scale=6,cont_oris=True,cont_sels=True)
+else:
+    rng = np.random.default_rng(seed+1234)
+    opm_fft = rng.normal(size=(N,N)) + 1j * rng.normal(size=(N,N))
+    opm_fft[0,0] = 0 # remove DC component
+    freqs = np.fft.fftfreq(N,1/N)
+    freqs = np.sqrt(freqs[:,None]**2 + freqs[None,:]**2)
+    if 'band' in map_type:
+        # assume map_type == 'per_{freq}_{width}'
+        _,freq,width = map_type.split('_')
+        freq = float(freq)
+        width = float(width)
+        opm_fft *= np.heaviside(0.5*width - np.abs(freqs-freq),0.5)
+    elif 'low' in map_type:
+        # assume map_type == 'low_{decay}'
+        _,decay = map_type.split('_')
+        decay = float(decay)
+        opm_fft *= np.exp(-freqs/decay)
+    else:
+        raise ValueError('Unknown map type: {}'.format(map_type))
+    L4_inp_opm = np.fft.ifft2(opm_fft)
+    L4_inp_opm *= meanOS / np.mean(np.abs(L4_inp_opm)) # normalize mean to meanOS
+    res_dir = res_dir + 'L4_sel_map={:s}_grec={:.2f}_lrec={:.1f}_thresh={:.3f}_actpow={:.2f}/'.format(
+            map_type,grec,lrec,thresh,actpow)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -66,341 +170,203 @@ res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
-# Define parameters for L2/3 input from data
-avg_OS = 0.15
-avg_CV = 0.4
+# Define thalamic input functions
+kl2 = 2
 
-# Create heterogeneous recurrent connectivity
-config_name = "lempel_big_L4_model"
-Version = -1
-config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
-config_dict['W4to4_params']['max_ew'] = grec
+def elong_inp(gam,ori,phs):
+    return 1 + np.cos(phs)*np.exp(-kl2*(1+(1-gam**2)/gam**2*np.sin(ori)**2)/2)
 
-conn = connectivity.Connectivity_2pop((N,N),(N,N),\
-                                    (N,N), (N,N),\
-                                    random_seed=seed,\
-                                    Nvert=1, verbose=True)
+# Precalculate and interpolate effect of activation function on orientation selectivity
+gams = np.linspace(0.4,1,301)
+oris = np.linspace(0,np.pi,120,endpoint=False)
+phss = np.linspace(0,2*np.pi,120,endpoint=False)
+resps = np.fmax(0,elong_inp(gams[:,None,None],oris[None,:,None],phss[None,None,:])-thresh)**actpow
+oss,_ = af.calc_OS_MR(resps)
 
-start = time.process_time()
+gam_os_itp = interp1d(oss,gams,fill_value='extrapolate')
+gam_map = gam_os_itp(np.abs(L4_inp_opm))
 
-H = 0.7
-try:
-    Wrec = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
-except:
-    Wrec,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),Wrec)
+# Generate rf scatter and ON/OFF bias maps
+rf_sct_scale = 1.5
+pol_scale = 0.7
+L_mm = N/11
+mag_fact = 0.02
+L_deg = L_mm / np.sqrt(mag_fact)
+grate_freq = 0.06
 
-print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
-
-# Define functions to calculate effect of clipping on orientation selectivity
-def clip_r0(OSs):
-    out = np.ones_like(OSs)
-    out[OSs > 0.5] = (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
-    
-def clip_r1(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
-
-def clip_OS(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/\
-        (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))
-    return out
-
-# Precalculate and interpolate clipping effect
-OSs = np.linspace(0.0,10000.0,20001)
-
-thy_clip_OSs = clip_OS(OSs)
-thy_clip_r0s = clip_r0(OSs)
-thy_clip_r1s = clip_r1(OSs)
-
-clip_r0_itp = interp1d(OSs,thy_clip_r0s,fill_value='extrapolate')
-inv_r1_itp = interp1d(thy_clip_r1s,OSs,fill_value='extrapolate')
-inv_OS_itp = interp1d(thy_clip_OSs,OSs,fill_value='extrapolate')
-
-# Define function to create activity with desired orientation selectivity
-def gen_clip_act(ori,z):
-    etas = inv_OS_itp(np.abs(z))
-    return np.fmax(0,1 + 2*etas*np.real(np.exp(-1j*ori*2*np.pi/180) * z/np.abs(z))) / clip_r0_itp(etas)
-
-start = time.process_time()
-
-# Define function to build S&P OPM
-def gen_sp_opm(r1,shape,seed=0,tol=1e-2):
+def gen_rf_sct_map(N,sig2,sct_scale,pol_scale,seed=0):
     rng = np.random.default_rng(seed)
-    
-    z = np.exp(1j*2*np.pi*rng.random(size=(N,N)))
-    
-    x = rng.gamma(shape=shape,scale=r1/shape,size=(N,N)) + bgnd*rng.random((N,N))
-    x = clip_OS(x)
-    x = np.fmax(1e-12,x)
-    
-    z *= x
-    
-    return z
 
-snp_z = gen_sp_opm(avg_OS,ksel,seed)
+    ks = np.arange(N)/N
+    ks[ks > 0.5] = ks[ks > 0.5] - 1
+    kxs,kys = np.meshgrid(ks*N,ks*N)
+    ks = np.sqrt(kxs**2 + kys**2)
+    kpol = 1/(np.sqrt(sig2)*pol_scale)
 
-res_dict['snp_z'] = snp_z
+    polmap = (np.fft.ifft2(ks*np.exp(0.125-2*(ks - 0.75*kpol)**2/kpol**2)*\
+        np.fft.fft2(rng.binomial(n=1,p=0.5,size=(N,N))-0.5)) > 0).astype(int)
+    
+    sctmap = rng.normal(loc=0,scale=np.sqrt(sig2)*sct_scale,size=(N,N,2))
+    
+    return sctmap,polmap
 
-# Calculate distance from all pairs of grid points
+def gen_abs_phs_map(N,rf_sct_map,pol_map,ori,freq,Lgrid):
+    xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
+    abs_rf_centx = rf_sct_map[:,:,0] + xs
+    abs_rf_centy = rf_sct_map[:,:,1] + ys
+    
+    abs_phs = 2*np.pi*np.mod(freq*Lgrid*(np.cos(ori)*abs_rf_centx + np.sin(ori)*abs_rf_centy) + 0.5*pol_map,1)
+    return abs_phs
+
+sctmap,polmap = gen_rf_sct_map(N,sig2,rf_sct_scale,pol_scale)
+abs_phs = gen_abs_phs_map(N,sctmap,polmap,0,grate_freq,L_deg)
+
+# Create L4 recurrent weights
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
 dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
 dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
 dys[dys > 0.5] = 1 - dys[dys > 0.5]
-ds2 = dxs**2 + dys**2
-ds = np.sqrt(ds2)
+ds2s = dxs**2 + dys**2
 
-# Smooth S&P OPM with Gaussian kernel
-if lker != 0.0:
-    gauss = np.exp(-0.5*ds2/lker2)
-else:
-    gauss = (ds2 == 0.0).astype(float)
-    
-gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
-
-L4_z = np.einsum('ijkl,kl->ij',gauss,snp_z * inv_OS_itp(np.abs(snp_z)) / np.fmax(1e-12,np.abs(snp_z)))
-
-# scale magnitude of z field until its mean selectivity matches data
-while np.abs(np.mean(clip_OS(np.abs(L4_z))) - avg_OS) > 1e-3:
-    L4_z *= 1 - (np.mean(clip_OS(np.abs(L4_z))) - avg_OS)
-
-L4_z *= clip_OS(np.abs(L4_z)) / np.fmax(1e-12,np.abs(L4_z))
-
-res_dict['L4_z'] = L4_z
-
-Wlker = Wlker_fact*lker
-Wlker2 = Wlker**2
-
-if Wlker != 0.0:
-    W = np.exp(-0.5*ds2/Wlker2)
-else:
-    W = (ds2 == 0.0).astype(float)
-    
-W *= np.random.default_rng(seed).random((N,N))
-    
-W /= np.sum(W,(-2,-1))[:,:,None,None]
-
-res_dict['z'] = L4_z
-
-print('Creating input orientation map took',time.process_time() - start,'s\n')
-
-# Interpolate relationship between squeezed gabor phase and OS
-start = time.process_time()
-
-def squeezed_gabor_r0(sigbar,phi,thresh):
-    return quad(lambda θ: np.fmax(0,np.sqrt(np.sin(phi)**2+(sigbar*np.cos(θ))**2)/\
-                                            np.sqrt(np.sin(phi)**2+sigbar**2)-thresh),0,np.pi)[0]
-
-def squeezed_gabor_r1(sigbar,phi,thresh):
-    return quad(lambda θ: np.cos(2*θ)*np.fmax(0,np.sqrt(np.sin(phi)**2+(sigbar*np.cos(θ))**2)/\
-                                            np.sqrt(np.sin(phi)**2+sigbar**2)-thresh),0,np.pi)[0]
-
-def squeezed_gabor_OS(sigbar,phi,thresh):
-    r0 = squeezed_gabor_r0(sigbar,phi,thresh)
-    r1 = squeezed_gabor_r1(sigbar,phi,thresh)
-    return r1/r0
-
-phis = np.linspace(0,np.pi/2,101)
-RF_r0s = np.zeros_like(phis)
-RF_r1s = np.zeros_like(phis)
-RF_OSs = np.zeros_like(phis)
-
-for phi_idx,phi in enumerate(phis):
-    RF_r0s[phi_idx] = squeezed_gabor_r0(0.25,phi,0.72)
-    RF_r1s[phi_idx] = squeezed_gabor_r1(0.25,phi,0.72)
-    RF_OSs[phi_idx] = squeezed_gabor_OS(0.25,phi,0.72)
-    
-min_OS = np.min(RF_OSs)
-max_OS = np.max(RF_OSs)
-RF_r0_itp = interp1d(phis,RF_r0s,fill_value='extrapolate')
-RF_r1_itp = interp1d(phis,RF_r1s,fill_value='extrapolate')
-RF_OS_itp = interp1d(phis,RF_OSs,fill_value='extrapolate')
-RF_OS_inv_itp = interp1d(RF_OSs,phis,fill_value='extrapolate')
-
-L4_phis = RF_OS_inv_itp(np.fmax(min_OS,np.abs(L4_z)))
-
-# Create L4 RFs
-σ = 0.04
-k = 0.5/σ
-xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
-xs[xs > 0.5] = xs[xs > 0.5] - 1
-ys[ys > 0.5] = ys[ys > 0.5] - 1
-ds = np.sqrt(xs**2 + ys**2)
-
-def sq_gabor(ori,phi):
-    return np.exp(-0.5*(xs**2+ys**2)/σ**2)*np.sin(k*(np.cos(ori*np.pi/180)*xs+np.sin(ori*np.pi/180)*ys)+phi)/np.sqrt(np.sin(phi)**2+(k*σ)**2)#np.sin(k*σ+phi)
-
-RFs = np.zeros((N,N,N,N))
-rng = np.random.default_rng(seed)
-for i in range(N):
-    for j in range(N):
-        this_rf = rng.choice([1,-1])*sq_gabor(np.angle(L4_z[i,j])*180/(2*np.pi),rng.choice([1,-1])*L4_phis[i,j])
-        this_rf[ds > 2.5*σ] = 0
-        this_rf /= np.sum(np.abs(this_rf))
-        RFs[i,j] = np.roll(this_rf,(i,j),(0,1))
-        
-on_conn = np.zeros_like(RFs)
-of_conn = np.zeros_like(RFs)
-
-on_conn[RFs > 0] = RFs[RFs > 0]
-of_conn[RFs < 0] = -RFs[RFs < 0]
-
-print('Creating L4 RFs took',time.process_time() - start,'s\n')
-
-# generate inputs
-start = time.process_time()
-
-kvecs = np.vstack((np.round(4*np.cos(np.pi*np.arange(n_ori)/n_ori)),
-                np.round(n_ori*np.sin(np.pi*np.arange(n_ori)/n_ori)))).T
-phss = 2*np.pi*np.arange(n_phs)/n_phs
-
-rets = np.zeros((n_ori,n_phs,n_rpt,N,N))
-
-for i,kvec in enumerate(kvecs):
-    for j,phs in enumerate(phss):
-        for k in range(n_rpt):
-            rets[i,j,k] = np.cos(2*np.pi*(kvec[0]*xs + kvec[1]*ys) - phs) + eta*rng.normal(size=(N,N))
-        
-on_inp = np.zeros_like(rets)
-of_inp = np.zeros_like(rets)
-
-on_inp[rets > 0] = rets[rets > 0]
-of_inp[rets < 0] = -rets[rets < 0]
-
-L4_inps = np.zeros((n_ori,n_phs,n_rpt,2,N,N))
-
-for i,kvec in enumerate(kvecs):
-    for j,phs in enumerate(phss):
-        for k in range(n_rpt):
-            L4_inps[i,j,k,0] = np.einsum('ijkl,kl->ij',on_conn,on_inp[i,j,k]) +\
-                            np.einsum('ijkl,kl->ij',of_conn,of_inp[i,j,k])
-            L4_inps[i,j,k,1] = L4_inps[i,j,k,0]
-    
-print('Creating L4 input patterns took',time.process_time() - start,'s\n')
+w = np.exp(-0.5*ds2s**2/(sig2*lrec**2)**2)
+w -= 0.5*np.eye(N**2).reshape((N,N,N,N))
+w /= np.mean(np.sum(w,(-2,-1)))
 
 # Define integration functions
 def fio_rect(x):
     return np.fmax(x,0)
 
-def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
-    arg = gamma_rec * np.dot(Wrec,y) + gamma_ff * inp_ff.flatten()
-    return 1./tau*( -y + fio_rect(arg))
+def integrate_ampa_nmda(x0,inp,dt,Nt,Wrec,gamma_rec=1.02,ta=0.01,tn=0.325,frac_n=0.5):
+    if np.isscalar(x0):
+        xa = (1-frac_n)*x0
+        xn = frac_n*x0
+    else:
+        xa = (1-frac_n)*x0[0]
+        xn = frac_n*x0[1]
+    
+    if isinstance(inp, np.ndarray):
+        inp_len = len(inp)
+        for t_idx in range(Nt):
+            net_inp = gamma_rec * np.dot(Wrec,fio_rect(xa+xn-thresh)**actpow) + inp[t_idx%inp_len]
+            xa += ((1-frac_n)*net_inp - xa)*dt/ta
+            xn += (frac_n*net_inp - xn)*dt/tn
+    else:
+        for t_idx in range(Nt):
+            net_inp = gamma_rec * np.dot(Wrec,fio_rect(xa+xn-thresh)**actpow) + inp(t_idx*dt)
+            xa += ((1-frac_n)*net_inp - xa)*dt/ta
+            xn += (frac_n*net_inp - xn)*dt/tn
+    return xa,xn,fio_rect(xa+xn-thresh)**actpow
 
-def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
-    y = y0
-    for t_idx in range(Nt):
-        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,1.0)
-        dy = out
-        y = y + dt*dy
-    return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
+def integrate_nmda(x0,inp,dt,Nt,Wrec,gamma_rec=1.02,tn=0.325):
+    xn = x0
+    
+    if isinstance(inp, np.ndarray):
+        inp_len = len(inp)
+        for t_idx in range(Nt):
+            net_inp = gamma_rec * np.dot(Wrec,fio_rect(xn-thresh)**actpow) + inp[t_idx%inp_len]
+            xn += (net_inp - xn)*dt/tn
+    else:
+        for t_idx in range(Nt):
+            net_inp = gamma_rec * np.dot(Wrec,fio_rect(xn-thresh)**actpow) + inp(t_idx*dt)
+            xn += (net_inp - xn)*dt/tn
+    return xn,fio_rect(xn-thresh)**actpow
+
+def integrate_ampa_nmda_no_rec(x0,inp,dt,Nt,ta=0.01,tn=0.325,frac_n=0.5):
+    if np.isscalar(x0):
+        xa = (1-frac_n)*x0
+        xn = frac_n*x0
+    else:
+        xa = (1-frac_n)*x0[0]
+        xn = frac_n*x0[1]
+        
+    if isinstance(inp, np.ndarray):
+        inp_len = len(inp)
+        for t_idx in range(Nt):
+            net_inp = inp[t_idx%inp_len]
+            xa += ((1-frac_n)*net_inp - xa)*dt/ta
+            xn += (frac_n*net_inp - xn)*dt/tn
+    else:
+        for t_idx in range(Nt):
+            net_inp = inp(t_idx*dt)
+            xa += ((1-frac_n)*net_inp - xa)*dt/ta
+            xn += (frac_n*net_inp - xn)*dt/tn
+    return xa,xn,fio_rect(xa+xn-thresh)**actpow
+
+def integrate_nmda_no_rec(x0,inp,dt,Nt,tn=0.325):
+    xn = x0
+        
+    if isinstance(inp, np.ndarray):
+        inp_len = len(inp)
+        for t_idx in range(Nt):
+            net_inp = inp[t_idx%inp_len]
+            xn += (net_inp - xn)*dt/tn
+    else:
+        for t_idx in range(Nt):
+            net_inp = inp(t_idx*dt)
+            xn += (net_inp - xn)*dt/tn
+    return xn,fio_rect(xn-thresh)**actpow
 
 # Integrate to get firing rates
-L4_rates = np.zeros_like(L4_inps)
+L4_rf_rates = np.zeros((n_ori,n_phs,N,N))
+L4_rates = np.zeros((n_ori,n_phs,N,N))
+
+inp_oris = np.linspace(0,np.pi,n_ori,endpoint=False)
+
+pref_oris = 0.5*np.angle(L4_inp_opm)
+pref_oris[pref_oris < 0] += np.pi
+gam_map_flat = gam_map.flatten()
+pref_oris_flat = pref_oris.flatten()
 
 start = time.process_time()
 
-for i,kvec in enumerate(kvecs):
-    for j,phs in enumerate(phss):
-        for k in range(n_rpt):
-            # L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-\
-            #     thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
-            L4_rates[i,j,k] = integrate(np.ones(2*N**2),L4_inps[i,j,k].reshape((2,-1))-\
-                thresh,0.25,n_int,grec)
+for ori_idx in range(n_ori):
+    abs_phs = gen_abs_phs_map(N,sctmap,polmap,inp_oris[ori_idx],grate_freq,L_deg).flatten()
+    def ff_inp(t):
+        return elong_inp(gam_map_flat,np.abs(inp_oris[ori_idx]-pref_oris_flat),abs_phs+2*np.pi*3*t)
+    dt = 1/(3*n_phs*n_int)
+    ff_inp_array = ff_inp(np.arange(n_phs*n_int)[:,None]*dt)
+    
+    inp_xn,y = integrate_nmda_no_rec(0.001*np.ones(N**2),ff_inp_array,dt,6*3*n_phs*n_int)
+    L4_rf_rates[ori_idx,0] = y.reshape((N,N))
+    rec_xn,y = integrate_nmda(0.001*np.ones(N**2),ff_inp_array,dt,
+                              6*3*n_phs*n_int,np.array(w.reshape((N**2,N**2))),grec)
+    L4_rates[ori_idx,0] = y.reshape((N,N))
+    for phs_idx in range(n_phs-1):
+        inp_xn,y = integrate_nmda_no_rec(inp_xn,ff_inp_array[n_int*phs_idx:n_int*(phs_idx+1)], dt,n_int)
+        L4_rf_rates[ori_idx,phs_idx+1] = y.reshape((N,N))
+        rec_xn,y = integrate_nmda(rec_xn,ff_inp_array[n_int*phs_idx:n_int*(phs_idx+1)],
+                                  dt,n_int,np.array(w.reshape((N**2,N**2))),grec)
+        L4_rates[ori_idx,phs_idx+1] = y.reshape((N,N))
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 if saverates:
+    res_dict['L4_rf_rates'] = L4_rf_rates
     res_dict['L4_rates'] = L4_rates
 
-L23_inps = np.zeros_like(L4_rates[:,:,:,0,:,:])
-
-for i,kvec in enumerate(kvecs):
-    for j,phs in enumerate(phss):
-        for k in range(n_rpt):
-            L23_inps[i,j,k] = np.einsum('ijkl,kl->ij',W,L4_rates[i,j,k,0])
-            
 # Calculate CV of inputs and responses
-L4_inp_CV = np.mean(np.std(L4_inps,2) / np.mean(L4_inps,2))
-L4_rate_CV = np.mean(np.std(L4_rates,2) / np.mean(L4_rates,2))
-L23_inp_CV = np.mean(np.std(L23_inps,2) / np.mean(L23_inps,2))
+inp_r0 = np.mean(L4_rf_rates,(0,1))
+inp_opm,inp_mr = af.calc_OPM_MR(L4_rf_rates.transpose(2,3,0,1))
+# inp_os = np.abs(inp_opm)
+# inp_po = np.angle(inp_opm)*180/(2*np.pi)
+inp_r1 = np.abs(inp_opm)*inp_r0
 
-# Calculate noise averaged activity per orientation and phase
-noise_avg_L4_inp = np.mean(L4_inps,2)
-noise_avg_L4_rate = np.mean(L4_rates,2)
-noise_avg_L23_inp = np.mean(L23_inps,2)
+L4_rate_r0 = np.mean(L4_rates,(0,1))
+L4_rate_opm,L4_rate_mr = af.calc_OPM_MR(L4_rates.transpose(2,3,0,1))
+# L4_rate_os = np.abs(L4_rate_opm)
+# L4_rate_po = np.angle(L4_rate_opm)*180/(2*np.pi)
+L4_rate_r1 = np.abs(L4_rate_opm)*L4_rate_r0
 
-L4_inp_F0,L4_inp_F1,L4_inp_APP = uf.calc_dc_ac_comp(noise_avg_L4_inp,1)
-L4_inp_F1 *= 2
-L4_inp_MR = L4_inp_F1/L4_inp_F0
-L4_inp_APP *= 360/(2*np.pi)
-L4_inp_avg,L4_inp_OS,L4_inp_PO = uf.calc_dc_ac_comp(L4_inp_F1,0)
-L4_inp_OS = L4_inp_OS/L4_inp_avg
-L4_inp_PO *= 180/(2*np.pi)
+res_dict['inp_r0'] = inp_r0
+res_dict['inp_r1'] = inp_r1
+res_dict['inp_opm'] = inp_opm
+res_dict['inp_mr'] = inp_mr
 
-L4_rate_F0,L4_rate_F1,L4_rate_APP = uf.calc_dc_ac_comp(noise_avg_L4_rate,1)
-L4_rate_F1 *= 2
-L4_rate_MR = L4_rate_F1/L4_rate_F0
-L4_rate_APP *= 360/(2*np.pi)
-L4_rate_avg,L4_rate_OS,L4_rate_PO = uf.calc_dc_ac_comp(L4_rate_F0,0)
-L4_rate_OS = L4_rate_OS/L4_rate_avg
-L4_rate_PO *= 180/(2*np.pi)
-
-L23_inp_F0,L23_inp_F1,L23_inp_APP = uf.calc_dc_ac_comp(noise_avg_L23_inp,1)
-L23_inp_F1 *= 2
-L23_inp_MR = L23_inp_F1/L23_inp_F0
-L23_inp_APP *= 360/(2*np.pi)
-L23_inp_avg,L23_inp_OS,L23_inp_PO = uf.calc_dc_ac_comp(L23_inp_F0,0)
-L23_inp_OS = L23_inp_OS/L23_inp_avg
-L23_inp_PO *= 180/(2*np.pi)
-
-L4_inp_z = L4_inp_OS * np.exp(1j*L4_inp_PO*2*np.pi/180)
-L4_rate_z = L4_rate_OS * np.exp(1j*L4_rate_PO*2*np.pi/180)
-L23_inp_z = L23_inp_OS * np.exp(1j*L23_inp_PO*2*np.pi/180)
-
-res_dict['L4_inp_CV'] = L4_inp_CV
-res_dict['L4_rate_CV'] = L4_rate_CV
-res_dict['L23_inp_CV'] = L23_inp_CV
-
-res_dict['L4_inp_F0'] = L4_inp_F0
-res_dict['L4_inp_F1'] = L4_inp_F1
-res_dict['L4_inp_APP'] = L4_inp_APP
-res_dict['L4_inp_MR'] = L4_inp_MR
-res_dict['L4_inp_avg'] = L4_inp_avg
-res_dict['L4_inp_OS'] = L4_inp_OS
-res_dict['L4_inp_PO'] = L4_inp_PO
-
-res_dict['L4_rate_F0'] = L4_rate_F0
-res_dict['L4_rate_F1'] = L4_rate_F1
-res_dict['L4_rate_APP'] = L4_rate_APP
-res_dict['L4_rate_MR'] = L4_rate_MR
-res_dict['L4_rate_avg'] = L4_rate_avg
-res_dict['L4_rate_OS'] = L4_rate_OS
-res_dict['L4_rate_PO'] = L4_rate_PO
-
-res_dict['L23_inp_F0'] = L23_inp_F0
-res_dict['L23_inp_F1'] = L23_inp_F1
-res_dict['L23_inp_APP'] = L23_inp_APP
-res_dict['L23_inp_MR'] = L23_inp_MR
-res_dict['L23_inp_avg'] = L23_inp_avg
-res_dict['L23_inp_OS'] = L23_inp_OS
-res_dict['L23_inp_PO'] = L23_inp_PO
-
-res_dict['L4_inp_z'] = L4_inp_z
-res_dict['L4_rate_z'] = L4_rate_z
-res_dict['L23_inp_z'] = L23_inp_z
-
-res_dict['L4_inp_mean_E_OS'] = np.mean(L4_inp_OS[0])
-res_dict['L4_inp_mean_I_OS'] = np.mean(L4_inp_OS[1])
-
-res_dict['L4_rate_mean_E_OS'] = np.mean(L4_rate_OS[0])
-res_dict['L4_rate_mean_I_OS'] = np.mean(L4_rate_OS[1])
-
-res_dict['L23_inp_mean_E_OS'] = np.mean(L23_inp_OS[0])
-res_dict['L23_inp_mean_I_OS'] = np.mean(L23_inp_OS[1])
+res_dict['L4_rate_r0'] = L4_rate_r0
+res_dict['L4_rate_r1'] = L4_rate_r1
+res_dict['L4_rate_opm'] = L4_rate_opm
+res_dict['L4_rate_mr'] = L4_rate_mr
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)
