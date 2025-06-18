@@ -35,14 +35,10 @@ dens = args['dens']
 map_type = args['map']
 saverates = args['saverates']
 
-# grecs = np.linspace(0.9,1.10,5)
-# lrecs = np.linspace(0.6,1.2,4)
-# threshs = np.linspace(1.0,1.01,6)
-# actpows = np.linspace(0.8,1.0,5)[:-1]
-grecs = np.linspace(0.9,1.10,2)
-lrecs = np.linspace(0.6,1.2,2)
-threshs = np.linspace(1.0,1.01,2)
-actpows = np.linspace(0.8,1.0,2)
+grecs = np.linspace(0.9,1.10,5)
+lrecs = np.linspace(0.6,1.2,4)
+threshs = np.linspace(1.0,1.01,6)
+actpows = np.linspace(0.8,1.0,5)[:-1]
 
 N = 60
 
@@ -377,5 +373,5 @@ res_dict['L4_rate_r1'] = L4_rate_r1
 res_dict['L4_rate_opm'] = L4_rate_opm
 res_dict['L4_rate_mr'] = L4_rate_mr
 
-# with open(res_file, 'wb') as handle:
-#     pickle.dump(res_dict,handle)
+with open(res_file, 'wb') as handle:
+    pickle.dump(res_dict,handle)
