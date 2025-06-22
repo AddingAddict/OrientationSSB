@@ -24,6 +24,7 @@ class Model:
         prune: bool=False, # whether to prune weights
         rec_e_plast: bool=True, # whether recurrent weights are plastic
         rec_i_plast: bool=True, # whether recurrent weights are plastic
+        rec_i_ltd: float=1.0, # factor for LTD of inhibitory weights
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -122,6 +123,9 @@ class Model:
         # whether recurrent weights are plastic
         self.rec_e_plast = rec_e_plast
         self.rec_i_plast = rec_i_plast
+        
+        # factor for LTD of inhibitory weights
+        self.rec_i_ltd = rec_i_ltd
 
         # RELU gains
         self.gain_e = 1.0
@@ -308,14 +312,14 @@ class Model:
             else:
                 self.dwei += self.ai * self.wei_rate * (np.outer(np.fmax(self.uei - self.uei_avg,0),
                                                                 np.fmax(self.ui - self.ui_avg,0)) -\
-                                                        np.outer(np.fmax(self.ue - self.ue_avg,0),
+                                                        self.rec_i_ltd*np.outer(np.fmax(self.ue - self.ue_avg,0),
                                                                 np.fmax(self.ui - self.ui_avg,0)))
             if self.hebb_wii:
                 self.dwii += self.ai * self.wii_rate * np.outer(self.ui - self.ui_avg,self.ui - self.ui_avg)
             else:
                 self.dwii += self.ai * self.wii_rate * (np.outer(np.fmax(self.uii - self.uii_avg,0),
                                                                 np.fmax(self.ui - self.ui_avg,0)) -\
-                                                        np.outer(np.fmax(self.ui - self.ui_avg,0),
+                                                        self.rec_i_ltd*np.outer(np.fmax(self.ui - self.ui_avg,0),
                                                                 np.fmax(self.ui - self.ui_avg,0)))
 
     def sum_norm_dw(

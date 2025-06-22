@@ -29,6 +29,7 @@ parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=floa
 # parser.add_argument('--hebb_wii', '-hii', help='whether wii has Hebbian learning rule',type=int, default=0)
 parser.add_argument('--prune', '-p', help='whether to prune feedforward weights',type=int, default=0)
 parser.add_argument('--rec_plast', '-r', help='whether recurrent weights are plastic',type=int, default=0)
+parser.add_argument('--rec_i_ltd', '-d', help='factor for inhibitory LTD term',type=float, default=1.0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=15)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
@@ -51,6 +52,7 @@ gain_i = args['gain_i']
 # hebb_wii = int(args['hebb_wii']) > 0
 prune = int(args['prune']) > 0
 rec_plast = int(args['rec_plast']) > 0
+rec_i_ltd = args['rec_i_ltd']
 n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
 n_shrink = args['n_shrink']
@@ -70,8 +72,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}/'.format(
-        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast)
+    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}_d={:.1f}/'.format(
+        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -97,7 +99,7 @@ def init_net(
     if n_iter==0: # starting a new simulation, must initialize the system
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_e_plast=rec_plast,
+                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,
                     rx_wave_start=lgn_spikes[13])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
@@ -106,7 +108,7 @@ def init_net(
             
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_e_plast=rec_plast,
+                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,
                     init_dict=res_dict)
         
     return net
