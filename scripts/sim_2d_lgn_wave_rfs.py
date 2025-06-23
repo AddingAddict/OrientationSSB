@@ -210,7 +210,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d} -d {:.1f}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
             seed,n_wave,n_stim,n_shrink,n_grid,
-            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast))
+            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd))

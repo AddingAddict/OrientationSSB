@@ -35,7 +35,7 @@ dens = args['dens']
 map_type = args['map']
 saverates = args['saverates']
 
-grecs = np.concat(([0],np.linspace(0.8,3.0,12)))
+grecs = np.concatenate(([0],np.linspace(0.8,3.0,12)))
 lrecs = np.linspace(0.8,1.2,3)
 thresh = 1.0
 actpow = 2
