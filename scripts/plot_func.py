@@ -224,6 +224,5 @@ def add_p_star(fig,ax,x1,x2,y,nstar):
         
     ax.add_line(lines.Line2D([x1,x2],[y,y],lw=1,color='k',clip_on=False))
     t = ax.text((x1+x2)/2,y,text,ha='center',va='center',clip_on=False)
-    width = t.get_window_extent(renderer=fig.canvas.get_renderer()).width
-    width = ax.transData.inverted().transform((width,0))[0]
-    ax.add_line(lines.Line2D([(x1+x2)/2-width,(x1+x2)/2+width],[y,y],lw=2,color='w',clip_on=False))
+    width = t.get_window_extent(renderer=fig.canvas.get_renderer()).transformed(ax.transData.inverted()).width
+    ax.add_line(lines.Line2D([(x1+x2)/2-width/2,(x1+x2)/2+width/2],[y,y],lw=2,color='w',clip_on=False))
