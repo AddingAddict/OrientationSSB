@@ -11,7 +11,6 @@ from scipy import optimize
 from scipy import sparse
 from scipy.special import ive
 import matplotlib.pyplot as plt
-from uncertainties import ufloat,umath
 
 from sbi.analysis import pairplot
 from sbi.inference import NPE,NPE_A

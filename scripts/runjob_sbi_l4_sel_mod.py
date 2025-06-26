@@ -86,7 +86,7 @@ def runjobs():
 
     time.sleep(0.2)
     
-    job_ids = range(10)
+    job_ids = range(50)
 
     for job_id in job_ids:
             #--------------------------------------------------------------------------
