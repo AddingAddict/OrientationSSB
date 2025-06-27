@@ -6,22 +6,8 @@ import argparse
 import numpy as np
 import torch
 from scipy import interpolate
-from scipy import linalg
-from scipy import optimize
-from scipy import sparse
-from scipy.special import ive
-import matplotlib.pyplot as plt
 
-from sbi.analysis import pairplot
-from sbi.inference import NPE,NPE_A
-from sbi.utils import BoxUniform
-from sbi.utils.user_input_checks import (
-    check_sbi_inputs,
-    process_prior,
-    process_simulator,
-)
-
-from tqdm import tqdm
+from sbi.utils.user_input_checks import process_prior
 
 import analyze_func as af
 import map_func as mf
@@ -29,10 +15,12 @@ from sbi_func import PostTimesBoxUniform
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--job_id', '-i', help='completely arbitrary job id label',type=int, default=0)
-parser.add_argument('--num_samps', '-n', help='number of samples per job',type=int, default=100)
+parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
+parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
 args = vars(parser.parse_args())
 job_id = int(args['job_id'])
-num_samps = int(args['num_samps'])
+num_inner = int(args['num_inner'])
+num_outer = int(args['num_outer'])
 
 device = torch.device("cpu")
 
@@ -291,15 +279,30 @@ def sheet_simulator(theta):
 
 # create prior distribution
 full_prior = PostTimesBoxUniform(posterior,5,
-                                  low =torch.tensor([0.2, 0.5, 2.0],device=device),
-                                  high=torch.tensor([5.0, 1.5, 4.0],device=device),)
+                                  low =torch.tensor([0.1, 0.3, 2.0],device=device),
+                                  high=torch.tensor([1.0, 1.0, 4.0],device=device),)
 
 full_prior,_,_ = process_prior(full_prior)
 
 start = time.process_time()
 
-theta = full_prior.sample((num_samps,))
-x = sheet_simulator(theta)
+theta = torch.zeros((0,8),dtype=torch.float32,device=device)
+x = torch.zeros((0,10),dtype=torch.float32,device=device)
+for outer_idx in range(num_outer):
+    print(f'Outer loop {outer_idx+1}/{num_outer}')
+    start_outer = time.process_time()
+
+    # sample from prior
+    theta_samp = full_prior.sample((num_inner,))
+
+    # simulate sheet
+    x_samp = sheet_simulator(theta_samp)
+
+    # append results
+    theta = torch.cat((theta,theta_samp),dim=0)
+    x = torch.cat((x,x_samp),dim=0)
+
+    print(f'  Outer loop took',time.process_time() - start_outer,'s\n')
 
 print(f'Simulating samples took',time.process_time() - start,'s\n')
 

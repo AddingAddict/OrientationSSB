@@ -24,14 +24,16 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--num_samps', '-n', help='number of samples per job',type=int, default=100)
+    parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
+    parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=2)
     
     args2 = parser.parse_args()
     args = vars(args2)
     
     cluster = str(args["cluster_"])
-    num_samps = int(args['num_samps'])
+    num_inner = int(args['num_inner'])
+    num_outer = int(args['num_outer'])
     gb = int(args['gb'])
 
     
@@ -86,43 +88,44 @@ def runjobs():
 
     time.sleep(0.2)
     
-    job_ids = range(50)
+    outer_jobs = 5
+    inner_jobs = 10
 
-    for job_id in job_ids:
-            #--------------------------------------------------------------------------
-            # Make SBTACH
-            inpath = currwd + "/sbi_l4_sel_mod.py"
-            c1 = "{:s} -i {:d} -n {:d}".format(
-                inpath,job_id,num_samps)
-            
-            jobname="{:s}_job_id={:d}".format(
-                'sbi_l4_sel_mod',job_id)
-            
-            if not args2.test:
-                jobnameDir=os.path.join(ofilesdir, jobname)
-                text_file=open(jobnameDir, "w");
-                os. system("chmod u+x "+ jobnameDir)
-                text_file.write("#!/bin/sh \n")
-                if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                    text_file.write("#SBATCH --account=theory \n")
-                text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                text_file.write("#SBATCH -t 0-11:59  \n")
-                text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-                # text_file.write("#SBATCH --gres=gpu\n")
-                text_file.write("#SBATCH -c 1 \n")
-                text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-                text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-                text_file.write("python  -W ignore " + c1+" \n")
-                text_file.write("echo $PATH  \n")
-                text_file.write("exit 0  \n")
-                text_file.close()
+    for outer_idx in range(outer_jobs):
+        #--------------------------------------------------------------------------
+        # Make SBTACH
+        inpath = currwd + "/sbi_l4_sel_mod.py"
+        c1 = "{:s} -i $SLURM_ARRAY_TASK_ID -ni {:d} -no {:d}".format(
+            inpath,num_inner,num_outer)
+        
+        jobname="{:s}_job_id={:d}".format(
+            'sbi_l4_sel_mod',outer_idx)
+        
+        if not args2.test:
+            jobnameDir=os.path.join(ofilesdir, jobname)
+            text_file=open(jobnameDir, "w");
+            os. system("chmod u+x "+ jobnameDir)
+            text_file.write("#!/bin/sh \n")
+            if cluster=='haba' or cluster=='moto' or cluster=='burg':
+                text_file.write("#SBATCH --account=theory \n")
+            text_file.write("#SBATCH --job-name="+jobname+ "\n")
+            text_file.write("#SBATCH -t 0-11:59  \n")
+            text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+            # text_file.write("#SBATCH --gres=gpu\n")
+            text_file.write("#SBATCH -c 1 \n")
+            text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%A_%a.o # STDOUT \n")
+            text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%A_%a.e # STDERR \n")
+            text_file.write("python  -W ignore " + c1+" \n")
+            text_file.write("echo $PATH  \n")
+            text_file.write("exit 0  \n")
+            text_file.close()
 
-                if cluster=='axon':
-                    os.system("sbatch -p burst " +jobnameDir);
-                else:
-                    os.system("sbatch " +jobnameDir);
+            if cluster=='axon':
+                os.system(f"sbatch -a {inner_jobs*outer_idx}-{inner_jobs*(outer_idx+1)-1} -p burst " +jobnameDir);
             else:
-                print (c1)
+                os.system(f"sbatch -a {inner_jobs*outer_idx}-{inner_jobs*(outer_idx+1)-1} " +jobnameDir);
+        else:
+            print (c1)
 
 
 
