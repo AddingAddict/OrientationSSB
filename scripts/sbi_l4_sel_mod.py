@@ -22,6 +22,8 @@ job_id = int(args['job_id'])
 num_inner = int(args['num_inner'])
 num_outer = int(args['num_outer'])
 
+print("Job ID:", job_id)
+
 device = torch.device("cpu")
 
 # Define where to save results

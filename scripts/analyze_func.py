@@ -191,8 +191,9 @@ def calc_OPM_MR(A):
     
     # infer index of preferred orientation
     PO += np.pi/noris
-    PO = np.where(PO<0,2*np.pi + PO,PO)
+    PO = np.mod(PO,2*np.pi)
     PO = np.array(PO / (2*np.pi) * noris).astype(int)
+    PO = np.mod(PO,noris)
     
     # calculate MR at preferred orientation
     # pref_F0,pref_F1 = np.zeros(np.shape(A)[:-2]),np.zeros(np.shape(A)[:-2])
@@ -215,8 +216,9 @@ def calc_OS_MR(A):
     
     # infer index of preferred orientation
     PO += np.pi/noris
-    PO = np.where(PO<0,2*np.pi + PO,PO)
+    PO = np.mod(PO,2*np.pi)
     PO = np.array(PO / (2*np.pi) * noris).astype(int)
+    PO = np.mod(PO,noris)
     
     # calculate MR at preferred orientation
     # pref_F0,pref_F1 = np.zeros(np.shape(A)[:-2]),np.zeros(np.shape(A)[:-2])
