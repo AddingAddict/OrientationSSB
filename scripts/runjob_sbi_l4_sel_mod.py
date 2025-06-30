@@ -25,7 +25,7 @@ def runjobs():
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
     parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
-    parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
+    parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=5)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=2)
     
     args2 = parser.parse_args()
@@ -109,7 +109,7 @@ def runjobs():
             if cluster=='haba' or cluster=='moto' or cluster=='burg':
                 text_file.write("#SBATCH --account=theory \n")
             text_file.write("#SBATCH --job-name="+jobname+ "\n")
-            text_file.write("#SBATCH -t 0-11:59  \n")
+            text_file.write("#SBATCH -t 0-23:59  \n")
             text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
             # text_file.write("#SBATCH --gres=gpu\n")
             text_file.write("#SBATCH -c 1 \n")
