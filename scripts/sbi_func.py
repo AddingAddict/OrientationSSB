@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import torch
 from torch import Tensor
-from torch.distributions import Distribution
+from torch.distributions import Distribution,constraints
 
 from sbi.sbi_types import Array
 from sbi.utils import BoxUniform
@@ -12,6 +12,8 @@ class PostTimesBoxUniform(Distribution):
         self,
         post,
         post_dim: int,
+        post_low: Union[Tensor, Array],
+        post_high: Union[Tensor, Array],
         low: Union[Tensor, Array],
         high: Union[Tensor, Array],
         device: Optional[str] = None,
@@ -34,6 +36,8 @@ class PostTimesBoxUniform(Distribution):
 
         self.post = post
         self.post_dim = post_dim
+        self.post_low = torch.as_tensor(post_low, dtype=torch.float32, device=device)
+        self.post_high = torch.as_tensor(post_high, dtype=torch.float32, device=device)
         self.low = torch.as_tensor(low, dtype=torch.float32, device=device)
         self.high = torch.as_tensor(high, dtype=torch.float32, device=device)
         self.box_uniform = BoxUniform(low,high)
@@ -41,6 +45,15 @@ class PostTimesBoxUniform(Distribution):
         super().__init__(self.box_uniform.batch_shape,
                          torch.Size((self.box_uniform.event_shape[0]+self.post_dim,)),
                          validate_args=validate_args)
+        
+        
+    @property
+    def support(self):
+        return constraints._IndependentConstraint(
+            constraints._Interval(torch.cat((self.post_low,self.low)),
+                                 torch.cat((self.post_high,self.high))),
+            1
+        )
         
     def sample(self, sample_shape=torch.Size()) -> Tensor:
         post_samples = self.post.sample(sample_shape)

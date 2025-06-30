@@ -26,6 +26,7 @@ def runjobs():
     parser.add_argument("--cluster_", help=" String", default='burg')
     parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
     parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
+    parser.add_argument('--bayes_iter', '-bi', help='bayessian inference interation (0 = use prior, 1 = use first posterior)',type=int, default=0)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=2)
     
     args2 = parser.parse_args()
@@ -34,9 +35,9 @@ def runjobs():
     cluster = str(args["cluster_"])
     num_inner = int(args['num_inner'])
     num_outer = int(args['num_outer'])
+    bayes_iter = int(args['bayes_iter'])
     gb = int(args['gb'])
 
-    
     if (args2.test):
         print ("testing commands")
     
@@ -95,12 +96,11 @@ def runjobs():
         #--------------------------------------------------------------------------
         # Make SBTACH
         inpath = currwd + "/sbi_l4_sel_mod.py"
-        c1 = "{:s} -i $SLURM_ARRAY_TASK_ID -ni {:d} -no {:d}".format(
-            inpath,num_inner,num_outer)
-        
-        jobname="{:s}_job_id={:d}".format(
-            'sbi_l4_sel_mod',outer_idx)
-        
+        c1 = "{:s} -i $SLURM_ARRAY_TASK_ID -ni {:d} -no {:d} -bi {:d}".format(
+            inpath,num_inner,num_outer,bayes_iter)
+        jobname="{:s}_bayes_iter={:d}_job_id={:d}".format(
+            'sbi_l4_sel_mod',bayes_iter,outer_idx)
+
         if not args2.test:
             jobnameDir=os.path.join(ofilesdir, jobname)
             text_file=open(jobnameDir, "w");
