@@ -17,11 +17,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--job_id', '-i', help='completely arbitrary job id label',type=int, default=0)
 parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
 parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
+parser.add_argument('--bayes_iter', '-bi', help='bayessian inference interation (0 = use prior, 1 = use first posterior)',type=int, default=0)
 args = vars(parser.parse_args())
 job_id = int(args['job_id'])
 num_inner = int(args['num_inner'])
 num_outer = int(args['num_outer'])
+bayes_iter = int(args['bayes_iter'])
 
+print("Bayesian iteration:", bayes_iter)
 print("Job ID:", job_id)
 
 device = torch.device("cpu")
@@ -35,12 +38,25 @@ res_dir = res_dir + 'sbi_l4_sel_mod/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_file = res_dir + 'job={:d}.pkl'.format(job_id)
+res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 
-# load posterior of phase ring connectivity parameters
-with open('./../notebooks/phase_ring_posterior.pkl','rb') as handle:
-    posterior = pickle.load(handle)
-    
+# create prior distribution
+if bayes_iter == 0:
+    # load posterior of phase ring connectivity parameters
+    with open('./../notebooks/phase_ring_posterior.pkl','rb') as handle:
+        posterior = pickle.load(handle)
+        
+    full_prior = PostTimesBoxUniform(posterior,5,
+                                    post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
+                                    post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
+                                    low =torch.tensor([0.1, 0.3, 2.0],device=device),
+                                    high=torch.tensor([1.0, 1.0, 4.0],device=device),)
+
+    full_prior,_,_ = process_prior(full_prior)
+else:
+    with open(f'./../notebooks/l4_posterior_{bayes_iter:d}.pkl','rb') as handle:
+        full_prior = pickle.load(handle)
+
 # create L4 orientation map
 N = 60
 
@@ -278,13 +294,6 @@ def sheet_simulator(theta):
     valid_idx = torch.all(torch.tensor(resps) < 5e4,axis=(1,2,3,4)) & (Jii < 0)
     
     return torch.where(valid_idx[:,None],out,torch.tensor([torch.nan])[:,None])
-
-# create prior distribution
-full_prior = PostTimesBoxUniform(posterior,5,
-                                  low =torch.tensor([0.1, 0.3, 2.0],device=device),
-                                  high=torch.tensor([1.0, 1.0, 4.0],device=device),)
-
-full_prior,_,_ = process_prior(full_prior)
 
 start = time.process_time()
 
