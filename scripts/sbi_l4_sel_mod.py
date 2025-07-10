@@ -46,11 +46,11 @@ if bayes_iter == 0:
     with open('./../notebooks/phase_ring_posterior.pkl','rb') as handle:
         posterior = pickle.load(handle)
         
-    full_prior = PostTimesBoxUniform(posterior,5,
-                                    post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
-                                    post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
-                                    low =torch.tensor([0.1, 0.3, 2.0],device=device),
-                                    high=torch.tensor([1.0, 1.0, 4.0],device=device),)
+    full_prior = PostTimesBoxUniform(posterior,
+                                     post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
+                                     post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
+                                     low =torch.tensor([0.1, 0.3, 2.0],device=device),
+                                     high=torch.tensor([1.0, 1.0, 4.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
