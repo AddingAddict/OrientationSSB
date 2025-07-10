@@ -8,6 +8,7 @@ import torch
 from scipy import interpolate
 
 from sbi.utils.user_input_checks import process_prior
+from sbi.utils import BoxUniform
 
 import analyze_func as af
 import map_func as mf
@@ -59,6 +60,8 @@ dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
 dys[dys > 0.5] = 1 - dys[dys > 0.5]
 dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
+
+nbins = 50
 
 idxs = np.digitize(dss,np.linspace(0,np.max(dss),nbins+1))
 
@@ -179,7 +182,7 @@ def get_J(theta):
     
     return Jee,Jei,Jie,Jii
 
-ng = np.random.default_rng(0)
+rng = np.random.default_rng(0)
 
 npatt = 200
 patts = 1 + 0.01*rng.normal(size=(npatt,N**2))
@@ -192,7 +195,7 @@ def get_sheet_resps(theta,N):
     Jii *= theta[:,5]
     
     c = 100
-    thresh = c
+    thresh = 0
     nint = 3
     nwrm = 100 * nint
     dt = 0.01 / nint
@@ -265,7 +268,7 @@ for outer_idx in range(num_outer):
     start_outer = time.process_time()
 
     # sample from prior
-    theta_samp = full_prior.sample((num_inner,))
+    theta_samp = prior.sample((num_inner,))
 
     # simulate sheet
     x_samp = sheet_simulator(theta_samp)
