@@ -91,16 +91,15 @@ def integrate_sheet_no_nmda(xea0,xeg0,xia0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei
     
     rng = np.random.default_rng(0)
     
-    if np.isscalar(Jee):
-        noise_ee = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
-        noise_ei = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
-        noise_ie = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
-        noise_ii = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
-        
-        Wee = Jee*kerne.reshape(N**2,N**2)*noise_ee[:,:]
-        Wei = Jei*kernei.reshape(N**2,N**2)*noise_ei[:,:]
-        Wie = Jie*kerne.reshape(N**2,N**2)*noise_ie[:,:]
-        Wii = Jii*kernii.reshape(N**2,N**2)*noise_ii[:,:]
+    if np.isscalar(Jee):        
+        noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+        Wee = Jee*kerne.reshape(N**2,N**2)*noise[:,:]
+        noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+        Wei = Jei*kernei.reshape(N**2,N**2)*noise[:,:]
+        noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+        Wie = Jie*kerne.reshape(N**2,N**2)*noise[:,:]
+        noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+        Wii = Jii*kernii.reshape(N**2,N**2)*noise[:,:]
         
         Wee = Wee[:,:,None]
         Wei = Wei[:,:,None]
@@ -115,19 +114,18 @@ def integrate_sheet_no_nmda(xea0,xeg0,xia0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei
             xin = xin[:,None]
             xig = xig[:,None]
     else:
-        noise_ee = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
-                             size=(N**2,N**2,len(Jee)))
-        noise_ei = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
-                             size=(N**2,N**2,len(Jee)))
-        noise_ie = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
-                             size=(N**2,N**2,len(Jee)))
-        noise_ii = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
-                             size=(N**2,N**2,len(Jee)))
-        
-        Wee = Jee[None,None,:]*kerne.reshape(N**2,N**2,-1)*noise_ee
-        Wei = Jei[None,None,:]*kernei.reshape(N**2,N**2,-1)*noise_ei
-        Wie = Jie[None,None,:]*kerne.reshape(N**2,N**2,-1)*noise_ie
-        Wii = Jii[None,None,:]*kernii.reshape(N**2,N**2,-1)*noise_ii
+        noise = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
+                          size=(N**2,N**2,len(Jee)))
+        Wee = Jee[None,None,:]*kerne.reshape(N**2,N**2,-1)*noise
+        noise = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
+                          size=(N**2,N**2,len(Jee)))
+        Wei = Jei[None,None,:]*kernei.reshape(N**2,N**2,-1)*noise
+        noise = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
+                          size=(N**2,N**2,len(Jee)))
+        Wie = Jie[None,None,:]*kerne.reshape(N**2,N**2,-1)*noise
+        noise = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
+                          size=(N**2,N**2,len(Jee)))
+        Wii = Jii[None,None,:]*kernii.reshape(N**2,N**2,-1)*noise
         
         if len(xea.shape) == 1:
             xea = xea[:,None] * np.ones(len(Jee))[None,:]
