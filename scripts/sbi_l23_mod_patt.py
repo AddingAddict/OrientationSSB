@@ -44,7 +44,7 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 # create prior distribution
 if bayes_iter == 0:
     prior = BoxUniform(low =torch.tensor([ 0.0,-2.0,-3.0,-2.0, 0.01, 0.5, 0.3, 2.0, 0.01],device=device),
-                   high=torch.tensor([ 1.0, 2.0,-0.0, 1.0, 0.04, 0.9, 0.9, 4.0, 0.5],device=device),)
+                       high=torch.tensor([ 1.0, 2.0,-0.0, 1.0, 0.04, 0.9, 0.9, 4.0, 0.5],device=device),)
 
     prior,_,_ = process_prior(prior)
 else:
@@ -52,7 +52,7 @@ else:
         prior = pickle.load(handle)
 
 # create distances between grid points
-N = 60
+N = 40
 
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
 dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
@@ -68,7 +68,7 @@ idxs = np.digitize(dss,np.linspace(0,np.max(dss),nbins+1))
 # define simulation functions
 def integrate_sheet_no_nmda(xea0,xeg0,xia0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
                     het_lev,N,ne,ni,threshe,threshi,
-                    t0,dt,Nt,ta=0.02,tg=0.01):
+                    t0,dt,Nt,ta=0.01,tg=0.01):
     '''
     Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
     xe0, xi0: initial excitatory and inhibitory activity
@@ -183,15 +183,21 @@ def get_sheet_resps(theta,N):
     c = 100
     thresh = 0
     nint = 3
-    nwrm = 100 * nint
+    nwrm = 50 * nint
     dt = 0.01 / nint
     
     s_e = theta[:,4]
     s_ei = s_e * theta[:,5]
     s_ii = s_ei * theta[:,6]
     kerne = np.exp(-(dss[:,:,None]/(s_e[None,None,:]))**theta[None,None,:,7])
+    norm = kerne.sum(axis=1).mean(axis=0)
+    kerne /= norm[None,None,:]
     kernei = np.exp(-(dss[:,:,None]/(s_ei[None,None,:]))**theta[None,None,:,7])
+    norm = kernei.sum(axis=1).mean(axis=0)
+    kernei /= norm[None,None,:]
     kernii = np.exp(-(dss[:,:,None]/(s_ii[None,None,:]))**theta[None,None,:,7])
+    norm = kernii.sum(axis=1).mean(axis=0)
+    kernii /= norm[None,None,:]
     
     resps = np.zeros((theta.shape[0],2,N**2,npatt))
     for patt_idx,patt in enumerate(patts):
@@ -215,8 +221,9 @@ def sheet_simulator(theta):
     theta[:,7] = p_ker
     theta[:,8] = het_level
     
-    returns: [mod,min_r]
+    returns: [mod,dim,min_r]
     mod = excitatory response modularity
+    dim = excitatory response dimensionality
     min_r = average minimum excitatory response relative to the maximum
     '''
     
@@ -225,7 +232,10 @@ def sheet_simulator(theta):
     resp_z = resps[:,0,:,:]
     resp_z = resp_z - np.mean(resp_z,axis=-1,keepdims=True)
     resp_z = resp_z / np.std(resp_z,axis=-1,keepdims=True)
-    corr = np.mean(resp_z[:,None,:,:] * resp_z[:,:,None,:],-1)
+    corr = np.zeros((theta.shape[0],N**2,N**2))
+    for i in range(npatt):
+        corr += resp_z[:,None,:,i] * resp_z[:,:,None,i]
+    corr /= npatt
     
     corr_curve = np.zeros((theta.shape[0],nbins))
     for i in range(nbins):
@@ -235,11 +245,17 @@ def sheet_simulator(theta):
     corr_maxs = np.array([np.max(corr_curve[i,arg_mins[i]:]) for i in range(theta.shape[0])])
     mod = corr_maxs - corr_mins
     
+    dim = np.zeros(theta.shape[0])
+    for i in range(theta.shape[0]):
+        w = np.linalg.eigvalsh(corr[i,:,:])
+        dim[i] = np.sum(w)**2/np.sum(w**2)
+    
     min_r = np.mean(np.min(resps[:,0,:,:],axis=-2) / np.max(resps[:,0,:,:],axis=-2),axis=-1)
     
-    out = torch.zeros((theta.shape[0],2),dtype=theta.dtype).to(theta.device)
+    out = torch.zeros((theta.shape[0],3),dtype=theta.dtype).to(theta.device)
     out[:,0] = torch.tensor(mod,dtype=theta.dtype).to(theta.device)
-    out[:,1] = torch.tensor(min_r,dtype=theta.dtype).to(theta.device)
+    out[:,1] = torch.tensor(dim,dtype=theta.dtype).to(theta.device)
+    out[:,2] = torch.tensor(min_r,dtype=theta.dtype).to(theta.device)
     
     valid_idx = torch.all(torch.tensor(resps) < 5e4,axis=(1,2,3))
     
