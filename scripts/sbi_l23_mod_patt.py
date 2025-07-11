@@ -239,7 +239,7 @@ def sheet_simulator(theta):
     
     corr_curve = np.zeros((theta.shape[0],nbins))
     for i in range(nbins):
-        corr_curve[:,i] = np.mean(corr[:,idxs == i+1],axis=(1,2))
+        corr_curve[:,i] = np.mean(corr[:,idxs == i+1],axis=-1)
     arg_mins = np.argmin(corr_curve,axis=1)
     corr_mins = np.array([corr_curve[i,arg_mins[i]] for i in range(theta.shape[0])])
     corr_maxs = np.array([np.max(corr_curve[i,arg_mins[i]:]) for i in range(theta.shape[0])])
@@ -247,8 +247,12 @@ def sheet_simulator(theta):
     
     dim = np.zeros(theta.shape[0])
     for i in range(theta.shape[0]):
-        w = np.linalg.eigvalsh(corr[i,:,:])
-        dim[i] = np.sum(w)**2/np.sum(w**2)
+        try:
+            # w = np.linalg.eigvalsh(corr[i,:,:])
+            # dim[i] = np.sum(w)**2/np.sum(w**2)
+            dim[i] = np.trace(corr[i,:,:])**2 / np.trace(corr[i,:,:] @ corr[i,:,:])
+        except:
+            dim[i] = 100
     
     min_r = np.mean(np.min(resps[:,0,:,:],axis=-2) / np.max(resps[:,0,:,:],axis=-2),axis=-1)
     
@@ -264,7 +268,7 @@ def sheet_simulator(theta):
 start = time.process_time()
 
 theta = torch.zeros((0,9),dtype=torch.float32,device=device)
-x = torch.zeros((0,2),dtype=torch.float32,device=device)
+x = torch.zeros((0,3),dtype=torch.float32,device=device)
 for outer_idx in range(num_outer):
     print(f'Outer loop {outer_idx+1}/{num_outer}')
     start_outer = time.process_time()
