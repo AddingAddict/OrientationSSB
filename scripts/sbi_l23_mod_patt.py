@@ -108,10 +108,8 @@ def integrate_sheet_no_nmda(xea0,xeg0,xia0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei
         
         if len(xea.shape) == 1:
             xea = xea[:,None]
-            xen = xen[:,None]
             xeg = xeg[:,None]
             xia = xia[:,None]
-            xin = xin[:,None]
             xig = xig[:,None]
     else:
         noise = rng.gamma(shape=1/het_lev[None,None,:]**2,scale=het_lev[None,None,:]**2,
