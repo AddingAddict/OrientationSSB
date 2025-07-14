@@ -5,7 +5,6 @@ import argparse
 
 import numpy as np
 import torch
-from scipy import interpolate
 from scipy.interpolate import CubicSpline
 
 from sbi.utils.user_input_checks import process_prior
@@ -242,7 +241,7 @@ def get_sheet_resps(theta,N):
         resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  ff_inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,theta[:,11]*theta[:,8],N,2,2,
-                                 thresh,thresh,0,dt,nwrm,tsamp)
+                                 thresh,thresh,0,dt,nwrm+nint*nphs,tsamp)
         resps[:,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
         # for phs_idx in range(nphs-1):
         #     xea,xen,xeg,xia,xin,xig,resp = integrate_sheet(xea,xen,xeg,xia,xin,xig,
