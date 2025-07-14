@@ -198,8 +198,6 @@ def get_J(theta):
     
     return Jee,Jei,Jie,Jii
 
-rng = np.random.default_rng(0)
-
 def get_sheet_resps(theta,N):
     Jee,Jei,Jie,Jii = get_J(theta)
     Jee *= theta[:,5]
