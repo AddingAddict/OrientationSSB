@@ -58,8 +58,8 @@ if bayes_iter == 0:
     full_prior = PostTimesBoxUniform(posterior,
         post_low =torch.tensor([ 0.0,-2.0,-4.0,-2.0, 0.01, 0.5, 0.3, 2.0, 0.01],device=device),
         post_high=torch.tensor([ 1.0, 2.0,-0.0, 2.0, 0.06, 0.9, 0.9, 4.0, 0.5],device=device),
-        low =torch.tensor([0.5, 0.5, 0.5],device=device),
-        high=torch.tensor([1.5, 1.5, 1.5],device=device),)
+        low =torch.tensor([0.5, 0.5, 0.5, 0.5],device=device),
+        high=torch.tensor([3.0, 1.5, 1.5, 4.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
@@ -200,10 +200,10 @@ def get_J(theta):
 
 def get_sheet_resps(theta,N):
     Jee,Jei,Jie,Jii = get_J(theta)
-    Jee *= theta[:,5]
-    Jei *= theta[:,5]
-    Jie *= theta[:,5]
-    Jii *= theta[:,5]
+    Jee *= theta[:,5]*theta[:,12]
+    Jei *= theta[:,5]*theta[:,12]
+    Jie *= theta[:,5]*theta[:,12]
+    Jii *= theta[:,5]*theta[:,12]
     
     thresh = 0
     nori = 8
@@ -263,6 +263,7 @@ def sheet_simulator(theta):
     theta[:,9] = inp_mult
     theta[:,10] = s_mult
     theta[:,11] = het_mult
+    theta[:,12] = J_mult
     
     returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
     os = excitatory orientation selectivity
@@ -287,7 +288,7 @@ def sheet_simulator(theta):
 
 start = time.process_time()
 
-theta = torch.zeros((0,12),dtype=torch.float32,device=device)
+theta = torch.zeros((0,13),dtype=torch.float32,device=device)
 x = torch.zeros((0,10),dtype=torch.float32,device=device)
 for outer_idx in range(num_outer):
     print(f'Outer loop {outer_idx+1}/{num_outer}')
