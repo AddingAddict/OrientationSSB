@@ -63,7 +63,7 @@ if bayes_iter == 0:
 
     full_prior,_,_ = process_prior(full_prior)
 else:
-    with open(f'./../notebooks/l23_sel_mod_{bayes_iter:d}.pkl','rb') as handle:
+    with open(f'./../notebooks/l23_sel_mod_posterior_{bayes_iter:d}.pkl','rb') as handle:
         full_prior = pickle.load(handle)
 
 # create distances between grid points
