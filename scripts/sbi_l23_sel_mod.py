@@ -42,7 +42,9 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 
 # load L4 responses
 with open('./../results/L4_sel/seed=0.pkl', 'rb') as handle:
-    L4_rates = pickle.load(handle)['L4_rates'][0]
+    L4_res_dict = pickle.load(handle)
+    L4_rates = L4_res_dict['L4_rates'][0]
+    L4_rate_opm = L4_res_dict['L4_rate_opm'][0]
 L4_rates /= np.nanmean(L4_rates,axis=(-2,-1),keepdims=True)
 
 L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
@@ -58,8 +60,8 @@ if bayes_iter == 0:
     full_prior = PostTimesBoxUniform(posterior,
         post_low =torch.tensor([ 0.0,-2.0,-4.0,-2.0, 0.01, 0.5, 0.3, 2.0, 0.01],device=device),
         post_high=torch.tensor([ 1.0, 2.0,-0.0, 2.0, 0.06, 0.9, 0.9, 4.0, 0.5],device=device),
-        low =torch.tensor([0.5, 0.5, 0.5, 0.5],device=device),
-        high=torch.tensor([3.0, 1.5, 1.5, 4.0],device=device),)
+        low =torch.tensor([ 0.5, 0.5, 0.5, 0.5],device=device),
+        high=torch.tensor([10.0, 3.0, 3.0,20.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
@@ -265,22 +267,33 @@ def sheet_simulator(theta):
     theta[:,11] = het_mult
     theta[:,12] = J_mult
     
-    returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
+    returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr,mu_mm]
     os = excitatory orientation selectivity
     mr = excitatory modulation ratio
+    mm = input-output mismatch
     '''
     
     resps = get_sheet_resps(theta,N)
     
-    os,mr = af.calc_OS_MR(resps[:,0,:,:,:])
+    opm,mr = af.calc_OPM_MR(resps[:,0,:,:,:])
+    os = np.abs(opm)
     
-    out = torch.zeros((theta.shape[0],10),dtype=theta.dtype).to(theta.device)
+    inp_po = np.angle(L4_rate_opm)*180/(2*np.pi)
+    inp_po[inp_po > 90] -= 180
+    out_po = np.angle(opm)*180/(2*np.pi)
+    out_po[out_po > 90] -= 180
+
+    mm = np.abs(inp_po - out_po)
+    mm[mm > 90] = 180 - mm[mm > 90]
+    
+    out = torch.zeros((theta.shape[0],11),dtype=theta.dtype).to(theta.device)
     out[:,0:3] = torch.tensor(np.quantile(os,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
     out[:,3] = torch.tensor(np.mean(os,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,4] = torch.tensor(np.std(os,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,5:8] = torch.tensor(np.quantile(mr,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
     out[:,8] = torch.tensor(np.mean(mr,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,9] = torch.tensor(np.std(mr,axis=1),dtype=theta.dtype).to(theta.device)
+    out[:,10] = torch.tensor(np.mean(mm,axis=1),dtype=theta.dtype).to(theta.device)
     
     valid_idx = torch.all(torch.tensor(resps) < 5e4,axis=(1,2,3,4))
     
@@ -289,7 +302,7 @@ def sheet_simulator(theta):
 start = time.process_time()
 
 theta = torch.zeros((0,13),dtype=torch.float32,device=device)
-x = torch.zeros((0,10),dtype=torch.float32,device=device)
+x = torch.zeros((0,11),dtype=torch.float32,device=device)
 for outer_idx in range(num_outer):
     print(f'Outer loop {outer_idx+1}/{num_outer}')
     start_outer = time.process_time()
