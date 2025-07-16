@@ -286,37 +286,31 @@ def sheet_simulator(theta):
     resp_opm,mr = af.calc_OPM_MR(resps[:,0,:,:,:])
     os = np.abs(resp_opm)
     
-    out = torch.zeros((theta.shape[0],10),dtype=theta.dtype).to(theta.device)
+    inp_po = np.angle(omap.flatten())*180/(2*np.pi)
+    inp_po[inp_po > 90] -= 180
+    out_po = np.angle(resp_opm)*180/(2*np.pi)
+    out_po[out_po > 90] -= 180
+    
+    mm = np.abs(inp_po - out_po)
+    mm[mm > 90] = 180 - mm[mm > 90]
+    
+    out = torch.zeros((theta.shape[0],11),dtype=theta.dtype).to(theta.device)
     out[:,0:3] = torch.tensor(np.quantile(os,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
     out[:,3] = torch.tensor(np.mean(os,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,4] = torch.tensor(np.std(os,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,5:8] = torch.tensor(np.quantile(mr,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
     out[:,8] = torch.tensor(np.mean(mr,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,9] = torch.tensor(np.std(mr,axis=1),dtype=theta.dtype).to(theta.device)
-    
-    inp_PO = np.angle(omap.flatten())*180/(2*np.pi)
-    inp_PO[inp_PO > 90] -= 180
-    rate_PO = np.angle(resp_opm)*180/(2*np.pi)
-    rate_PO[rate_PO > 90] -= 180
-
-    mm = np.abs(inp_PO - rate_PO)
-    mm[mm > 90] = 180 - mm[mm > 90]
-    
-    out_mm = torch.zeros((theta.shape[0],5),dtype=theta.dtype).to(theta.device)
-    out_mm[:,0:3] = torch.tensor(np.quantile(mm,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
-    out_mm[:,3] = torch.tensor(np.mean(mm,axis=1),dtype=theta.dtype).to(theta.device)
-    out_mm[:,4] = torch.tensor(np.std(mm,axis=1),dtype=theta.dtype).to(theta.device)
+    out[:,10] = torch.tensor(np.mean(mm,axis=1),dtype=theta.dtype).to(theta.device)
     
     valid_idx = torch.all(torch.tensor(resps) < 5e4,axis=(1,2,3,4)) & (Jii < 0)
     
-    return torch.where(valid_idx[:,None],out,torch.tensor([torch.nan])[:,None]), \
-        torch.where(valid_idx[:,None],out_mm,torch.tensor([torch.nan])[:,None])
+    return torch.where(valid_idx[:,None],out,torch.tensor([torch.nan])[:,None])
 
 start = time.process_time()
 
 theta = torch.zeros((0,8),dtype=torch.float32,device=device)
-x = torch.zeros((0,10),dtype=torch.float32,device=device)
-x_mm = torch.zeros((0,5),dtype=torch.float32,device=device)
+x = torch.zeros((0,11),dtype=torch.float32,device=device)
 for outer_idx in range(num_outer):
     print(f'Outer loop {outer_idx+1}/{num_outer}')
     start_outer = time.process_time()
@@ -325,12 +319,11 @@ for outer_idx in range(num_outer):
     theta_samp = full_prior.sample((num_inner,))
 
     # simulate sheet
-    x_samp,mm_samp = sheet_simulator(theta_samp)
+    x_samp = sheet_simulator(theta_samp)
 
     # append results
     theta = torch.cat((theta,theta_samp),dim=0)
     x = torch.cat((x,x_samp),dim=0)
-    x_mm = torch.cat((x_mm,mm_samp),dim=0)
 
     print(f'  Outer loop took',time.process_time() - start_outer,'s\n')
 
@@ -341,5 +334,4 @@ with open(res_file, 'wb') as handle:
     pickle.dump({
         'theta': theta,
         'x': x,
-        'x_mm': x_mm,
     }, handle)
