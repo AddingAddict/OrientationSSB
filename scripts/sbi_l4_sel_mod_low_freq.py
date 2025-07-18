@@ -8,6 +8,7 @@ import torch
 from scipy import interpolate
 
 from sbi.utils.user_input_checks import process_prior
+from sbi.utils import BoxUniform
 
 import analyze_func as af
 import map_func as mf
@@ -46,11 +47,13 @@ if bayes_iter == 0:
     with open('./../notebooks/phase_ring_posterior.pkl','rb') as handle:
         posterior = pickle.load(handle)
         
-    full_prior = PostTimesBoxUniform(posterior,
-                                     post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
-                                     post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
-                                     low =torch.tensor([0.1, 0.3, 2.0],device=device),
-                                     high=torch.tensor([1.0, 1.0, 4.0],device=device),)
+    # full_prior = PostTimesBoxUniform(posterior,
+    #                                  post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
+    #                                  post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
+    #                                  low =torch.tensor([0.1, 0.2, 0.1, 2.0],device=device),
+    #                                  high=torch.tensor([1.5, 1.0, 0.9, 4.0],device=device),)
+    full_prior = BoxUniform(low =torch.tensor([ 0.3, 0.0,-2.0,-1.0, 0.2, 0.1, 0.2, 2.0],device=device),
+                            high=torch.tensor([ 1.0, 0.6,-0.0, 0.5, 1.0, 1.0, 1.0, 4.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
@@ -113,7 +116,7 @@ dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
 # define simulation functions
 def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,ni,threshe,threshi,
-                    t0,dt,Nt,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac=1.0):
+                    t0,dt,Nt,tsamp=None,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac=1.0):
     '''
     Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
     xe0, xi0: initial excitatory and inhibitory activity
@@ -128,6 +131,10 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
     ta, tn, tg: time constants for AMPA, NMDA, and GABA receptor dynamics
     frac_n: fraction of NMDA vs NMDA+AMPA receptors in the excitatory population
     '''
+    
+    if tsamp is None:
+        tsamp = [Nt-1]
+    samp_idx = 0
     
     xea = xea0.copy()
     xen = xen0.copy()
@@ -144,6 +151,10 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         
         Wee += lat_frac*Jee*kern.reshape(N**2,N**2)
         Wie += lat_frac*Jie*kern.reshape(N**2,N**2)
+        # Wee = Jee*kerne.reshape(N**2,N**2)
+        # Wei = Jei*kerni.reshape(N**2,N**2)
+        # Wie = Jie*kerne.reshape(N**2,N**2)
+        # Wii = Jii*kerni.reshape(N**2,N**2)
         
         Wee = Wee[:,:,None]
         Wei = Wei[:,:,None]
@@ -157,6 +168,8 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
             xia = xia[:,None]
             xin = xin[:,None]
             xig = xig[:,None]
+            
+        resps = np.zeros((2,N**2,1,len(tsamp)))
     else:
         Wee = Jee[None,None,:]*np.eye(N**2)[:,:,None]
         Wei = Jei[None,None,:]*np.eye(N**2)[:,:,None]
@@ -165,6 +178,10 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         
         Wee += lat_frac[None,None,:]*Jee[None,None,:]*kern.reshape(N**2,N**2,-1)
         Wie += lat_frac[None,None,:]*Jie[None,None,:]*kern.reshape(N**2,N**2,-1)
+        # Wee = Jee[None,None,:]*kerne.reshape(N**2,N**2,-1)
+        # Wei = Jei[None,None,:]*kerni.reshape(N**2,N**2,-1)
+        # Wie = Jie[None,None,:]*kerne.reshape(N**2,N**2,-1)
+        # Wii = Jii[None,None,:]*kerni.reshape(N**2,N**2,-1)
         
         if len(xea.shape) == 1:
             xea = xea[:,None] * np.ones(len(Jee))[None,:]
@@ -173,11 +190,17 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
             xia = xia[:,None] * np.ones(len(Jee))[None,:]
             xin = xin[:,None] * np.ones(len(Jee))[None,:]
             xig = xig[:,None] * np.ones(len(Jee))[None,:]
+            
+        resps = np.zeros((2,N**2,len(Jee),len(tsamp)))
     
     for t_idx in range(Nt):
         ff_inp = inp(t0+t_idx*dt)
         ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
         yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+        if t_idx in tsamp:
+            resps[0,:,:,samp_idx] = ye
+            resps[1,:,:,samp_idx] = yi
+            samp_idx += 1
         net_ee = np.einsum('ijk,jk->ik',Wee,ye) + ff_inp[:,None]
         net_ei = np.einsum('ijk,jk->ik',Wei,yi)
         net_ie = np.einsum('ijk,jk->ik',Wie,ye) + ff_inp[:,None]
@@ -189,9 +212,10 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         xin += (frac_n*net_ie - xin)*dt/tn
         xig += (net_ii - xig)*dt/tg
         
-    ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
-    yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
-    return xea,xen,xeg,xia,xin,xig,np.concatenate((ye,yi))
+    # ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+    # yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+    # return xea,xen,xeg,xia,xin,xig,np.concatenate((ye,yi))
+    return resps
 
 def get_J(theta):
     '''
@@ -219,7 +243,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     theta[:,3] = (log10[|Jei|] - log10[|Jie|]) / 2
     theta[:,4] = J_lat / J_pair
     theta[:,5] = J_fact
-    theta[:,6] = l_ker
+    theta[:,6] = s_e
     theta[:,7] = p_ker
     
     returns: resps, array of shape (theta.shape[0],2,N**2,nori=8,nphs=8)
@@ -239,10 +263,13 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
     
-    kern = np.exp(-(dss[:,:,None]/(np.sqrt(sig2)*theta[None,None,:,6]))**theta[None,None,:,7])
+    se = np.sqrt(sig2)*theta[None,None,:,6]
+    
+    kern = np.exp(-(dss[:,:,None]/se)**theta[None,None,:,7])
     norm = kern.sum(axis=1).mean(axis=0)
     kern /= norm[None,None,:]
     
+    tsamp = nwrm-1 + np.arange(0,nphs) * nint
     resps = np.zeros((theta.shape[0],2,N**2,nori,nphs))
     for ori_idx,ori in enumerate(oris):
         phs_map_flat = mf.gen_abs_phs_map(N,rf_sct_map,pol_map,ori,grate_freq,L_deg).flatten()
@@ -250,16 +277,17 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
         ori_map_flat = ori_map.flatten()
         def ff_inp(t):
             return c*elong_inp(gam_map_flat,ori-ori_map_flat,phs_map_flat+2*np.pi*3*t)
-        xea,xen,xeg,xia,xin,xig,resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+        resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  ff_inp,Jee,Jei,Jie,Jii,kern,N,2,2,
-                                 thresh,thresh,0,dt,nwrm,lat_frac=theta[:,4])
-        resps[:,:,:,ori_idx,0] = resp.T.reshape(theta.shape[0],2,N**2)
-        for phs_idx in range(nphs-1):
-            xea,xen,xeg,xia,xin,xig,resp = integrate_sheet(xea,xen,xeg,xia,xin,xig,
-                                 ff_inp,Jee,Jei,Jie,Jii,kern,N,2,2,
-                                 thresh,thresh,phs_idx*nint*dt,dt,nint,lat_frac=theta[:,4])
-            resps[:,:,:,ori_idx,phs_idx+1] = resp.T.reshape(theta.shape[0],2,N**2)
+                                 thresh,thresh,0,dt,nwrm+nint*nphs,tsamp,lat_frac=theta[:,4])
+        resps[:,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
+        # resps[:,:,:,ori_idx,0] = resp.T.reshape(theta.shape[0],2,N**2)
+        # for phs_idx in range(nphs-1):
+        #     xea,xen,xeg,xia,xin,xig,resp = integrate_sheet(xea,xen,xeg,xia,xin,xig,
+        #                          ff_inp,Jee,Jei,Jie,Jii,kerne,kerni,N,2,2,
+        #                          thresh,thresh,phs_idx*nint*dt,dt,nint,lat_frac=theta[:,4])
+        #     resps[:,:,:,ori_idx,phs_idx+1] = resp.T.reshape(theta.shape[0],2,N**2)
         
     return resps
 
@@ -271,7 +299,7 @@ def sheet_simulator(theta):
     theta[:,3] = (log10[|Jei|] - log10[|Jie|]) / 2
     theta[:,4] = J_lat / J_pair
     theta[:,5] = J_fact
-    theta[:,6] = l_ker
+    theta[:,6] = s_e
     theta[:,7] = p_ker
     
     returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
