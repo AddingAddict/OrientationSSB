@@ -44,16 +44,14 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 # create prior distribution
 if bayes_iter == 0:
     # load posterior of phase ring connectivity parameters
-    with open('./../notebooks/phase_ring_posterior.pkl','rb') as handle:
+    with open('./../notebooks/l4_low_freq_prior.pkl','rb') as handle:
         posterior = pickle.load(handle)
         
-    # full_prior = PostTimesBoxUniform(posterior,
-    #                                  post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
-    #                                  post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
-    #                                  low =torch.tensor([0.1, 0.2, 0.1, 2.0],device=device),
-    #                                  high=torch.tensor([1.5, 1.0, 0.9, 4.0],device=device),)
-    full_prior = BoxUniform(low =torch.tensor([ 0.3, 0.0,-2.0,-1.0, 0.2, 0.1, 0.2, 2.0],device=device),
-                            high=torch.tensor([ 1.0, 0.6,-0.0, 0.5, 1.0, 1.0, 1.0, 4.0],device=device),)
+    full_prior = PostTimesBoxUniform(posterior,
+                                     post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2, 0.1, 0.3, 2.0],device=device),
+                                     post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0, 1.0, 1.0, 4.0],device=device),
+                                     low =torch.tensor([0.9, 0.5],device=device),
+                                     high=torch.tensor([2.0, 2.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
@@ -116,7 +114,7 @@ dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
 # define simulation functions
 def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,ni,threshe,threshi,
-                    t0,dt,Nt,tsamp=None,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac=1.0):
+                    t0,dt,Nt,tsamp=None,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac_ee=1.0,lat_frac_ie=1.0):
     '''
     Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
     xe0, xi0: initial excitatory and inhibitory activity
@@ -149,8 +147,8 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         Wie = Jie*np.eye(N**2)
         Wii = Jii*np.eye(N**2)
         
-        Wee += lat_frac*Jee*kern.reshape(N**2,N**2)
-        Wie += lat_frac*Jie*kern.reshape(N**2,N**2)
+        Wee += lat_frac_ee*Jee*kern.reshape(N**2,N**2)
+        Wie += lat_frac_ie*Jie*kern.reshape(N**2,N**2)
         # Wee = Jee*kerne.reshape(N**2,N**2)
         # Wei = Jei*kerni.reshape(N**2,N**2)
         # Wie = Jie*kerne.reshape(N**2,N**2)
@@ -176,8 +174,8 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         Wie = Jie[None,None,:]*np.eye(N**2)[:,:,None]
         Wii = Jii[None,None,:]*np.eye(N**2)[:,:,None]
         
-        Wee += lat_frac[None,None,:]*Jee[None,None,:]*kern.reshape(N**2,N**2,-1)
-        Wie += lat_frac[None,None,:]*Jie[None,None,:]*kern.reshape(N**2,N**2,-1)
+        Wee += lat_frac_ee[None,None,:]*Jee[None,None,:]*kern.reshape(N**2,N**2,-1)
+        Wie += lat_frac_ie[None,None,:]*Jie[None,None,:]*kern.reshape(N**2,N**2,-1)
         # Wee = Jee[None,None,:]*kerne.reshape(N**2,N**2,-1)
         # Wei = Jei[None,None,:]*kerni.reshape(N**2,N**2,-1)
         # Wie = Jie[None,None,:]*kerne.reshape(N**2,N**2,-1)
@@ -245,6 +243,8 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     theta[:,5] = J_fact
     theta[:,6] = s_e
     theta[:,7] = p_ker
+    theta[:,8] = s_mult
+    theta[:,9] = Jie_lat_mult
     
     returns: resps, array of shape (theta.shape[0],2,N**2,nori=8,nphs=8)
     '''
@@ -263,7 +263,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
     
-    se = np.sqrt(sig2)*theta[None,None,:,6]
+    se = np.sqrt(sig2)*theta[None,None,:,6]*theta[None,None,:,8]
     
     kern = np.exp(-(dss[:,:,None]/se)**theta[None,None,:,7])
     norm = kern.sum(axis=1).mean(axis=0)
@@ -280,7 +280,8 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
         resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                  ff_inp,Jee,Jei,Jie,Jii,kern,N,2,2,
-                                 thresh,thresh,0,dt,nwrm+nint*nphs,tsamp,lat_frac=theta[:,4])
+                                 thresh,thresh,0,dt,nwrm+nint*nphs,tsamp,
+                                 lat_frac_ee=theta[:,4],lat_frac_ie=theta[:,4]*theta[:,9])
         resps[:,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
         # resps[:,:,:,ori_idx,0] = resp.T.reshape(theta.shape[0],2,N**2)
         # for phs_idx in range(nphs-1):
@@ -301,6 +302,8 @@ def sheet_simulator(theta):
     theta[:,5] = J_fact
     theta[:,6] = s_e
     theta[:,7] = p_ker
+    theta[:,8] = s_mult
+    theta[:,9] = Jie_lat_mult
     
     returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
     os = excitatory orientation selectivity
@@ -337,7 +340,7 @@ def sheet_simulator(theta):
 
 start = time.process_time()
 
-theta = torch.zeros((0,8),dtype=torch.float32,device=device)
+theta = torch.zeros((0,10),dtype=torch.float32,device=device)
 x = torch.zeros((0,11),dtype=torch.float32,device=device)
 for outer_idx in range(num_outer):
     print(f'Outer loop {outer_idx+1}/{num_outer}')
