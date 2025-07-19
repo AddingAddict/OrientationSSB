@@ -12,25 +12,29 @@ from scipy.special import erf
 import matplotlib.pyplot as plt
 
 def get_fps(A,axes=None,zero_mean=True,calc_err=False):
-    if axes is None:
+    if axes is None or axes == (-2,-1):
         Nax = A.shape[-2]
+        axes = (A.ndim-2,A.ndim-1)
     else:
+        assert axes[0] < axes[1], "axes[0] must be smaller than axes[1]"
         Nax = A.shape[axes[0]]
     if zero_mean:
-        fps = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A))))**2
+        fps = np.abs(np.fft.fftshift(np.fft.fft2(A - np.nanmean(A,axis=axes,keepdims=True),axes=axes),axes=axes))**2
     else:
-        fps = np.abs(np.fft.fftshift(np.fft.fft2(A)))**2
-    raps = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
+        fps = np.abs(np.fft.fftshift(np.fft.fft2(A,axes=axes),axes=axes))**2
+    raps = np.zeros(A.shape[:axes[0]] + A.shape[axes[0]+1:axes[1]] \
+        + A.shape[axes[1]+1:] + (int(np.ceil(Nax//2*np.sqrt(2))),))
     if calc_err:
-        raps_err = np.zeros(int(np.ceil(Nax//2*np.sqrt(2))))
+        raps_err = np.zeros(A.shape[:axes[0]] + A.shape[axes[0]+1:axes[1]] \
+            + A.shape[axes[1]+1:] + (int(np.ceil(Nax//2*np.sqrt(2))),))
 
     grid = np.arange(-Nax//2,Nax//2)
     x,y = np.meshgrid(grid,grid)
     bin_idxs = np.digitize(np.sqrt(x**2+y**2),np.arange(0,np.ceil(Nax//2*np.sqrt(2)))+0.5)
     for idx in range(0,int(np.ceil(Nax//2*np.sqrt(2)))):
-        raps[idx] = np.mean(fps[bin_idxs == idx])
+        raps[...,idx] = np.mean(fps[...,bin_idxs == idx],-1)
         if calc_err:
-            raps_err[idx] = np.std(fps[bin_idxs == idx]) / np.sqrt(np.sum(bin_idxs == idx))
+            raps_err[...,idx] = np.std(fps[...,bin_idxs == idx],-1) / np.sqrt(np.sum(...,bin_idxs == idx),-1)
     
     if calc_err:
         return fps,raps,raps_err
@@ -133,9 +137,9 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
             return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
                 / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi
     else:
-        norm = np.sum(raps)
-        return np.sum(freqs**3 * raps / norm) \
-            / np.sum(freqs * raps / norm)**3 * np.pi
+        norm = np.sum(raps,-1,keepdims=True)
+        return np.sum(freqs**3 * raps / norm,-1) \
+            / np.sum(freqs * raps / norm,-1)**3 * np.pi
 
 def bandpass_filter(A,ll,lu):
     Nax = A.shape[0]
