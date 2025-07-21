@@ -121,21 +121,46 @@ def raps_fn(k,alf,a0,a1,a2):
 def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False):        
     if continuous:
         # raps_itp = interp1d(freqs,raps,kind='linear',bounds_error=False,fill_value=0)
-        
-        peak_idx = np.argmax(np.concatenate(([0,0],raps[2:])))
+        if raps.ndim == 1:
+            peak_idx = np.argmax(np.concatenate(([0,0],raps[2:])))
 
-        popt,pcov = curve_fit(raps_fn,freqs,raps,
-                              p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
-                              bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
-        raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
-        
-        norm = quad(raps_itp,0,np.inf)[0]
-        if return_fit:
-            return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
-                / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi, popt
+            popt,pcov = curve_fit(raps_fn,freqs,raps,
+                                p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
+                                bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+            raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
+            
+            norm = quad(raps_itp,0,np.inf)[0]
+            if return_fit:
+                return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
+                    / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi, popt
+            else:
+                return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
+                    / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi
         else:
-            return quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
-                / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi
+            pwd_list = []
+            popt_list = []
+            if freqs.ndim == 1:
+                freqs = freqs[None,:] * np.ones((raps.shape[0],1))
+            elif freqs.shape[0] != raps.shape[0]:
+                freqs = freqs * np.ones((raps.shape[0],1))
+            for i in range(raps.shape[0]):
+                peak_idx = np.argmax(np.concatenate(([0,0],raps[i,2:])))
+
+                popt,pcov = curve_fit(raps_fn,freqs[i],raps[i],
+                                    p0=(0,raps[i,peak_idx]/freqs[i,peak_idx],freqs[i,peak_idx],0.3*freqs[i,peak_idx]),
+                                    bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+                raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
+                
+                norm = quad(raps_itp,0,np.inf)[0]
+                
+                pwd_list.append(quad(lambda k: k**3*raps_itp(k)/norm,0,np.inf)[0] \
+                    / quad(lambda k: k*raps_itp(k)/norm,0,np.inf)[0]**3 * np.pi)
+                if return_fit:
+                    popt_list.append(popt)
+            if return_fit:
+                return np.array(pwd_list), np.array(popt_list)
+            else:
+                return np.array(pwd_list)
     else:
         norm = np.sum(raps,-1,keepdims=True)
         return np.sum(freqs**3 * raps / norm,-1) \
