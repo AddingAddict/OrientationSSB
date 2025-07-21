@@ -10,7 +10,6 @@ from scipy.interpolate import CubicSpline
 from sbi.utils.user_input_checks import process_prior
 
 import analyze_func as af
-import map_func as mf
 from sbi_func import PostTimesBoxUniform
 
 parser = argparse.ArgumentParser()
@@ -279,8 +278,8 @@ def sheet_simulator(theta):
     mm[mm > 90] = 180 - mm[mm > 90]
     
     _,raps = af.get_fps(opm.reshape(-1,N,N)[:,:,:])
-    pwd = af.calc_pinwheel_density_from_raps(np.arange(raps[:,:-20].shape[-1])[None,:]/N,
-                                             raps[:,:-20],continuous=False)
+    pwd = af.calc_pinwheel_density_from_raps(np.arange(raps.shape[-1])[None,:]/N,
+                                             raps,continuous=True)
     
     out = torch.zeros((theta.shape[0],12),dtype=theta.dtype).to(theta.device)
     out[:,0:3] = torch.tensor(np.quantile(os,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
