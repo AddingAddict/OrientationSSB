@@ -21,6 +21,7 @@ from dev_ori_sel_RF import connectivity
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=8)
+parser.add_argument('--n_phs', '-np', help='number of phases',type=int, default=8)
 parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=8)
 parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
@@ -28,9 +29,11 @@ parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--htro', '-ht', help='L2/3 recurrent weight heterogeneity',type=float, default=0.7)
 parser.add_argument('--map', '-m', help='L4 orientation map type',type=str, default='act')
+parser.add_argument('--phase', '-p', help='phase selection type',type=str, default='center_5')
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=True)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
+n_phs = int(args['n_phs'])
 n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
@@ -38,6 +41,7 @@ dens = args['dens']
 grec = args['grec']
 htro = args['htro']
 map_type = args['map']
+phase_type = args['phase']
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
@@ -79,8 +83,8 @@ meanCV = np.mean(np.sqrt(res_dict['L4_rate_rV'])/res_dict['L4_rate_rm'])
 if map_type == 'act':
     # Get L4 orientation map from previous simulation
     L4_rate_opm = res_dict['L4_rate_opm']
-    res_dir = res_dir + 'L23_sel_dens={:.4f}_grec={:.3f}_htro={:.2f}/'.format(
-        dens,grec,htro)
+    res_dir = res_dir + 'L23_sel_mod_dens={:.4f}_phase={:s}_grec={:.3f}_htro={:.2f}/'.format(
+        dens,phase_type,grec,htro)
 else:
     rng = np.random.default_rng(seed+1234)
     opm_fft = rng.normal(size=(N,N)) + 1j * rng.normal(size=(N,N))
@@ -102,8 +106,31 @@ else:
         raise ValueError('Unknown map type: {}'.format(map_type))
     L4_rate_opm = np.fft.ifft2(opm_fft)
     L4_rate_opm *= 0.5 / np.max(np.abs(L4_rate_opm)) # normalize to 0.5
-    res_dir = res_dir + 'L23_sel_map={:s}_grec={:.3f}_htro={:.2f}/'.format(
-        map_type,grec,htro)
+    res_dir = res_dir + 'L23_sel_mod_map={:s}_phase={:s}_grec={:.3f}_htro={:.2f}/'.format(
+        map_type,phase_type,grec,htro)
+    
+# Create L4 phase map
+xs,ys = np.mgrid[:N,:N] / N
+oris = np.linspace(0,np.pi,n_ori,endpoint=False)
+if 'center' in phase_type:
+    # assume phase_type == 'center_{spat_freq}'
+    _,spat_freq = phase_type.split('_')
+    spat_freq = float(spat_freq)
+elif 'scat' in phase_type:
+    # assume phase_type == 'scat_{scat_scale}_{spat_freq}'
+    _,scat_scale,spat_freq = phase_type.split('_')
+    scat_scale = float(scat_scale)
+    spat_freq = float(spat_freq)
+    rng = np.random.default_rng(seed)
+    xs += 0.05*rng.normal(size=(60,60))
+    ys += 0.05*rng.normal(size=(60,60))
+kxs = np.round(60*spat_freq*np.cos(oris)) / 60
+kys = np.round(60*spat_freq*np.sin(oris)) / 60
+L4_rate_phase_map = 2*np.pi*np.mod(kxs[:,None,None] * xs[None,:,:] + kys[:,None,None] * ys[None,:,:],1)
+if 'bias' in phase_type:
+    pol = rng.binomial(1,0.5,size=(N,N))
+    L4_rate_phase_map += pol * np.pi
+    L4_rate_phase_map = np.mod(L4_rate_phase_map,2*np.pi)
 
 # Define where to save results
 if not os.path.exists(res_dir):
@@ -122,6 +149,9 @@ maxOS = 0.6
 # Define functions to model feedforward inputs with given orientation selectivity
 def elong_inp(ksig,ori):
     return np.exp(-(ksig*np.sin(ori))**2/2) / ive(0,ksig**2/4)
+
+def simple_inp(phs):
+    return np.fmax(0,np.cos(phs)) * np.pi
 
 def elong_os(ksig):
     return ive(1,ksig**2/4) / ive(0,ksig**2/4)
@@ -142,17 +172,20 @@ start = time.process_time()
 
 pos = np.angle(L4_rate_opm)/2
 inp_oris = np.arange(n_ori)/n_ori * np.pi
-inps = np.zeros((n_ori,n_rpt,N,N))
+inp_phss = np.arange(n_phs)/n_phs * 2 * np.pi
+inps = np.zeros((n_ori,n_phs,n_rpt,N,N))
 
 rng = np.random.default_rng(seed)
 for ori_idx,ori in enumerate(inp_oris):
-    mean_inp = rm * elong_inp(ksmap,ori-pos)
     shape = 1/meanCV**2
-    scale = mean_inp/shape
-    for rpt_idx in range(n_rpt):
-        inps[ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
+    pps = L4_rate_phase_map[ori_idx]
+    for phs_idx,phs in enumerate(inp_phss):
+        mean_inp = rm * elong_inp(ksmap,ori-pos) * simple_inp(phs-pps)
+        scale = mean_inp/shape
+        for rpt_idx in range(n_rpt):
+            inps[ori_idx,phs_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale)
         
-n_spnt = 100
+n_spnt = 1000
 spnt_inps = np.zeros((n_spnt,N,N))
 for spnt_idx in range(n_spnt):
     mean_inp = rm*np.ones((N,N))
@@ -184,17 +217,19 @@ def integrate(y0,inp,dt,Nt,Wrec,gamma_rec=1.02):
 start = time.process_time()
 
 # Integrate to get firing rates
-L23_rates = np.zeros((n_ori,n_rpt,2,N,N,n_int//100))
+L23_rates = np.zeros((n_ori,n_phs,n_rpt,2,N,N,n_int//100))
 
 for ori_idx,ori in enumerate(inp_oris):
-    for rpt_idx in range(n_rpt):
-        L23_inp = np.concatenate((inps[ori_idx,rpt_idx].flatten(),
-                                    inps[ori_idx,rpt_idx].flatten()))
-        L23_rates[ori_idx,rpt_idx,:,:,:,0] = integrate(np.ones(2*N**2),
-            L23_inp,0.25,100,WL23,grec)
-        for i in range(1,n_int//100):
-            L23_rates[ori_idx,rpt_idx,:,:,:,i] = integrate(L23_rates[ori_idx,rpt_idx,:,:,:,i-1].flatten(),
+    for phs_idx,phs in enumerate(inp_phss):
+        for rpt_idx in range(n_rpt):
+            L23_inp = np.concatenate((inps[ori_idx,phs_idx,rpt_idx].flatten(),
+                                      inps[ori_idx,phs_idx,rpt_idx].flatten()))
+            L23_rates[ori_idx,phs_idx,rpt_idx,:,:,:,0] = integrate(np.ones(2*N**2),
                 L23_inp,0.25,100,WL23,grec)
+            for i in range(1,n_int//100):
+                L23_rates[ori_idx,phs_idx,rpt_idx,:,:,:,i] =\
+                    integrate(L23_rates[ori_idx,phs_idx,rpt_idx,:,:,:,i-1].flatten(),
+                              L23_inp,0.25,100,WL23,grec)
             
 L23_spnt_rates = np.zeros((n_spnt,2,N,N,n_int//100))
 for spnt_idx in range(n_rpt):
@@ -222,24 +257,24 @@ for i in range(n_int//100):
     L23_spnt_dim[i] = np.sum(cov_evals)**2/np.sum(cov_evals**2)
 
 # Calculate z_fields from inputs and rates
-inp_binned = inps.mean(1)
-L23_rate_binned = L23_rates.mean(1)
+inp_binned = inps.mean(2)
+L23_rate_binned = L23_rates.mean(2)
 
-inp_r0 = np.mean(inp_binned,0)
-inp_opm = af.calc_OPM(inp_binned.transpose(1,2,0))
+inp_r0 = np.mean(inp_binned,(0,1))
+inp_opm,inp_mr = af.calc_OPM_MR(inp_binned.transpose(2,3,0,1))
 inp_os = np.abs(inp_opm)
 inp_po = np.angle(inp_opm)*180/(2*np.pi)
 inp_r1 = inp_os*inp_r0
-inp_rm = np.mean(np.mean(inps,1),0)
-inp_rV = np.mean(np.var(inps,1),0)
+inp_rm = np.mean(np.mean(inps,2),(0,1))
+inp_rV = np.mean(np.var(inps,2),(0,1))
 
-L23_rate_r0 = np.mean(L23_rate_binned,0)
-L23_rate_opm = af.calc_OPM(L23_rate_binned.transpose(1,2,3,4,0))
+L23_rate_r0 = np.mean(L23_rate_binned,(0,1))
+L23_rate_opm,L23_rate_mr = af.calc_OPM_MR(L23_rate_binned.transpose(2,3,4,5,0,1))
 L23_rate_os = np.abs(L23_rate_opm)
 L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
 L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
-L23_rate_rm = np.mean(np.mean(L23_rates,1),0)
-L23_rate_rV = np.mean(np.var(L23_rates,1),0)
+L23_rate_rm = np.mean(np.mean(L23_rates,2),(0,1))
+L23_rate_rV = np.mean(np.var(L23_rates,2),(0,1))
 
 # Calculate hypercolumn size and number of pinwheels
 # _,z_fps = af.get_fps(L23_rate_opm[0])
@@ -255,6 +290,7 @@ res_dict['inp_r1'] = inp_r1
 res_dict['inp_rm'] = inp_rm
 res_dict['inp_rV'] = inp_rV
 res_dict['inp_opm'] = inp_opm
+res_dict['inp_mr'] = inp_mr
 
 res_dict['L23_spnt_dim'] = L23_spnt_dim
 
@@ -263,6 +299,7 @@ res_dict['L23_rate_r1'] = L23_rate_r1
 res_dict['L23_rate_rm'] = L23_rate_rm
 res_dict['L23_rate_rV'] = L23_rate_rV
 res_dict['L23_rate_opm'] = L23_rate_opm
+res_dict['L23_rate_mr'] = L23_rate_mr
 
 # res_dict['z_fps'] = z_fps
 # res_dict['Lam'] = Lam
