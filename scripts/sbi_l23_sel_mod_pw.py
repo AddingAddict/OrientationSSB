@@ -205,7 +205,7 @@ def get_sheet_resps(theta,N):
     nwrm = 12 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     
-    s_e = theta[:,10]*theta[:,4]
+    s_e = theta[:,10]*theta[:,4]*2
     s_ei = s_e * theta[:,5]
     s_ii = s_ei * theta[:,6]
     kerne = np.exp(-(dss[:,:,None]/(s_e[None,None,:]))**theta[None,None,:,7])
@@ -277,7 +277,7 @@ def sheet_simulator(theta):
     mm = np.abs(inp_po - out_po)
     mm[mm > 90] = 180 - mm[mm > 90]
     
-    _,raps = af.get_fps(opm.reshape(-1,N,N)[:,:,:])
+    _,raps = af.get_fps(opm.reshape(-1,N,N))
     pwd = af.calc_pinwheel_density_from_raps(np.arange(raps.shape[-1])[None,:]/N,
                                              raps,continuous=True)
     
