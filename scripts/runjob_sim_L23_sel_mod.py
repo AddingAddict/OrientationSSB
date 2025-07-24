@@ -93,11 +93,11 @@ def runjobs():
     time.sleep(0.2)
     
     denss = 0.01*2**np.linspace(-1,1,5)[3:4]
-    grecs = np.linspace(1.00,1.10,3)
+    grecs = np.linspace(1.00,1.10,3)[0:1]
     grecs[0] = 0.99
     htros = np.linspace(0.7,0.8,3)[0:1]
     maps = ['band_4_0.51','band_2_0.51','band_8_0.51','low_4','low_2','low_8']
-    phases = ['center_5','center_7','scat_0.05_5']
+    phases = ['center_5','scat_0.05_5']#['center_5','center_7','scat_0.05_5']
     seeds = range(1)
 
     for dens in denss:
