@@ -34,7 +34,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'sbi_l4_sel_mod_norm_kern/'
+res_dir = res_dir + 'sbi_l4_sel_mod_lati/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
