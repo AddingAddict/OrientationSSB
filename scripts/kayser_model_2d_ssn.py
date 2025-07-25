@@ -207,6 +207,14 @@ class Model:
             
             if rx_wave_start is None:
                 rx_wave_start = np.ones(self.n_lgn)
+            
+            if thresh is None:
+                he,hi = self.wex@rx_wave_start,self.wix@rx_wave_start
+                h = np.concatenate((he,hi))
+                self.thresh = 0.8*np.ones(self.n_e+self.n_i)*np.mean(h)
+            else:
+                self.thresh = np.ones(self.n_e+self.n_i)*thresh
+            
             # calculate average inputs and rates at the start of a geniculate wave
             self.update_inps(rx_wave_start,100*self.dt_dyn,0.1)
             
@@ -215,12 +223,6 @@ class Model:
             self.uie_avg = np.ones(self.n_i)*np.mean(self.uin + self.uia)
             self.uii_avg = np.ones(self.n_i)*np.mean(self.uii)
             self.rx_avg = np.ones(self.n_lgn)*np.mean(rx_wave_start)
-            if thresh is None:
-                he,hi = self.wex@rx_wave_start,self.wix@rx_wave_start
-                h = np.concatenate((he,hi))
-                self.thresh = np.ones(self.n_e+self.n_i)*np.mean(h)
-            else:
-                self.thresh = np.ones(self.n_e+self.n_i)*thresh
             
             x_sum = np.sum(self.wex,axis=0,keepdims=True) + np.sum(self.wix,axis=0,keepdims=True)
             e_sum = np.sum(self.wee,axis=0,keepdims=True) + np.sum(self.wie,axis=0,keepdims=True)
