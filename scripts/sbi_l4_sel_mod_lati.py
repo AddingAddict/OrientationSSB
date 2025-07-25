@@ -47,8 +47,8 @@ if bayes_iter == 0:
         posterior = pickle.load(handle)
         
     full_prior = PostTimesBoxUniform(posterior,
-                                     post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
-                                     post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
+                                     post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.1],device=device),
+                                     post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 0.9],device=device),
                                      low =torch.tensor([0.1, 0.3, 2.0],device=device),
                                      high=torch.tensor([1.0, 1.2, 4.0],device=device),)
 
