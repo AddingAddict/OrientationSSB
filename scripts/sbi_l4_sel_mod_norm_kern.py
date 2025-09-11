@@ -49,7 +49,7 @@ if bayes_iter == 0:
     full_prior = PostTimesBoxUniform(posterior,
                                      post_low =torch.tensor([ 0.0, 0.0,-3.0,-2.0, 0.2],device=device),
                                      post_high=torch.tensor([ 1.0, 1.0,-0.0, 1.0, 2.0],device=device),
-                                     low =torch.tensor([0.1, 0.3, 2.0],device=device),
+                                     low =torch.tensor([0.1, 0.2, 2.0],device=device),
                                      high=torch.tensor([1.0, 1.0, 4.0],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
@@ -234,7 +234,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     thresh = c
     nori = 8
     nphs = 8
-    nint = 8
+    nint = 12
     nwrm = 12 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)

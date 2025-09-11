@@ -241,7 +241,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     thresh = c
     nori = 8
     nphs = 8
-    nint = 8
+    nint = 12
     nwrm = 12 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
