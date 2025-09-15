@@ -304,13 +304,13 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
     
-    kern = np.exp(-(dss[:,:,None]/(np.sqrt(sig2)*theta[None,None,:,6]))**theta[None,None,:,7])
-    norm = kern.sum(axis=1).mean(axis=0)
-    kern /= norm[None,None,:]
-    
     tsamp = nwrm-1 + np.arange(0,nphs) * nint
     resps = np.zeros((theta.shape[0],2,N**2,nori,nphs))
     for prm_idx in range(theta.shape[0]):
+        kern = np.exp(-(dss/(np.sqrt(sig2)*theta[:,6].item()))**theta[:,7].item())
+        norm = kern.sum(axis=1).mean(axis=0)
+        kern /= norm
+        
         for ori_idx,ori in enumerate(oris):
             phs_map_flat = mf.gen_abs_phs_map(N,rf_sct_map,pol_map,ori,grate_freq,L_deg).flatten()
             gam_map_flat = gam_map.flatten()
@@ -321,7 +321,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
                                     np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                     ff_inp,Jee[prm_idx].item(),Jei[prm_idx].item(),
                                     Jie[prm_idx].item(),Jii[prm_idx].item(),
-                                    kern[:,:,prm_idx].numpy(),N,2,2,
+                                    kern,N,2,2,
                                     thresh,thresh,0,dt,nwrm+nint*nphs,tsamp,lat_frac=theta[prm_idx,4].item())
             resps[prm_idx,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
         
