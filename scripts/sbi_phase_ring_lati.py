@@ -32,7 +32,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'sbi_phase_ring/'
+res_dir = res_dir + 'sbi_phase_ring_lati/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
