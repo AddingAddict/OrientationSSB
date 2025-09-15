@@ -170,7 +170,7 @@ def integrate_ring(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,ne,ni,thres
     
     start_time = time.process_time()
     max_time = 60
-    def time_event(t,x):
+    def time_event(t,x,ncell,nprm=1):
         int_time = (start_time + max_time) - time.process_time()
         if int_time < 0: int_time = 0
         return int_time
