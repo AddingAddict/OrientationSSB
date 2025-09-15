@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 import torch
 from scipy import interpolate
+from scipy import integrate
 
 from sbi.utils.user_input_checks import process_prior
 
@@ -15,13 +16,11 @@ from sbi_func import PostTimesBoxUniform
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--job_id', '-i', help='completely arbitrary job id label',type=int, default=0)
-parser.add_argument('--num_inner', '-ni', help='number of samples per outer loop',type=int, default=50)
-parser.add_argument('--num_outer', '-no', help='number of outer loops',type=int, default=10)
+parser.add_argument('--num_samp', '-ns', help='number of samples',type=int, default=50)
 parser.add_argument('--bayes_iter', '-bi', help='bayessian inference interation (0 = use prior, 1 = use first posterior)',type=int, default=0)
 args = vars(parser.parse_args())
 job_id = int(args['job_id'])
-num_inner = int(args['num_inner'])
-num_outer = int(args['num_outer'])
+num_samp = int(args['num_samp'])
 bayes_iter = int(args['bayes_iter'])
 
 print("Bayesian iteration:", bayes_iter)
@@ -159,6 +158,7 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kern
             xin = xin[:,None]
             xig = xig[:,None]
             
+        nprm = 1
         resps = np.zeros((2,N**2,1,len(tsamp)))
     else:
         Wee = Jee[None,None,:]*kerne.reshape(N**2,N**2,-1)
@@ -173,27 +173,87 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kern
             xia = xia[:,None] * np.ones(len(Jee))[None,:]
             xin = xin[:,None] * np.ones(len(Jee))[None,:]
             xig = xig[:,None] * np.ones(len(Jee))[None,:]
-            
+        
+        nprm = len(Jee)
         resps = np.zeros((2,N**2,len(Jee),len(tsamp)))
     
-    for t_idx in range(Nt):
-        ff_inp = inp(t0+t_idx*dt)
+    # for t_idx in range(Nt):
+    #     ff_inp = inp(t0+t_idx*dt)
+    #     ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+    #     yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+    #     if t_idx in tsamp:
+    #         resps[0,:,:,samp_idx] = ye
+    #         resps[1,:,:,samp_idx] = yi
+    #         samp_idx += 1
+    #     net_ee = np.einsum('ijk,jk->ik',Wee,ye) + ff_inp[:,None]
+    #     net_ei = np.einsum('ijk,jk->ik',Wei,yi)
+    #     net_ie = np.einsum('ijk,jk->ik',Wie,ye) + ff_inp[:,None]
+    #     net_ii = np.einsum('ijk,jk->ik',Wii,yi)
+    #     xea += ((1-frac_n)*net_ee - xea)*dt/ta
+    #     xen += (frac_n*net_ee - xen)*dt/tn
+    #     xeg += (net_ei - xeg)*dt/tg
+    #     xia += ((1-frac_n)*net_ie - xia)*dt/ta
+    #     xin += (frac_n*net_ie - xin)*dt/tn
+    #     xig += (net_ii - xig)*dt/tg
+        
+    def dyn_func(t,x,ncell,nprm=1):
+        x = x.reshape((-1,nprm))
+        xea = x[0*ncell:1*ncell,:]
+        xen = x[1*ncell:2*ncell,:]
+        xeg = x[2*ncell:3*ncell,:]
+        xia = x[3*ncell:4*ncell,:]
+        xin = x[4*ncell:5*ncell,:]
+        xig = x[5*ncell:6*ncell,:]
+        
+        ff_inp = inp(t)
+
         ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
         yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
-        if t_idx in tsamp:
-            resps[0,:,:,samp_idx] = ye
-            resps[1,:,:,samp_idx] = yi
-            samp_idx += 1
+        
         net_ee = np.einsum('ijk,jk->ik',Wee,ye) + ff_inp[:,None]
         net_ei = np.einsum('ijk,jk->ik',Wei,yi)
         net_ie = np.einsum('ijk,jk->ik',Wie,ye) + ff_inp[:,None]
         net_ii = np.einsum('ijk,jk->ik',Wii,yi)
-        xea += ((1-frac_n)*net_ee - xea)*dt/ta
-        xen += (frac_n*net_ee - xen)*dt/tn
-        xeg += (net_ei - xeg)*dt/tg
-        xia += ((1-frac_n)*net_ie - xia)*dt/ta
-        xin += (frac_n*net_ie - xin)*dt/tn
-        xig += (net_ii - xig)*dt/tg
+        
+        dx = np.zeros_like(x)
+        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)*dt/ta
+        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)*dt/tn
+        dx[2*ncell:3*ncell,:] = (net_ei - xeg)*dt/tg
+        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)*dt/ta
+        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)*dt/tn
+        dx[5*ncell:6*ncell,:] = (net_ii - xig)*dt/tg
+        
+        return dx.flatten()
+    
+    x0 = np.concatenate((xea,xen,xeg,xia,xin,xig),axis=0).flatten()
+    
+    start_time = time.process_time()
+    max_time = 60
+    def time_event(t,x,ncell,nprm):
+        int_time = (start_time + max_time) - time.process_time()
+        if int_time < 0: int_time = 0
+        return int_time
+    time_event.terminal = True
+    
+    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=tsamp*dt,args=(N**2,nprm),method='RK23',events=time_event)
+    if sol.status != 0:
+        x = np.nan*np.ones((6*N**2*nprm,len(tsamp)))
+    else:
+        x = sol.y[:,-1]
+    x = x.reshape((-1,nprm,len(tsamp)))
+    
+    xea = x[0*N**2:1*N**2,:]
+    xen = x[1*N**2:2*N**2,:]
+    xeg = x[2*N**2:3*N**2,:]
+    xia = x[3*N**2:4*N**2,:]
+    xin = x[4*N**2:5*N**2,:]
+    xig = x[5*N**2:6*N**2,:]
+    
+    ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+    yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+    
+    resps[0] = ye
+    resps[1] = yi
         
     # ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
     # yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
@@ -242,7 +302,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     nori = 8
     nphs = 8
     nint = 12
-    nwrm = 12 * nint * nphs
+    nwrm = 50 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
     
@@ -258,17 +318,20 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     
     tsamp = nwrm-1 + np.arange(0,nphs) * nint
     resps = np.zeros((theta.shape[0],2,N**2,nori,nphs))
-    for ori_idx,ori in enumerate(oris):
-        phs_map_flat = mf.gen_abs_phs_map(N,rf_sct_map,pol_map,ori,grate_freq,L_deg).flatten()
-        gam_map_flat = gam_map.flatten()
-        ori_map_flat = ori_map.flatten()
-        def ff_inp(t):
-            return c*elong_inp(gam_map_flat,ori-ori_map_flat,phs_map_flat+2*np.pi*3*t)
-        resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
-                                 np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
-                                 ff_inp,Jee,Jei,Jie,Jii,kerne,kerni,N,2,2,
-                                 thresh,thresh,0,dt,nwrm+nint*nphs,tsamp)
-        resps[:,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
+    for prm_idx in range(theta.shape[0]):
+        for ori_idx,ori in enumerate(oris):
+            phs_map_flat = mf.gen_abs_phs_map(N,rf_sct_map,pol_map,ori,grate_freq,L_deg).flatten()
+            gam_map_flat = gam_map.flatten()
+            ori_map_flat = ori_map.flatten()
+            def ff_inp(t):
+                return c*elong_inp(gam_map_flat,ori-ori_map_flat,phs_map_flat+2*np.pi*3*t)
+            resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                    np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                    ff_inp,Jee[prm_idx].item(),Jei[prm_idx].item(),
+                                    Jie[prm_idx].item(),Jii[prm_idx].item(),
+                                    kerne[:,:,prm_idx],kerni[:,:,prm_idx],N,2,2,
+                                    thresh,thresh,0,dt,nwrm+nint*nphs,tsamp)
+            resps[prm_idx,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
         
     return resps
 
@@ -318,23 +381,11 @@ def sheet_simulator(theta):
 
 start = time.process_time()
 
-theta = torch.zeros((0,8),dtype=torch.float32,device=device)
-x = torch.zeros((0,11),dtype=torch.float32,device=device)
-for outer_idx in range(num_outer):
-    print(f'Outer loop {outer_idx+1}/{num_outer}')
-    start_outer = time.process_time()
+# sample from prior
+theta = full_prior.sample((num_samp,))
 
-    # sample from prior
-    theta_samp = full_prior.sample((num_inner,))
-
-    # simulate sheet
-    x_samp = sheet_simulator(theta_samp)
-
-    # append results
-    theta = torch.cat((theta,theta_samp),dim=0)
-    x = torch.cat((x,x_samp),dim=0)
-
-    print(f'  Outer loop took',time.process_time() - start_outer,'s\n')
+# simulate sheet
+x = sheet_simulator(theta)
 
 print(f'Simulating samples took',time.process_time() - start,'s\n')
 
