@@ -5,7 +5,6 @@ import argparse
 
 import numpy as np
 import torch
-from scipy import interpolate
 from scipy import integrate
 
 from sbi.utils import BoxUniform
@@ -15,7 +14,7 @@ import analyze_func as af
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--job_id', '-i', help='completely arbitrary job id label',type=int, default=0)
-parser.add_argument('--num_samp', '-ns', help='number of samples',type=int, default=20000)
+parser.add_argument('--num_samp', '-ns', help='number of samples',type=int, default=200)
 parser.add_argument('--bayes_iter', '-bi', help='bayessian inference interation (0 = use prior, 1 = use first posterior)',type=int, default=0)
 args = vars(parser.parse_args())
 job_id = int(args['job_id'])
@@ -168,8 +167,17 @@ def integrate_ring(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,ne,ni,thres
         return dx.flatten()
     
     x0 = np.concatenate((xea,xen,xeg,xia,xin,xig),axis=0).flatten()
-    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=(Nt*dt,),args=(nring,nprm),method='RK23')
-    if not sol.success:
+    
+    start_time = time.process_time()
+    max_time = 60
+    def time_event(t,x):
+        int_time = (start_time + max_time) - time.process_time()
+        if int_time < 0: int_time = 0
+        return int_time
+    time_event.terminal = True
+    
+    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=(Nt*dt,),args=(nring,nprm),method='RK23',events=time_event)
+    if sol.status != 0:
         x = np.nan*np.ones(6*nring*nprm)
     else:
         x = sol.y[:,-1]
@@ -223,7 +231,7 @@ def get_resps(theta, nring=8, gam=0.65):
             _,resp = integrate_ring(np.zeros(nring),np.zeros(nring),np.zeros(nring),
                                 np.zeros(nring),np.zeros(nring),np.zeros(nring),
                                 ff_inp,Jee[prm_idx].item(),Jei[prm_idx].item(),Jie[prm_idx].item(),Jii[prm_idx].item(),2,2,
-                                thresh,thresh,nring,0.0025,4*400,
+                                thresh,thresh,nring,0.25,4*50,
                                 lat_exc=np.pi,lat_inh=np.pi*theta[prm_idx,4].item())
             resps[prm_idx,:,ori_idx,:] = resp.T.reshape(2,nring)
         
