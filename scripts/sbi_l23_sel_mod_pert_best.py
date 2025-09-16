@@ -45,7 +45,7 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 N = 60
 
 # Define parameters for connectivity
-params = np.load("./../notebooks/l23_params.npy")
+params = np.load("./../notebooks/l23_params_base.npy")
 Jee0,Jei0,Jie0,Jii0 = 10**params[:4]
 
 se0 = params[4]
