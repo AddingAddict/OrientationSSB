@@ -110,7 +110,7 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kern
     
     rng = np.random.default_rng(0)
     
-    if np.isscalar(Jee):        
+    if np.isscalar(Jee):
         noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
         Wee = Jee*kerne.reshape(N**2,N**2)*noise[:,:]
         noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))

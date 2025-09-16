@@ -42,8 +42,12 @@ if bayes_iter == 0:
     full_prior = BoxUniform(low =torch.tensor([ 0.0,-0.5,-2.5,-2.0, 0.1],device=device),
                     high=torch.tensor([ 1.0, 1.0,-0.5, 1.0, 0.9],device=device),)
 else:
-    with open(f'./../notebooks/phase_ring_lat_posterior_{bayes_iter:d}.pkl','rb') as handle:
-        full_prior = pickle.load(handle)
+    try:
+        with open(f'./../notebooks/phase_ring_lat_posterior_{bayes_iter:d}.pkl','rb') as handle:
+            full_prior = pickle.load(handle)
+    except:
+        with open(f'./../notebooks/phase_ring_lat_posterior.pkl','rb') as handle:
+            full_prior = pickle.load(handle)
         
 nring = 8
 
@@ -157,12 +161,12 @@ def integrate_ring(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,ne,ni,thres
         net_ii = np.einsum('ijk,jk->ik',Wii,yi)
         
         dx = np.zeros_like(x)
-        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)*dt/ta
-        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)*dt/tn
-        dx[2*ncell:3*ncell,:] = (net_ei - xeg)*dt/tg
-        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)*dt/ta
-        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)*dt/tn
-        dx[5*ncell:6*ncell,:] = (net_ii - xig)*dt/tg
+        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)/ta
+        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)/tn
+        dx[2*ncell:3*ncell,:] = (net_ei - xeg)/tg
+        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)/ta
+        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)/tn
+        dx[5*ncell:6*ncell,:] = (net_ii - xig)/tg
         
         return dx.flatten()
     

@@ -214,12 +214,12 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         net_ii = np.einsum('ijk,jk->ik',Wii,yi)
         
         dx = np.zeros_like(x)
-        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)*dt/ta
-        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)*dt/tn
-        dx[2*ncell:3*ncell,:] = (net_ei - xeg)*dt/tg
-        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)*dt/ta
-        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)*dt/tn
-        dx[5*ncell:6*ncell,:] = (net_ii - xig)*dt/tg
+        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)/ta
+        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)/tn
+        dx[2*ncell:3*ncell,:] = (net_ei - xeg)/tg
+        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)/ta
+        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)/tn
+        dx[5*ncell:6*ncell,:] = (net_ii - xig)/tg
         
         return dx.flatten()
     
@@ -233,11 +233,11 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
         return int_time
     time_event.terminal = True
     
-    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=tsamp*dt,args=(N**2,nprm),method='RK23',events=time_event)
+    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=tsamp*dt,args=(N**2,nprm),method='RK23')#,events=time_event)
     if sol.status != 0:
         x = np.nan*np.ones((6*N**2*nprm,len(tsamp)))
     else:
-        x = sol.y[:,-1]
+        x = sol.y
     x = x.reshape((-1,nprm,len(tsamp)))
     
     xea = x[0*N**2:1*N**2,:]
@@ -300,7 +300,7 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     nori = 8
     nphs = 8
     nint = 12
-    nwrm = 50 * nint * nphs
+    nwrm = 4 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     oris = np.linspace(0,np.pi,nori,endpoint=False)
     
@@ -345,7 +345,7 @@ def sheet_simulator(theta):
     
     _,_,_,Jii = get_J(theta)
     
-    resps = get_sheet_resps(theta,N,gam_map,np.angle(omap),sctmap,polmap)
+    resps = get_sheet_resps(theta,N,gam_map,np.angle(omap)/2,sctmap,polmap)
     
     resp_opm,mr = af.calc_OPM_MR(resps[:,0,:,:,:])
     os = np.abs(resp_opm)
