@@ -123,10 +123,15 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
         # raps_itp = interp1d(freqs,raps,kind='linear',bounds_error=False,fill_value=0)
         if raps.ndim == 1:
             peak_idx = np.argmax(np.concatenate(([0,0],raps[2:])))
-
-            popt,pcov = curve_fit(raps_fn,freqs,raps,
-                                p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
-                                bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+            try:
+                popt,pcov = curve_fit(raps_fn,freqs,raps,
+                                    p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
+                                    bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+            except:
+                if return_fit:
+                    return np.nan, [np.nan]*4
+                else:
+                    return np.nan
             raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
             
             norm = quad(raps_itp,0,np.inf)[0]
@@ -145,10 +150,15 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
                 freqs = freqs * np.ones((raps.shape[0],1))
             for i in range(raps.shape[0]):
                 peak_idx = np.argmax(np.concatenate(([0,0],raps[i,2:])))
-
-                popt,pcov = curve_fit(raps_fn,freqs[i],raps[i],
-                                    p0=(0,raps[i,peak_idx]/freqs[i,peak_idx],freqs[i,peak_idx],0.3*freqs[i,peak_idx]),
-                                    bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+                try:
+                    popt,pcov = curve_fit(raps_fn,freqs[i],raps[i],
+                                        p0=(0,raps[i,peak_idx]/freqs[i,peak_idx],freqs[i,peak_idx],0.3*freqs[i,peak_idx]),
+                                        bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+                except:
+                    pwd_list.append(np.nan)
+                    if return_fit:
+                        popt_list.append([np.nan]*4)
+                    continue
                 raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
                 
                 norm = quad(raps_itp,0,np.inf)[0]
