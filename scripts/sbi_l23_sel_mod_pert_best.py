@@ -94,9 +94,9 @@ dys[dys > 0.5] = 1 - dys[dys > 0.5]
 dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
 # define simulation functions
-def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
+def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
                     het_lev,N,
-                    t0,dt,Nt,tsamp=None,te=0.02,ti=0.01):
+                    t0,dt,Nt,tsamp=None,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7):
     '''
     Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
     xe0, xi0: initial excitatory and inhibitory activity
@@ -116,8 +116,12 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
         tsamp = [Nt-1]
     samp_idx = 0
     
-    xe = xe0.copy()
-    xi = xi0.copy()
+    xea = xea0.copy()
+    xen = xen0.copy()
+    xeg = xeg0.copy()
+    xia = xia0.copy()
+    xin = xin0.copy()
+    xig = xig0.copy()
     
     rng = np.random.default_rng(0)
     
@@ -136,9 +140,13 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
         Wie = Wie[:,:,None]
         Wii = Wii[:,:,None]
         
-        if len(xe.shape) == 1:
-            xe = xe[:,None]
-            xi = xi[:,None]
+        if len(xea.shape) == 1:
+            xea = xea[:,None]
+            xen = xen[:,None]
+            xeg = xeg[:,None]
+            xia = xia[:,None]
+            xin = xin[:,None]
+            xig = xig[:,None]
         
         nprm = 1
         resps = np.zeros((2,N**2,1,len(tsamp)))
@@ -156,9 +164,13 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
                           size=(N**2,N**2,len(Jee)))
         Wii = Jii[None,None,:]*kernii.reshape(N**2,N**2,-1)*noise
         
-        if len(xe.shape) == 1:
-            xe = xe[:,None] * np.ones(len(Jee))[None,:]
-            xi = xi[:,None] * np.ones(len(Jee))[None,:]
+        if len(xea.shape) == 1:
+            xea = xea[:,None] * np.ones(len(Jee))[None,:]
+            xen = xen[:,None] * np.ones(len(Jee))[None,:]
+            xeg = xeg[:,None] * np.ones(len(Jee))[None,:]
+            xia = xia[:,None] * np.ones(len(Jee))[None,:]
+            xin = xin[:,None] * np.ones(len(Jee))[None,:]
+            xig = xig[:,None] * np.ones(len(Jee))[None,:]
             
         nprm = len(Jee)
         resps = np.zeros((2,N**2,len(Jee),len(tsamp)))
@@ -185,16 +197,20 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
     # ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
     # yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
     # return xea,xen,xeg,xia,xin,xig,np.concatenate((ye,yi))
-    
+        
     def dyn_func(t,x,ncell,nprm=1):
         x = x.reshape((-1,nprm))
-        xe = x[0*ncell:1*ncell,:]
-        xi = x[1*ncell:2*ncell,:]
+        xea = x[0*ncell:1*ncell,:]
+        xen = x[1*ncell:2*ncell,:]
+        xeg = x[2*ncell:3*ncell,:]
+        xia = x[3*ncell:4*ncell,:]
+        xin = x[4*ncell:5*ncell,:]
+        xig = x[5*ncell:6*ncell,:]
         
         ff_inp = inp(t)
 
-        ye = np.fmin(1e5,np.fmax(0,xe))
-        yi = np.fmin(1e5,np.fmax(0,xi))
+        ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg)**2)
+        yi = np.fmin(1e5,np.fmax(0,xia+xin+xig)**2)
         
         net_ee = np.einsum('ijk,jk->ik',Wee,ye) + ff_inp[:,None]
         net_ei = np.einsum('ijk,jk->ik',Wei,yi)
@@ -202,12 +218,16 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
         net_ii = np.einsum('ijk,jk->ik',Wii,yi)
         
         dx = np.zeros_like(x)
-        dx[0*ncell:1*ncell,:] = (net_ee + net_ei - xe)/te
-        dx[1*ncell:2*ncell,:] = (net_ie + net_ii - xi)/ti
+        dx[0*ncell:1*ncell,:] = ((1-frac_n)*net_ee - xea)/ta
+        dx[1*ncell:2*ncell,:] = (frac_n*net_ee - xen)/tn
+        dx[2*ncell:3*ncell,:] = (net_ei - xeg)/tg
+        dx[3*ncell:4*ncell,:] = ((1-frac_n)*net_ie - xia)/ta
+        dx[4*ncell:5*ncell,:] = (frac_n*net_ie - xin)/tn
+        dx[5*ncell:6*ncell,:] = (net_ii - xig)/tg
         
         return dx.flatten()
     
-    x0 = np.concatenate((xe,xi),axis=0).flatten()
+    x0 = np.concatenate((xea,xen,xeg,xia,xin,xig),axis=0).flatten()
     
     start_time = time.process_time()
     max_time = 60
@@ -219,16 +239,20 @@ def integrate_sheet(xe0,xi0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
     
     sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=tsamp*dt,args=(N**2,nprm),method='RK23')#,events=time_event)
     if sol.status != 0:
-        x = np.nan*np.ones((2*N**2*nprm,len(tsamp)))
+        x = np.nan*np.ones((6*N**2*nprm,len(tsamp)))
     else:
         x = sol.y
     x = x.reshape((-1,nprm,len(tsamp)))
     
-    xe = x[0*N**2:1*N**2,:]
-    xi = x[1*N**2:2*N**2,:]
+    xea = x[0*N**2:1*N**2,:]
+    xen = x[1*N**2:2*N**2,:]
+    xeg = x[2*N**2:3*N**2,:]
+    xia = x[3*N**2:4*N**2,:]
+    xin = x[4*N**2:5*N**2,:]
+    xig = x[5*N**2:6*N**2,:]
     
-    ye = np.fmin(1e5,np.fmax(0,xe))
-    yi = np.fmin(1e5,np.fmax(0,xi))
+    ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg)**2)
+    yi = np.fmin(1e5,np.fmax(0,xia+xin+xig)**2)
     
     resps[0] = ye
     resps[1] = yi
@@ -257,7 +281,7 @@ def get_sheet_resps(theta,N):
     nori = 8
     nphs = 8
     nint = 5
-    nwrm = 12 * nint * nphs
+    nwrm = 6 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     
     oris = np.linspace(0,np.pi,nori,endpoint=False)
@@ -290,7 +314,8 @@ def get_sheet_resps(theta,N):
         for ori_idx,ori in enumerate(oris):
             def ff_inp(t):
                 return inp_mult * L4_rates_itp(t)[:,ori_idx]
-            resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),
+            resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                   np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                     ff_inp,Jee,Jei,Jie,Jii,
                                     kerne,kernei,kernii,het_lev,N,0,dt,nwrm+nint*nphs,tsamp)
             resps[prm_idx,:,:,ori_idx,:] = resp.transpose((2,0,1,3))
