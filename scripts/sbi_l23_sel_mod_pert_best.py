@@ -75,8 +75,8 @@ if bayes_iter == 0:
     # 6: sii mult
     # 7: het mult
     # 8: inp mult
-    full_prior = BoxUniform(low =torch.tensor([0.8,0.8,0.8,0.8,0.5,0.8,0.8,0.8,0.8],device=device),
-                            high=torch.tensor([1.2,1.2,1.2,1.2,2.0,1.2,1.2,1.2,1.2],device=device),)
+    full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.5,0.7,0.7,0.7,0.7],device=device),
+                            high=torch.tensor([1.3,1.3,1.3,1.3,3.0,1.3,1.3,1.3,1.3],device=device),)
 
     full_prior,_,_ = process_prior(full_prior)
 else:
@@ -257,7 +257,7 @@ def get_sheet_resps(theta,N):
     nori = 8
     nphs = 8
     nint = 5
-    nwrm = 4 * nint * nphs
+    nwrm = 12 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     
     oris = np.linspace(0,np.pi,nori,endpoint=False)
