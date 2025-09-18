@@ -44,14 +44,6 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 # set prior and grid size for model
 N = 60
 
-# Define parameters for connectivity
-params = np.load("./../notebooks/l23_params_base.npy")
-Jee0,Jei0,Jie0,Jii0 = 10**params[:4]
-
-se0 = params[4]
-sei0 = se0 * params[5]
-sii0 = sei0 * params[6]
-
 # load L4 responses
 with open('./../results/L4_sel/seed=0.pkl', 'rb') as handle:
     L4_res_dict = pickle.load(handle)
@@ -63,25 +55,18 @@ L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
                            np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
                            axis=-1,bc_type='periodic')
 
+full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.5,0.7,0.7,0.7,0.7],device=device),
+                        high=torch.tensor([1.3,1.3,1.3,1.3,3.0,1.3,1.3,1.3,1.3],device=device),)
 # create prior distribution
 if bayes_iter == 0:
-    # params:
-    # 0: Jee mult
-    # 1: Jei mult
-    # 2: Jie mult
-    # 3: Jii mult
-    # 4: s mult
-    # 5: sei mult
-    # 6: sii mult
-    # 7: het mult
-    # 8: inp mult
-    full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.5,0.7,0.7,0.7,0.7],device=device),
-                            high=torch.tensor([1.3,1.3,1.3,1.3,3.0,1.3,1.3,1.3,1.3],device=device),)
-
-    full_prior,_,_ = process_prior(full_prior)
+    params = np.load("./../notebooks/l23_params_base.npy")
 else:
-    with open(f'./../notebooks/l23_sel_mod_pb_posterior_{bayes_iter:d}.pkl','rb') as handle:
-        full_prior = pickle.load(handle)
+    params = np.load(f"./../notebooks/l23_params_base_{bayes_iter}.npy")
+Jee0,Jei0,Jie0,Jii0 = 10**params[:4]
+
+se0 = params[4]
+sei0 = se0 * params[5]
+sii0 = sei0 * params[6]
 
 # create distances between grid points
 N = 60
