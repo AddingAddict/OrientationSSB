@@ -37,7 +37,6 @@ def runjobs():
     n_ori = int(args['n_ori'])
     n_phs = int(args['n_phs'])
     # n_rpt = int(args['n_rpt'])
-    n_int = int(args['n_int'])
     gb = int(args['gb'])
 
     
@@ -106,8 +105,12 @@ def runjobs():
                     #--------------------------------------------------------------------------
                     # Make SBTACH
                     inpath = currwd + "/sim_L4_sel.py"
-                    c1 = "{:s} -s {:d} -no {:d} -np {:d} -m {:s} -st {:d}".format(
-                        inpath,seed,n_ori,n_phs,map_type,static)
+                    if map_type == '':
+                        c1 = "{:s} -s {:d} -no {:d} -np {:d} -st {:d} -r 1".format(
+                            inpath,seed,n_ori,n_phs,static)
+                    else:
+                        c1 = "{:s} -s {:d} -no {:d} -np {:d} -m {:s} -st {:d} -r 1".format(
+                            inpath,seed,n_ori,n_phs,map_type,static)
                     
                     jobname="{:s}_map={:s}_static={:d}_seed={:d}".format(
                         'sim_L4_sel',map_type,static,seed)

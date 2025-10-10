@@ -71,7 +71,7 @@ class Model:
         
         # define arbors
         if flat_x:
-            self.ax = np.ones_like(self.dists)
+            self.ax = np.ones_like(self.scat_dists)
         else:
             self.ax = np.exp(-self.scat_dists**2/(2*s_x**2))
         self.ax = np.concatenate((self.ax,self.ax),axis=1)
