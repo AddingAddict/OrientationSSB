@@ -31,37 +31,42 @@ class Model:
         ):
         # grid points and distances
         self.n_grid = n_grid
-        self.xs,self.ys = np.meshgrid(np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid),
-                                      np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid))
-        self.xs,self.ys = self.xs.flatten(),self.ys.flatten()
+        self.n_egrid = n_e * n_grid
+        self.txs,self.tys = np.meshgrid(np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid),
+                                        np.linspace(0.5/self.n_grid,1-0.5/self.n_grid,self.n_grid))
+        self.txs,self.tys = self.txs.flatten(),self.tys.flatten()
+        
+        self.cxs,self.cys = np.meshgrid(np.linspace(0.5/self.n_egrid,1-0.5/self.n_egrid,self.n_egrid),
+                                        np.linspace(0.5/self.n_egrid,1-0.5/self.n_egrid,self.n_egrid))
+        self.cxs,self.cys = self.cxs.flatten(),self.cys.flatten()
         
         # retinotopic scatter
         if s_s < 1e-10:
-            self.ret_scat_xs = np.zeros_like(self.xs)
-            self.ret_scat_ys = np.zeros_like(self.ys)
+            self.ret_scat_cxs = np.zeros_like(self.cxs)
+            self.ret_scat_cys = np.zeros_like(self.cys)
         else:
             rng = np.random.default_rng(0)
-            thts = 2*np.pi*rng.uniform(0,1,size=self.xs.size)
+            thtes = 2*np.pi*rng.uniform(0,1,size=self.cxs.size)
             if flat_s:
-                rads = s_s*np.sqrt(rng.uniform(0,cut_lim,size=self.xs.size))
+                rades = s_s*np.sqrt(rng.uniform(0,cut_lim,size=self.cxs.size))
             else:
                 ray = stats.rayleigh()
-                rads = s_s*ray.ppf(rng.uniform(size=self.xs.size)*ray.cdf(cut_lim))
-            self.ret_scat_xs = rads*np.cos(thts)
-            self.ret_scat_ys = rads*np.sin(thts)
+                rades = s_s*ray.ppf(rng.uniform(size=self.cxs.size)*ray.cdf(cut_lim))
+            self.ret_scat_cxs = rades*np.cos(thtes)
+            self.ret_scat_cys = rades*np.sin(thtes)
         
-        self.dists = np.sqrt(np.fmin(np.abs(self.xs[:,None]-self.xs[None,:]),
-                                     1-np.abs(self.xs[:,None]-self.xs[None,:]))**2 +\
-                             np.fmin(np.abs(self.ys[:,None]-self.ys[None,:]),
-                                     1-np.abs(self.ys[:,None]-self.ys[None,:]))**2)
-        self.scat_dists = np.sqrt(np.fmin(np.abs((self.xs+self.ret_scat_xs)[:,None]-self.xs[None,:]),
-                                     1-np.abs((self.xs+self.ret_scat_xs)[:,None]-self.xs[None,:]))**2 +\
-                             np.fmin(np.abs((self.ys+self.ret_scat_ys)[:,None]-self.ys[None,:]),
-                                     1-np.abs((self.ys+self.ret_scat_ys)[:,None]-self.ys[None,:]))**2)
+        self.dists = np.sqrt(np.fmin(np.abs(self.cxs[:,None]-self.cxs[None,:]),
+                                   1-np.abs(self.cxs[:,None]-self.cxs[None,:]))**2 +\
+                             np.fmin(np.abs(self.cys[:,None]-self.cys[None,:]),
+                                   1-np.abs(self.cys[:,None]-self.cys[None,:]))**2)
+        self.scat_dists = np.sqrt(np.fmin(np.abs((self.cxs+self.ret_scat_cxs)[:,None]-self.txs[None,:]),
+                                        1-np.abs((self.cxs+self.ret_scat_cxs)[:,None]-self.txs[None,:]))**2 +\
+                                  np.fmin(np.abs((self.cys+self.ret_scat_cys)[:,None]-self.tys[None,:]),
+                                        1-np.abs((self.cys+self.ret_scat_cys)[:,None]-self.tys[None,:]))**2)
 
         # number of cells
-        self.n_e = n_e*n_grid**2
-        self.n_i = n_i*n_grid**2
+        self.n_e = self.n_egrid**2
+        self.n_i = self.n_e
         self.n_lgn = 2*n_x*n_grid**2
         
         # define arbors
