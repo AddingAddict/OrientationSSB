@@ -10,325 +10,356 @@ import argparse
 import time
 
 import numpy as np
-from scipy.interpolate import interp1d
-from scipy.stats import qmc
-import matplotlib.pyplot as plt
+from scipy.interpolate import CubicSpline
+from scipy import integrate
 
-import util_func as uf
 import analyze_func as af
 
-import dev_ori_sel_RF
-from dev_ori_sel_RF import connectivity
-
 parser = argparse.ArgumentParser()
-parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
-parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
-parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
+parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=16)
+parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=16)
+parser.add_argument('--n_int', '-nt', help='number of integration steps between phases',type=int, default=4)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.002)
-parser.add_argument('--areaCV', '-a', help='CV of cluster area',type=float, default=0.0)
-parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--thresh', '-th', help='L2/3 activation threshold',type=float, default=0.0)
+parser.add_argument('--add_phase', '-ap', help='add phase to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--map', '-m', help='whether to switch to a different L4 map',type=str, default=None)
+parser.add_argument('--static', '-st', help='static or dynamic input',type=bool, default=False)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
+parser.add_argument('--saveweights', '-w', help='save weights or not',type=bool, default=False)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
-n_rpt = int(args['n_rpt'])
+n_phs = int(args['n_phs'])
+# n_rpt = int(args['n_rpt'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
-dens = args['dens']
-areaCV = args['areaCV']
-grec = args['grec']
-thresh = args['thresh']
+add_phase = args['add_phase']
+static = args['static']
 saverates = args['saverates']
+saveweights = args['saveweights']
 
-n_inp = n_ori * n_rpt
+N = 60
+
+# Define parameters for connectivity
+params = np.load("./../notebooks/l23_params.npy")
 
 # Define where to save results
 res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + 'L4_act_L23_sel_dens={:.4f}_areaCV={:.2f}_grec={:.3f}_thresh={:.2f}/'.format(
-    dens,areaCV,grec,thresh)
+res_dir = res_dir + 'L23_sel/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
-
+    
+if static:
+    res_dir = res_dir + 'static_'
+if args['map'] is not None:
+    res_dir = res_dir + args['map'] + '_'
+if add_phase:
+    res_dir = res_dir + 'phase_'
 res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
-# Define parameters for L2/3 input from databgnd_min = 0.05
-bgnd_min = 0.05
-bgnd_max = 0.25
-meanOS = 0.17
-maxOS = 0.5
-meanCV = 0.4
-
-# Create heterogeneous recurrent connectivity
-config_name = "big_hetero"
-Version = -1
-config_dict,_,_,_,_,N,_ = uf.get_network_size(config_name)
-
-conn = connectivity.Connectivity_2pop((N,N),(N,N),\
-                                    (N,N), (N,N),\
-                                    random_seed=seed,\
-                                    Nvert=1, verbose=True)
-
-start = time.process_time()
-
-H = 0.7
-try:
-    Wrec = np.load('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}.npy'.format(N,H,seed))
-except:
-    Wrec,_ = conn.create_matrix_2pop(config_dict["W4to4_params"],config_dict["W4to4_params"]["Wrec_mode"])
-    np.save('./../notebooks/hetero_W_N={:d}_H={:.1f}_seed={:d}'.format(N,H,seed),Wrec)
-
-print('Creating heterogeneous recurrent connectivity took',time.process_time() - start,'s\n')
-
-# Define functions to calculate effect of clipping on orientation selectivity
-def clip_r0(OSs):
-    out = np.ones_like(OSs)
-    out[OSs > 0.5] = (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
+# load L4 responses
+if args['map'] is None:
+    with open('./../results/L4_sel/seed=0.pkl', 'rb') as handle:
+        L4_res_dict = pickle.load(handle)
+else:
+    with open(f'./../results/L4_sel/map={args['map']}_seed=0.pkl', 'rb') as handle:
+        L4_res_dict = pickle.load(handle)
     
-def clip_r1(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/np.pi
-    return out
+L4_rates = L4_res_dict['L4_rates'][0]
+L4_rate_opm = L4_res_dict['L4_rate_opm'][0]
 
-def clip_OS(OSs):
-    out = OSs.copy()
-    out[OSs > 0.5] = (0.25*np.sqrt(4-1/OSs[OSs > 0.5]**2)+OSs[OSs > 0.5]*np.arccos(-0.5/OSs[OSs > 0.5]))/\
-        (OSs[OSs > 0.5]*np.sqrt(4-1/OSs[OSs > 0.5]**2)+np.arccos(-0.5/OSs[OSs > 0.5]))
-    return out
+L4_rates /= np.nanmean(L4_rates,axis=(-2,-1),keepdims=True)
+if add_phase:
+    _,_,phs = af.calc_dc_ac_comp(L4_rates)
+    L4_phase_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,8,endpoint=False)[None,None,:]-phs[:,:,None]))
+    L4_phase_rates *= np.nanmean(L4_rates,axis=(-1),keepdims=True) / np.nanmean(L4_phase_rates,axis=(-1),keepdims=True)
+    L4_rates = L4_phase_rates
 
-# Precalculate and interpolate clipping effect
-OSs = np.linspace(0.0,10000.0,20001)
+L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
+                           np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
+                           axis=-1,bc_type='periodic')
 
-thy_clip_OSs = clip_OS(OSs)
-thy_clip_r0s = clip_r0(OSs)
-thy_clip_r1s = clip_r1(OSs)
-
-clip_r0_itp = interp1d(OSs,thy_clip_r0s,fill_value='extrapolate')
-inv_r1_itp = interp1d(thy_clip_r1s,OSs,fill_value='extrapolate')
-inv_OS_itp = interp1d(thy_clip_OSs,OSs,fill_value='extrapolate')
-
-# Define function to create activity with desired orientation selectivity
-def gen_clip_act(ori,z):
-    etas = inv_OS_itp(np.abs(z))
-    return np.fmax(0,1 + 2*etas*np.real(np.exp(-1j*ori*2*np.pi/180) * z/np.abs(z))) / clip_r0_itp(etas)
-
-start = time.process_time()
-
-# Calculate distance from all pairs of grid points
+# Compute distance matrix for connectivity kernel
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
 dxs = np.abs(xs[:,:,None,None] - xs[None,None,:,:])
 dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
 dys[dys > 0.5] = 1 - dys[dys > 0.5]
-ds2 = dxs**2 + dys**2
-ds = np.sqrt(ds2)
+dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
-# Define function to build L4 OPM
-def gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=0):
-    rng = np.random.default_rng(seed)
+# define simulation functions
+def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
+                    het_lev,N,ne,ni,threshe,threshi,
+                    t0,dt,Nt,tsamp=None,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7):
+    '''
+    Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
+    xe0, xi0: initial excitatory and inhibitory activity
+    inp: input function, takes time t and returns input at that time
+    Jee, Jei, Jie, Jii: connectivity strengths per connection type
+    kern: connectivity kernel for the sheet
+    ne, ni: rate activation exponents for excitatory and inhibitory neurons
+    threshe, threshi: activation thresholds for excitatory and inhibitory neurons
+    t0: initial time
+    dt: time step for integration
+    Nt: number of time steps to integrate
+    ta, tn, tg: time constants for AMPA, NMDA, and GABA receptor dynamics
+    frac_n: fraction of NMDA vs NMDA+AMPA receptors in the excitatory population
+    '''
     
-    bgndOS = 0.5*(bgnd_min+bgnd_max)
+    if tsamp is None:
+        tsamp = [Nt-1]
+    samp_idx = 0
+    
+    xea = xea0.copy()
+    xen = xen0.copy()
+    xeg = xeg0.copy()
+    xia = xia0.copy()
+    xin = xin0.copy()
+    xig = xig0.copy()
+    
+    rng = np.random.default_rng(0)
+    
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wee = Jee*kerne.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wei = Jei*kernei.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wie = Jie*kerne.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wii = Jii*kernii.reshape(N**2,N**2)*noise
+    
+    if len(xea.shape) == 1:
+        xea = xea
+        xen = xen
+        xeg = xeg
+        xia = xia
+        xin = xin
+        xig = xig
+    
+    resps = np.zeros((2,N**2,len(tsamp)))
+    
+    # for t_idx in range(Nt):
+    #     ff_inp = inp(t0+t_idx*dt)
+    #     ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+    #     yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+    #     if t_idx in tsamp:
+    #         resps[0,:,samp_idx] = ye
+    #         resps[1,:,samp_idx] = yi
+    #         samp_idx += 1
+    #     net_ee = Wee@ye + ff_inp
+    #     net_ei = Wei@yi
+    #     net_ie = Wie@ye + ff_inp
+    #     net_ii = Wii@yi
+    #     xea += ((1-frac_n)*net_ee - xea)*dt/ta
+    #     xen += (frac_n*net_ee - xen)*dt/tn
+    #     xeg += (net_ei - xeg)*dt/tg
+    #     xia += ((1-frac_n)*net_ie - xia)*dt/ta
+    #     xin += (frac_n*net_ie - xin)*dt/tn
+    #     xig += (net_ii - xig)*dt/tg
+        
+    def dyn_func(t,x,ncell):
+        xea = x[0*ncell:1*ncell]
+        xen = x[1*ncell:2*ncell]
+        xeg = x[2*ncell:3*ncell]
+        xia = x[3*ncell:4*ncell]
+        xin = x[4*ncell:5*ncell]
+        xig = x[5*ncell:6*ncell]
+        
+        ff_inp = inp(t)
 
-    nclstr = np.round(N**2*dens).astype(int)
-    sig2 = (meanOS - bgndOS)/((maxOS - bgndOS)*dens*np.pi) / N**2
-
-    clstr_pts = qmc.Halton(d=2,scramble=False,seed=seed).random(nclstr)
+        ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+        yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
+        
+        net_ee = Wee@ye + ff_inp
+        net_ei = Wei@yi
+        net_ie = Wie@ye + ff_inp
+        net_ii = Wii@yi
+        
+        dx = np.zeros_like(x)
+        dx[0*ncell:1*ncell] = ((1-frac_n)*net_ee - xea)/ta
+        dx[1*ncell:2*ncell] = (frac_n*net_ee - xen)/tn
+        dx[2*ncell:3*ncell] = (net_ei - xeg)/tg
+        dx[3*ncell:4*ncell] = ((1-frac_n)*net_ie - xia)/ta
+        dx[4*ncell:5*ncell] = (frac_n*net_ie - xin)/tn
+        dx[5*ncell:6*ncell] = (net_ii - xig)/tg
+        
+        return dx.flatten()
     
-    oris = 2*np.pi*rng.random(nclstr)
+    x0 = np.concatenate((xea,xen,xeg,xia,xin,xig),axis=0).flatten()
     
-    if np.isclose(areaCV,0):
-        sig2s = sig2*np.ones(nclstr)
-        rng.gamma(shape=1,scale=1,size=nclstr)
+    start_time = time.process_time()
+    max_time = 60
+    def time_event(t,x,ncell):
+        int_time = (start_time + max_time) - time.process_time()
+        if int_time < 0: int_time = 0
+        return int_time
+    time_event.terminal = True
+    
+    sol = integrate.solve_ivp(dyn_func,(0,dt*Nt),y0=x0,t_eval=tsamp*dt,args=(N**2,),method='RK23')#,events=time_event)
+    if sol.status != 0:
+        x = np.nan*np.ones((6*N**2,len(tsamp)))
     else:
-        shape = 1/areaCV**2
-        scale = sig2/shape
-        sig2s = rng.gamma(shape=shape,scale=scale,size=nclstr)
+        x = sol.y
+    x = x.reshape((-1,len(tsamp)))
     
-    xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
-    dxs = np.abs(xs[None,:,:] - clstr_pts[:,0,None,None])
-    dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
-    dys = np.abs(ys[None,:,:] - clstr_pts[:,1,None,None])
-    dys[dys > 0.5] = 1 - dys[dys > 0.5]
-    ds2s = dxs**2 + dys**2
-
-    omap = np.zeros((N,N),dtype='complex64')
-    holes = np.zeros((N,N),dtype='float64')
+    xea = x[0*N**2:1*N**2,:]
+    xen = x[1*N**2:2*N**2,:]
+    xeg = x[2*N**2:3*N**2,:]
+    xia = x[3*N**2:4*N**2,:]
+    xin = x[4*N**2:5*N**2,:]
+    xig = x[5*N**2:6*N**2,:]
+        
+    ye = np.fmin(1e5,np.fmax(0,xea+xen+xeg-threshe)**ne)
+    yi = np.fmin(1e5,np.fmax(0,xia+xin+xig-threshi)**ni)
     
-    for i in range(nclstr):
-        omap += np.heaviside(1.01*sig2s[i]-ds2s[i],1)*np.exp(1j*oris[i])
-        holes += np.heaviside(1.01*sig2s[i]-ds2s[i],1)
-            
-    true_clstr_size = np.sum(np.abs(omap))
-    omap *= maxOS*nclstr*np.pi*sig2*N**2/true_clstr_size
+    resps[0] = ye
+    resps[1] = yi
+    # return xea,xen,xeg,xia,xin,xig,np.concatenate((ye,yi))
+    return resps
 
-    ks = np.arange(N)/N
-    ks[ks > 0.5] = ks[ks > 0.5] - 1
-    kxs,kys = np.meshgrid(ks*N,ks*N)
-
-    bgnd_ofield = np.fft.ifft2(np.exp(-0.25*(kxs**2+kys**2)*sig2*16)*np.fft.fft2(np.exp(1j*2*np.pi*rng.random((N,N)))))
-    bgnd_ofield /= np.abs(bgnd_ofield)
-    bgnd_sfield = np.real(np.fft.ifft2(np.exp(-0.25*(kxs**2+kys**2)*sig2*16)*np.fft.fft2(rng.random((N,N)))))
-    bgnd_sfield -= np.min(bgnd_sfield)
-    bgnd_sfield *= (bgnd_max-bgnd_min) / (np.max(bgnd_sfield) - np.min(bgnd_sfield))
-    bgnd_sfield += bgnd_min
-    bgnd_sfield /= nclstr*np.pi*sig2*N**2/true_clstr_size
-    bgnd_sfield = bgnd_min+(bgnd_max-bgnd_min)*rng.random((N,N))
-    omap += bgnd_sfield*bgnd_ofield*(1-holes)
-
-    gauss = np.exp(-0.5*ds2/(sig2/4))
-    gauss *= np.abs(omap[None,None,:,:])**1.3
-    gauss /= np.sum(gauss,(-2,-1))[:,:,None,None]
-
-    imap = np.einsum('ijkl,kl->ij',gauss,omap)
+def get_sheet_resps(params,N):
+    '''
+    params[0] = log10[|Jee]]
+    params[1] = log10[|Jei]]
+    params[2] = log10[|Jie]]
+    params[3] = log10[|Jii]]
+    params[4] = s_e
+    params[5] = s_ei / s_e
+    params[6] = s_ii / s_ei
+    params[7] = p_ker
+    params[8] = het_level
+    params[9] = inp_mult
     
-    return omap,imap,gauss
-
-L4_rate_z,L23_inp_z,W4to23 = gen_maps(N,dens,bgnd_min,bgnd_max,maxOS,meanOS,seed,areaCV=areaCV)
-
-res_dict['L4_z'] = L4_rate_z
-res_dict['z'] = L23_inp_z
-
-print('Creating input orientation map took',time.process_time() - start,'s\n')
-
-# Create inputs
-start = time.process_time()
-
-oris = np.repeat(np.arange(n_ori)/n_ori * 180,n_rpt)
-mean_inps = np.zeros((n_inp,N,N))
-inps = np.zeros((n_inp,2,N,N))
-
-rng = np.random.default_rng(seed)
-for inp_idx in range(n_inp):
-    ori = oris[inp_idx]
-    mean_inps[inp_idx,:,:] = np.einsum('ijkl,kl->ij',W4to23,gen_clip_act(ori,L4_rate_z))
-    shape = 1/meanCV**2
-    scale = mean_inps[inp_idx,:,:]/shape
-    # scale = avg_FF
-    # shape = mean_inps[inp_idx,:,:]/avg_FF
-    for pop_idx in range(2):
-        inps[inp_idx,pop_idx,:,:] = rng.gamma(shape=shape,scale=scale)
-
-# res_dict['mean_inps'] = mean_inps
-# res_dict['inps'] = inps
+    returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
+    os = excitatory orientation selectivity
+    mr = excitatory modulation ratio
+    '''
+    Jee,Jei,Jie,Jii = 10**params[:4]
+    Jei *= -1
+    Jii *= -1
     
-print('Creating input patterns took',time.process_time() - start,'s\n')
-
-# Define integration functions
-def fio_rect(x):
-    return np.fmax(x,0)
-
-def dynamics_system(y,inp_ff,Wrec,gamma_rec,gamma_ff,tau):
-    arg = gamma_rec * np.dot(Wrec,y) + gamma_ff * inp_ff.flatten()
-    return 1./tau*( -y + fio_rect(arg))
-
-def integrate(y0,inp,dt,Nt,gamma_rec=1.02):
-    y = y0
-    for t_idx in range(Nt):
-        out = dynamics_system(y,inp,Wrec,gamma_rec,1.0,1.0)
-        dy = out
-        y = y + dt*dy
-    return np.array([y[:N**2].reshape((N,N)),y[N**2:].reshape((N,N))])
+    thresh = 0
+    nori = 8
+    nphs = 8
+    nint = 5
+    nwrm = 8 * nint * nphs
+    dt = 1 / (nint * nphs * 3)
+    
+    s_e = params[4]
+    s_ei = s_e * params[5]
+    s_ii = s_ei * params[6]
+    kerne = np.exp(-(dss/s_e)**params[None,None,7])
+    norm = kerne.sum(axis=1).mean(axis=0)
+    kerne /= norm
+    kernei = np.exp(-(dss/s_ei)**params[None,None,7])
+    norm = kernei.sum(axis=1).mean(axis=0)
+    kernei /= norm
+    kernii = np.exp(-(dss/s_ii)**params[None,None,7])
+    norm = kernii.sum(axis=1).mean(axis=0)
+    kernii /= norm
+    
+    inp_mult = params[9]
+    
+    tsamp = nwrm-1 + np.arange(0,nphs) * nint
+    resps = np.zeros((2,N**2,nori,nphs))
+    for ori_idx in range(nori):
+        if static:
+            for phs_idx,phs in enumerate(np.linspace(0,2*np.pi,n_phs,endpoint=False)):
+                print(ori_idx,phs_idx)
+                def ff_inp(t):
+                    return inp_mult * L4_rates_itp(phs/(2*np.pi*3))[:,ori_idx]
+                resps[:,:,ori_idx,phs_idx] = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                        np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                        ff_inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,params[8],N,2,2,
+                                        thresh,thresh,0,dt,nwrm/2,tsamp[0:1]/2)[:,:,-1]
+        else:
+            def ff_inp(t):
+                return inp_mult * L4_rates_itp(t)[:,ori_idx]
+            resps[:,:,ori_idx,:] = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                    np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
+                                    ff_inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,params[8],N,2,2,
+                                    thresh,thresh,0,dt,nwrm+nint*nphs,tsamp)
+        
+    return resps
 
 # Integrate to get firing rates
-rates = np.zeros_like(inps)
-
 start = time.process_time()
 
-for inp_idx in range(n_inp):
-    # rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1))-\
-    #     thresh*np.concatenate((np.ones((1,N**2)),np.zeros((1,N**2))),axis=0),0.25,n_int,grec)
-    rates[inp_idx] = integrate(np.ones(2*N**2),inps[inp_idx].reshape((2,-1))-\
-        thresh,0.25,n_int,grec)
+L23_rates = get_sheet_resps(params,N)
     
 print('Simulating rate dynamics took',time.process_time() - start,'s\n')
 
 if saverates:
-    res_dict['rates'] = rates
+    res_dict['L23_rates'] = L23_rates
+if saveweights:
+    Jee,Jei,Jie,Jii = 10**params[:4]
+    
+    s_e = params[4]
+    s_ei = s_e * params[5]
+    s_ii = s_ei * params[6]
+    kerne = np.exp(-(dss/s_e)**params[None,None,7])
+    norm = kerne.sum(axis=1).mean(axis=0)
+    kerne /= norm
+    kernei = np.exp(-(dss/s_ei)**params[None,None,7])
+    norm = kernei.sum(axis=1).mean(axis=0)
+    kernei /= norm
+    kernii = np.exp(-(dss/s_ii)**params[None,None,7])
+    norm = kernii.sum(axis=1).mean(axis=0)
+    kernii /= norm
+    
+    het_lev = params[8]
+    
+    rng = np.random.default_rng(0)
+    
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wee = Jee*kerne.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wei = Jei*kernei.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wie = Jie*kerne.reshape(N**2,N**2)*noise
+    noise = rng.gamma(shape=1/het_lev**2,scale=het_lev**2,size=(N**2,N**2))
+    Wii = Jii*kernii.reshape(N**2,N**2)*noise
+    
+    res_dict['weights'] = (Wee,Wei,Wie,Wii)
 
-# Calculate z_fields from inputs and rates
-ori_binned = oris.reshape(-1,n_rpt).mean(1)
-inp_binned = inps.reshape(-1,n_rpt,2,N,N).mean((1,2))
-rate_binned = rates.reshape(-1,n_rpt,2,N,N).mean(1)
+# Calculate CV of inputs and responses
+L23_rate_r0 = np.mean(L23_rates,(-2,-1))
+L23_rate_opm,L23_rate_mr = af.calc_OPM_MR(L23_rates)
+# L23_rate_os = np.abs(L23_rate_opm)
+# L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
+L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
 
-rate_r0 = np.mean(rate_binned,0)
-rate_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
-rate_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None,None]*rate_binned,0)
-rate_r1 = np.sqrt(rate_rs**2 + rate_rc**2)
-rate_rm = np.mean(np.mean(rates.reshape(-1,n_rpt,2,N,N),1),0)
-rate_rV = np.mean(np.var(rates.reshape(-1,n_rpt,2,N,N),1),0)
-
-inp_r0 = np.mean(inp_binned,0)
-inp_rs = np.mean(np.sin(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
-inp_rc = np.mean(np.cos(ori_binned*2*np.pi/180)[:,None,None]*inp_binned,0)
-inp_r1 = np.sqrt(inp_rs**2 + inp_rc**2)
-inp_rm = np.mean(np.mean(inps.reshape(-1,n_rpt,2,N,N),1),0)
-inp_rV = np.mean(np.var(inps.reshape(-1,n_rpt,2,N,N),1),0)
-
-rate_pref_ori = np.arctan2(rate_rs,rate_rc)*180/(2*np.pi)
-rate_pref_ori[rate_pref_ori > 90] -= 180
-rate_alt_pref_ori = ori_binned[rate_binned.argmax(0)]
-rate_alt_pref_ori[rate_alt_pref_ori > 90] -= 180
-rate_ori_sel = rate_r1/rate_r0
-
-inp_pref_ori = np.arctan2(inp_rs,inp_rc)*180/(2*np.pi)
-inp_pref_ori[inp_pref_ori > 90] -= 180
-inp_alt_pref_ori = ori_binned[inp_binned.argmax(0)]
-inp_alt_pref_ori[inp_alt_pref_ori > 90] -= 180
-inp_ori_sel = inp_r1/inp_r0
-
-rate_z = rate_ori_sel * np.exp(1j*rate_pref_ori*2*np.pi/180)
-inp_z = inp_ori_sel * np.exp(1j*inp_pref_ori*2*np.pi/180)
+res_dict['L23_rate_r0'] = L23_rate_r0
+res_dict['L23_rate_r1'] = L23_rate_r1
+res_dict['L23_rate_opm'] = L23_rate_opm
+res_dict['L23_rate_mr'] = L23_rate_mr
 
 # Calculate hypercolumn size and number of pinwheels
-z_unit = rate_z[0] / rate_ori_sel[0]
-
-_,z_fps = af.get_fps(rate_z[0])
-z_hc,_ = af.calc_hypercol_size(z_fps,N)
-z_pwcnt,z_pwpts = af.calc_pinwheels(af.bandpass_filter(rate_z[0],0.5*z_hc,1.5*z_hc))
-z_pwd = z_pwcnt/(N/z_hc)**2
-
-_,z_unit_fps = af.get_fps(z_unit)
-# z_unit_hc,_ = af.calc_hypercol_size(z_unit_fps,N)
-# z_unit_pwcnt,z_unit_pwpts = af.calc_pinwheels(af.bandpass_filter(z_unit,0.5*z_unit_hc,1.5*z_unit_hc))
-# z_unit_pwd = z_unit_pwcnt/(N/z_unit_hc)**2
+_,L23_rate_raps = af.get_fps(L23_rate_opm[0].reshape(N,N))
+L23_rate_hc,_ = af.calc_hypercol_size(L23_rate_raps,N)
+freqs = np.arange(len(L23_rate_raps))/60
+pwd,popt = af.calc_pinwheel_density_from_raps(freqs,L23_rate_raps,return_fit=True)
     
-Lam = z_hc
-npws,pwpts = z_pwcnt,z_pwpts
+Lam = L23_rate_hc
 
-res_dict['rate_r0'] = rate_r0
-res_dict['rate_r1'] = rate_r1
-res_dict['rate_rm'] = rate_rm
-res_dict['rate_rV'] = rate_rV
-res_dict['inp_r0'] = inp_r0
-res_dict['inp_r1'] = inp_r1
-res_dict['inp_rm'] = inp_rm
-res_dict['inp_rV'] = inp_rV
+res_dict['L23_rate_raps'] = L23_rate_raps
+res_dict['L23_rate_hc'] = L23_rate_hc
+res_dict['L23_rate_pwd'] = pwd
 
-res_dict['rate_z'] = rate_z
-res_dict['inp_z'] = inp_z
-
-res_dict['inp_OS'] = np.mean(inp_ori_sel)
-res_dict['E_rate_OS'] = np.mean(rate_ori_sel[0])
-res_dict['I_rate_OS'] = np.mean(rate_ori_sel[1])
-
-opm_mismatch = np.abs(inp_pref_ori - rate_pref_ori)
+# Calculate orientation mismatch
+L23_rate_pref_ori = np.angle(L23_rate_opm)*180/(2*np.pi)
+L23_rate_pref_ori[L23_rate_pref_ori > 90] -= 180
+L4_rate_pref_ori = np.angle(L4_rate_opm)*180/(2*np.pi)
+L4_rate_pref_ori[L4_rate_pref_ori > 90] -= 180
+opm_mismatch = np.abs(L4_rate_pref_ori - L23_rate_pref_ori)
 opm_mismatch[opm_mismatch > 90] = 180 - opm_mismatch[opm_mismatch > 90]
 
 res_dict['opm_mismatch'] = opm_mismatch
 res_dict['E_mismatch'] = np.mean(opm_mismatch[0])
 res_dict['I_mismatch'] = np.mean(opm_mismatch[1])
-
-res_dict['z_fps'] = z_fps
-res_dict['z_unit_fps'] = z_unit_fps
-res_dict['Lam'] = Lam
-res_dict['npws'] = npws
-res_dict['pwpts'] = pwpts
 
 with open(res_file, 'wb') as handle:
     pickle.dump(res_dict,handle)

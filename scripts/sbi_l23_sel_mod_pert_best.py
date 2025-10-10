@@ -55,8 +55,8 @@ L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
                            np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
                            axis=-1,bc_type='periodic')
 
-full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.5,0.7,0.7,0.7,0.7],device=device),
-                        high=torch.tensor([1.3,1.3,1.3,1.3,3.0,1.3,1.3,1.3,1.3],device=device),)
+full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.9,0.7,0.7,0.7,0.7],device=device),
+                        high=torch.tensor([1.3,1.3,1.3,1.3,1.1,1.3,1.3,1.3,1.3],device=device),)
 # create prior distribution
 if bayes_iter == 0:
     params = np.load("./../notebooks/l23_params_base.npy")
@@ -77,6 +77,10 @@ dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
 dys[dys > 0.5] = 1 - dys[dys > 0.5]
 dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
+
+# create correlation curve digitization
+nbins = 50
+idxs = np.digitize(dss,np.linspace(0,np.max(dss),nbins+1))
 
 # define simulation functions
 def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
@@ -346,7 +350,33 @@ def sheet_simulator(theta):
     pwd = af.calc_pinwheel_density_from_raps(np.arange(raps.shape[-1])[None,:]/N,
                                              raps,continuous=True)
     
-    out = torch.zeros((theta.shape[0],12),dtype=theta.dtype).to(theta.device)
+    resp_z = resps[:,0].reshape((theta.shape[0],N**2,-1))
+    npatt = resp_z.shape[-1]
+    resp_z = resp_z - np.mean(resp_z,axis=-1,keepdims=True)
+    resp_z = resp_z / np.std(resp_z,axis=-1,keepdims=True)
+    corr = np.zeros((theta.shape[0],N**2,N**2))
+    for i in range(npatt):
+        corr += resp_z[:,None,:,i] * resp_z[:,:,None,i]
+    corr /= npatt
+    
+    corr_curve = np.zeros((theta.shape[0],nbins))
+    for i in range(nbins):
+        corr_curve[:,i] = np.mean(corr[:,idxs == i+1],axis=-1)
+    arg_mins = np.argmin(corr_curve,axis=1)
+    corr_mins = np.array([corr_curve[i,arg_mins[i]] for i in range(theta.shape[0])])
+    corr_maxs = np.array([np.max(corr_curve[i,arg_mins[i]:]) for i in range(theta.shape[0])])
+    mod = corr_maxs - corr_mins
+    
+    dim = np.zeros(theta.shape[0])
+    for i in range(theta.shape[0]):
+        try:
+            # w = np.linalg.eigvalsh(corr[i,:,:])
+            # dim[i] = np.sum(w)**2/np.sum(w**2)
+            dim[i] = np.trace(corr[i,:,:])**2 / np.trace(corr[i,:,:] @ corr[i,:,:])
+        except:
+            dim[i] = 100
+    
+    out = torch.zeros((theta.shape[0],14),dtype=theta.dtype).to(theta.device)
     out[:,0:3] = torch.tensor(np.quantile(os,[0.25,0.50,0.75],axis=1).T,dtype=theta.dtype).to(theta.device)
     out[:,3] = torch.tensor(np.mean(os,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,4] = torch.tensor(np.std(os,axis=1),dtype=theta.dtype).to(theta.device)
@@ -355,6 +385,8 @@ def sheet_simulator(theta):
     out[:,9] = torch.tensor(np.std(mr,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,10] = torch.tensor(np.mean(mm,axis=1),dtype=theta.dtype).to(theta.device)
     out[:,11] = torch.tensor(pwd,dtype=theta.dtype).to(theta.device)
+    out[:,12] = torch.tensor(mod,dtype=theta.dtype).to(theta.device)
+    out[:,13] = torch.tensor(dim,dtype=theta.dtype).to(theta.device)
     
     valid_idx = torch.all(torch.tensor(resps) < 5e4,axis=(1,2,3,4))
     
