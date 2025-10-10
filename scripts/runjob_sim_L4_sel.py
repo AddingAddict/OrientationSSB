@@ -6,6 +6,7 @@ import time
 from sys import platform
 import uuid
 import random
+from tempfile import TemporaryDirectory
 
 from importlib import reload
 
@@ -27,7 +28,6 @@ def runjobs():
     parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=16)
     parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=16)
     # parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=5)
-    parser.add_argument('--n_int', '-nt', help='number of integration steps between phases',type=int, default=5)
     parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=2)
     
     args2 = parser.parse_args()
@@ -92,56 +92,51 @@ def runjobs():
 
     time.sleep(0.2)
     
-    denss = 0.01*2**np.linspace(-1,1,5)[3:4]
-    grecs = np.linspace(0.9,1.10,5)
-    lrecs = np.linspace(0.6,1.2,4)
-    threshs = np.linspace(1.0,1.01,6)
-    actpows = np.linspace(0.8,1.0,5)
-    maps = ['act','low_4']
-    seeds = range(1)
+    maps = ['','band','band_4','band_8','band_12','band_16']
+    seeds = range(50)
 
-    for dens in denss:
-        for grec in grecs:
-            for lrec in lrecs:
-                for thresh in threshs:
-                    for actpow in actpows:
-                        for map_type in maps:
-                            for seed in seeds:
-                                    #--------------------------------------------------------------------------
-                                    # Make SBTACH
-                                    inpath = currwd + "/sim_L4_sel.py"
-                                    c1 = "{:s} -s {:d} -no {:d} -np {:d} -nt {:d} -d {:f} -g {:f} -l {:f} -th {:f} -p {:f} -m {:s}".format(
-                                        inpath,seed,n_ori,n_phs,n_int,dens,grec,lrec,thresh,actpow,map_type)
-                                    
-                                    jobname="{:s}_dens={:.4f}_grec={:.3f}_lrec={:.1f}_thresh={:.3f}_actpow={:.2f}_map={:s}_seed={:d}".format(
-                                        'sim_L4_sel',dens,grec,lrec,thresh,actpow,map_type,seed)
-                                    
-                                    if not args2.test:
-                                        jobnameDir=os.path.join(ofilesdir, jobname)
-                                        text_file=open(jobnameDir, "w");
-                                        os. system("chmod u+x "+ jobnameDir)
-                                        text_file.write("#!/bin/sh \n")
-                                        if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                                            text_file.write("#SBATCH --account=theory \n")
-                                        text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                                        text_file.write("#SBATCH -t 0-0:59  \n")
-                                        text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-                                        # text_file.write("#SBATCH --gres=gpu\n")
-                                        text_file.write("#SBATCH -c 1 \n")
-                                        text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-                                        text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-                                        text_file.write("python  -W ignore " + c1+" \n")
-                                        text_file.write("echo $PATH  \n")
-                                        text_file.write("exit 0  \n")
-                                        text_file.close()
+    with TemporaryDirectory() as temp_dir:
+        for map_type in maps:
+            if map_type == '':
+                statics = [0,1]
+            else:
+                statics = [0]
+            for static in statics:
+                for seed in seeds:
+                    #--------------------------------------------------------------------------
+                    # Make SBTACH
+                    inpath = currwd + "/sim_L4_sel.py"
+                    c1 = "{:s} -s {:d} -no {:d} -np {:d} -m {:s} -st {:d}".format(
+                        inpath,seed,n_ori,n_phs,map_type,static)
+                    
+                    jobname="{:s}_map={:s}_static={:d}_seed={:d}".format(
+                        'sim_L4_sel',map_type,static,seed)
+                    
+                    if not args2.test:
+                        jobnameDir=os.path.join(temp_dir, jobname)
+                        text_file=open(jobnameDir, "w");
+                        os. system("chmod u+x "+ jobnameDir)
+                        text_file.write("#!/bin/sh \n")
+                        if cluster=='haba' or cluster=='moto' or cluster=='burg':
+                            text_file.write("#SBATCH --account=theory \n")
+                        text_file.write("#SBATCH --job-name="+jobname+ "\n")
+                        text_file.write("#SBATCH -t 0-0:59  \n")
+                        text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+                        # text_file.write("#SBATCH --gres=gpu\n")
+                        text_file.write("#SBATCH -c 1 \n")
+                        text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
+                        text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
+                        text_file.write("python  -W ignore " + c1+" \n")
+                        text_file.write("echo $PATH  \n")
+                        text_file.write("exit 0  \n")
+                        text_file.close()
 
-                                        if cluster=='axon':
-                                            os.system("sbatch -p burst " +jobnameDir);
-                                        else:
-                                            os.system("sbatch " +jobnameDir);
-                                    else:
-                                        print (c1)
-
+                        if cluster=='axon':
+                            os.system("sbatch -p burst " +jobnameDir);
+                        else:
+                            os.system("sbatch " +jobnameDir);
+                    else:
+                        print (c1)
 
 
 if __name__ == "__main__":
