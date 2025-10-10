@@ -21,6 +21,11 @@ def ytitle(ax,text,xloc=-0.25,**kwargs):
     ax.text(xloc,0.5,text,horizontalalignment='right',verticalalignment='center',
         multialignment='center',rotation='vertical',transform=ax.transAxes,**kwargs)
     
+def add_cbar(fig,ax,plot,**kwargs):
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    return fig.colorbar(plot, cax=cax, orientation='vertical', **kwargs)
+    
 def imshowticks(ax,xvals,yvals,xskip=1,yskip=1,xfmt=None,yfmt=None):
     if xfmt is None:
         xfmt = '{:.1f}'
@@ -29,13 +34,16 @@ def imshowticks(ax,xvals,yvals,xskip=1,yskip=1,xfmt=None,yfmt=None):
     ax.set_xticks(np.arange(len(xvals))[::xskip],[xfmt.format(xval) for xval in xvals[::xskip]])
     ax.set_yticks(np.arange(len(yvals))[::yskip],[yfmt.format(yval) for yval in yvals[::yskip]])
 
+def imshow(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
+    if hide_ticks:
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+    plot = ax.imshow(A,cmap=cmap,**kwargs)
+
 def imshowbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     plot = ax.imshow(A,cmap=cmap,**kwargs)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='5%', pad=0.05)
-    return fig.colorbar(plot, cax=cax, orientation='vertical')
+    return add_cbar(fig,ax,plot)
 
 def doubimsh(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**kwargs):
     if hide_ticks:
@@ -66,29 +74,29 @@ def doubimshbar(fig,ax,A1,A2,hide_ticks=True,cmap_name='RdBu_r',vmin=0,vmax=1,**
     cmap = 0.5*cmap
     cmap[...,-1] = 1
     plot = ax.imshow(cmap,**kwargs)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='5%', pad=0.05)
-    fig.colorbar(mpl.cm.ScalarMappable(
-                 norm=mpl.colors.Normalize(vmin=vmin-0.05*(vmax-vmin),vmax=vmax+0.05*(vmax-vmin)),cmap=cmap_name),
-                 cax=cax,orientation='vertical')
+    return add_cbar(fig,ax,plot,cmap=cmap_name,
+                    norm=mpl.colors.Normalize(vmin=vmin-0.05*(vmax-vmin),vmax=vmax+0.05*(vmax-vmin)))
+    # divider = make_axes_locatable(ax)
+    # cax = divider.append_axes('right', size='5%', pad=0.05)
+    # fig.colorbar(mpl.cm.ScalarMappable(
+    #              norm=mpl.colors.Normalize(vmin=vmin-0.05*(vmax-vmin),vmax=vmax+0.05*(vmax-vmin)),cmap=cmap_name),
+    #              cax=cax,orientation='vertical')
     
 def contourbar(fig,ax,A,hide_ticks=True,cmap='RdBu_r',**kwargs):
     x,y = np.meshgrid(np.arange(A.shape[1]),np.arange(A.shape[0]))
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
-    ax.invert_yaxis()
+    # ax.invert_yaxis()
     plot = ax.contour(x,y,A,cmap=cmap,**kwargs)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='5%', pad=0.05)
-    return fig.colorbar(plot, cax=cax, orientation='vertical')
+    return add_cbar(fig,ax,plot)
     
 def doubcont(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
     x,y = np.meshgrid(np.arange(A1.shape[1]),np.arange(A1.shape[0]))
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
-    ax.invert_yaxis()
+    # ax.invert_yaxis()
     plot1 = ax.contour(x,y,A1,cmap=cmap,**kwargs)
     plot2 = ax.contour(x,y,A2,cmap=cmap,**kwargs)
     
@@ -97,12 +105,13 @@ def doubcontbar(fig,ax,A1,A2,hide_ticks=True,cmap='RdBu_r',**kwargs):
     if hide_ticks:
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
     ax.set_aspect('equal')
-    ax.invert_yaxis()
+    # ax.invert_yaxis()
     plot1 = ax.contour(x,y,A1,cmap=cmap,**kwargs)
     plot2 = ax.contour(x,y,A2,cmap=cmap,**kwargs)
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes('right', size='5%', pad=0.05)
-    fig.colorbar(plot1, cax=cax, orientation='vertical')
+    return add_cbar(fig,ax,plot1)
+    # divider = make_axes_locatable(ax)
+    # cax = divider.append_axes('right', size='5%', pad=0.05)
+    # fig.colorbar(plot1, cax=cax, orientation='vertical')
 
 def domcol(fig,ax,A,hide_ticks=True,rlim=None,alim=None,**kwargs):
     H = np.angle(A)/(2*np.pi) + 0.5

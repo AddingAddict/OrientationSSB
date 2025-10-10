@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import curve_fit
 from scipy.ndimage import generate_binary_structure,gaussian_filter,label,binary_closing,zoom
 from skimage.measure import regionprops
 
@@ -213,3 +214,48 @@ def ellipse_feats_from_labeled(lab_A):
             ((-(xs-cent[1])*np.sin(ori)+(ys-cent[0])*np.cos(ori))/b)**2) < 0.5**2)
         
     return ellipse
+
+def ellipse_gauss_func(X, a, b, tht, A, x0, y0):
+    x, y = X
+    dx_rot = (x - x0) * np.cos(tht) + (y - y0) * np.sin(tht)
+    dy_rot = -(x - x0) * np.sin(tht) + (y - y0) * np.cos(tht)
+    return A * np.exp(-(dx_rot**2 / a**2 + dy_rot**2 / b**2))
+
+def ellipse_gauss_fit(field):
+    n = field.shape[0]
+    x,y = np.mgrid[:n,:n]
+    props = regionprops((field > 0).astype(int))[0]
+    
+    p0 = (props['major_axis_length']/2,
+          props['minor_axis_length']/2,
+          props['orientation'],
+          np.max(field),
+          props['centroid'][0],
+          props['centroid'][1])
+    
+    popt,pcov = curve_fit(ellipse_gauss_func, np.array([x.flatten(), y.flatten()]), field.flatten(),
+                          p0=p0, maxfev=100000)
+    
+    popt[0] = np.abs(popt[0])
+    popt[1] = np.abs(popt[1])
+    if popt[0] < popt[1]:
+        popt[0], popt[1] = popt[1], popt[0]
+        popt[2] = popt[2] + np.pi/2
+    popt[2] = np.mod(popt[2], np.pi)
+    if popt[2] > np.pi/2:
+        popt[2] -= np.pi
+    
+    popt[0] *= np.sqrt(8)
+    popt[1] *= np.sqrt(8)
+    
+    return popt,pcov
+
+def gaussprops(field):
+    popt,_ = ellipse_gauss_fit(field)
+    return {
+        'axis_major_length': popt[0],
+        'axis_minor_length': popt[1],
+        'orientation': popt[2],
+        'centroid': (popt[4], popt[5]),
+        'area': np.pi * popt[0] * popt[1]
+    }
