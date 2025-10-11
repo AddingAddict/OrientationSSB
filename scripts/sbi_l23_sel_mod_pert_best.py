@@ -55,8 +55,8 @@ L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
                            np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
                            axis=-1,bc_type='periodic')
 
-full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.9,0.7,0.7,0.7,0.7],device=device),
-                        high=torch.tensor([1.3,1.3,1.3,1.3,1.1,1.3,1.3,1.3,1.3],device=device),)
+full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.5,0.7,0.7,0.7,0.7],device=device),
+                        high=torch.tensor([1.3,1.3,1.3,1.3,3.0,1.3,1.3,1.3,1.3],device=device),)
 # create prior distribution
 if bayes_iter == 0:
     params = np.load("./../notebooks/l23_params_base.npy")
