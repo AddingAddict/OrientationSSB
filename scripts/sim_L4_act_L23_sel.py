@@ -65,7 +65,7 @@ if args['map'] is None:
     with open('./../results/L4_sel/seed=0.pkl', 'rb') as handle:
         L4_res_dict = pickle.load(handle)
 else:
-    with open(f'./../results/L4_sel/map={args['map']}_seed=0.pkl', 'rb') as handle:
+    with open('./../results/L4_sel/map={:s}_seed=0.pkl'.format(args['map']), 'rb') as handle:
         L4_res_dict = pickle.load(handle)
     
 L4_rates = L4_res_dict['L4_rates'][0]
