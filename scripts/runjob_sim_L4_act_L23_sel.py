@@ -6,6 +6,7 @@ import time
 from sys import platform
 import uuid
 import random
+from tempfile import TemporaryDirectory
 
 from importlib import reload
 
@@ -24,18 +25,18 @@ def runjobs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", "-t", type=int, default=0)
     parser.add_argument("--cluster_", help=" String", default='burg')
-    parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=60)
-    parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=10)
-    parser.add_argument('--n_int', '-nt', help='number of integration steps',type=int, default=300)
-    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=20)
+    parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, default=16)
+    parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=16)
+    # parser.add_argument('--n_rpt', '-nr', help='number of repetitions per orientation',type=int, default=5)
+    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=2)
     
     args2 = parser.parse_args()
     args = vars(args2)
     
     cluster = str(args["cluster_"])
     n_ori = int(args['n_ori'])
-    n_rpt = int(args['n_rpt'])
-    n_int = int(args['n_int'])
+    n_phs = int(args['n_phs'])
+    # n_rpt = int(args['n_rpt'])
     gb = int(args['gb'])
 
     
@@ -90,35 +91,44 @@ def runjobs():
 
     time.sleep(0.2)
     
-    denss = 0.01*2**np.linspace(-1,1,5)
-    areaCVs = np.linspace(0,0.4,5)[0:1]
-    grecs = np.linspace(1.05,1.25,5)[2:3]
-    threshs = np.linspace(0.0,0.2,5)[0:1]
-    seeds = range(20)
+    maps = ['','band','band_4','band_8','band_12','band_16']
+    seeds = range(50)
 
-    for dens in denss:
-        for areaCV in areaCVs:
-            for grec in grecs:
-                for thresh in threshs:
+    with TemporaryDirectory() as temp_dir:
+        for map_type in maps:
+            if map_type == '':
+                statics = [0,1]
+                phases = [0,1]
+            else:
+                statics = [0]
+                phases = [0]
+            for static in statics:
+                for phase in phases:
                     for seed in seeds:
                         #--------------------------------------------------------------------------
                         # Make SBTACH
                         inpath = currwd + "/sim_L4_act_L23_sel.py"
-                        c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -d {:f} -a {:f} -g {:f} -th {:f}".format(
-                            inpath,seed,n_ori,n_rpt,n_int,dens,areaCV,grec,thresh)
-                        
-                        jobname="{:s}_dens={:.4f}_areaCV={:.2f}_grec={:.3f}_thresh={:.2f}_seed={:d}".format(
-                            'sim_L4_act_L23_sel',dens,areaCV,grec,thresh,seed)
+                        c1 = "{:s} -s {:d} -no {:d} -np {:d} -r 1".format(
+                                inpath,seed,n_ori,n_phs)
+                        if map_type != '':
+                            c1 = c1 + " -m {:s}".format(map_type)
+                        if static == 1:
+                            c1 = c1 + " -st 1"
+                        if phase == 1:
+                            c1 = c1 + " -ap 1"
+
+                        jobname="{:s}_map={:s}_static={:d}_phase={:d}_seed={:d}".format(
+                            'sim_L4_act_L23_sel',map_type,static,phase,seed)
                         
                         if not args2.test:
-                            jobnameDir=os.path.join(ofilesdir, jobname)
+                            jobnameDir=os.path.join(temp_dir, jobname)
                             text_file=open(jobnameDir, "w");
                             os. system("chmod u+x "+ jobnameDir)
                             text_file.write("#!/bin/sh \n")
                             if cluster=='haba' or cluster=='moto' or cluster=='burg':
                                 text_file.write("#SBATCH --account=theory \n")
                             text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                            text_file.write("#SBATCH -t 0-11:59  \n")
+                            text_file.write("#SBATCH -t 0-2:59  \n")
                             text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
                             # text_file.write("#SBATCH --gres=gpu\n")
                             text_file.write("#SBATCH -c 1 \n")
@@ -135,7 +145,6 @@ def runjobs():
                                 os.system("sbatch " +jobnameDir);
                         else:
                             print (c1)
-
 
 
 if __name__ == "__main__":
