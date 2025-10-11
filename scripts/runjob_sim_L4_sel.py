@@ -91,7 +91,7 @@ def runjobs():
 
     time.sleep(0.2)
     
-    maps = ['','band','band_4','band_8','band_12','band_16']
+    maps = ['']#,'band','band_4','band_8','band_12','band_16']
     seeds = range(50)
 
     with TemporaryDirectory() as temp_dir:
@@ -105,13 +105,13 @@ def runjobs():
                     #--------------------------------------------------------------------------
                     # Make SBTACH
                     inpath = currwd + "/sim_L4_sel.py"
-                    if map_type == '':
-                        c1 = "{:s} -s {:d} -no {:d} -np {:d} -st {:d} -r 1".format(
-                            inpath,seed,n_ori,n_phs,static)
-                    else:
-                        c1 = "{:s} -s {:d} -no {:d} -np {:d} -m {:s} -st {:d} -r 1".format(
-                            inpath,seed,n_ori,n_phs,map_type,static)
-                    
+                    c1 = "{:s} -s {:d} -no {:d} -np {:d} -r 1".format(
+                            inpath,seed,n_ori,n_phs)
+                    if map_type != '':
+                        c1 = c1 + " -m {:s}".format(map_type)
+                    if static == 1:
+                        c1 = c1 + " -st 1"
+
                     jobname="{:s}_map={:s}_static={:d}_seed={:d}".format(
                         'sim_L4_sel',map_type,static,seed)
                     
@@ -123,7 +123,7 @@ def runjobs():
                         if cluster=='haba' or cluster=='moto' or cluster=='burg':
                             text_file.write("#SBATCH --account=theory \n")
                         text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                        text_file.write("#SBATCH -t 0-0:59  \n")
+                        text_file.write("#SBATCH -t 0-2:59  \n")
                         text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
                         # text_file.write("#SBATCH --gres=gpu\n")
                         text_file.write("#SBATCH -c 1 \n")
