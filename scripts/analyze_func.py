@@ -137,7 +137,7 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
         # raps_itp = interp1d(freqs,raps,kind='linear',bounds_error=False,fill_value=0)
         if raps.ndim == 1:
             try:
-                raps_itp,popt = fit_raps_fn(freqs,raps)
+                raps_itp,popt,_ = fit_raps_fn(freqs,raps)
             except:
                 if return_fit:
                     return np.nan, [np.nan]*4
@@ -158,7 +158,7 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
                 freqs = freqs * np.ones((raps.shape[0],1))
             for i in range(raps.shape[0]):
                 try:
-                    raps_itp,popt = fit_raps_fn(freqs[i],raps[i])
+                    raps_itp,popt,_ = fit_raps_fn(freqs[i],raps[i])
                 except:
                     pwd_list.append(np.nan)
                     if return_fit:
