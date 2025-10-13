@@ -110,12 +110,18 @@ def runjobs():
                         inpath = currwd + "/sim_L4_act_L23_sel.py"
                         c1 = "{:s} -s {:d} -no {:d} -np {:d} -r 1".format(
                                 inpath,seed,n_ori,n_phs)
-                        if map_type != '':
-                            c1 = c1 + " -m {:s}".format(map_type)
+                        res_dir = './../results/L23_sel/'
                         if static == 1:
                             c1 = c1 + " -st 1"
+                            res_dir = res_dir + 'static_'
+                        if map_type != '':
+                            c1 = c1 + " -m {:s}".format(map_type)
+                            res_dir = res_dir + 'map={:s}_'.format(map_type)
                         if phase == 1:
                             c1 = c1 + " -ap 1"
+                            res_dir = res_dir + 'phase_'
+                        if os.path.isfile(res_dir+'_seed={:d}.pkl'.format(seed)):
+                            continue
 
                         jobname="{:s}_map={:s}_static={:d}_phase={:d}_seed={:d}".format(
                             'sim_L4_act_L23_sel',map_type,static,phase,seed)
