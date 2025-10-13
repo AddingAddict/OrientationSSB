@@ -74,11 +74,11 @@ L4_rate_opm = L4_res_dict['L4_rate_opm'][0]
 L4_rates /= np.nanmean(L4_rates,axis=(-2,-1),keepdims=True)
 if add_phase:
     _,_,phs = af.calc_dc_ac_comp(L4_rates)
-    L4_phase_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,8,endpoint=False)[None,None,:]-phs[:,:,None]))
+    L4_phase_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,n_phs,endpoint=False)[None,None,:]-phs[:,:,None]))
     L4_phase_rates *= np.nanmean(L4_rates,axis=(-1),keepdims=True) / np.nanmean(L4_phase_rates,axis=(-1),keepdims=True)
     L4_rates = L4_phase_rates
 
-L4_rates_itp = CubicSpline(np.arange(0,8+1) * 1/(3*8),
+L4_rates_itp = CubicSpline(np.arange(0,n_phs+1) * 1/(3*n_phs),
                            np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
                            axis=-1,bc_type='periodic')
 
@@ -242,8 +242,8 @@ def get_sheet_resps(params,N):
     Jii *= -1
     
     thresh = 0
-    nori = 8
-    nphs = 8
+    nori = n_ori
+    nphs = n_phs
     nint = 5
     nwrm = 8 * nint * nphs
     dt = 1 / (nint * nphs * 3)
