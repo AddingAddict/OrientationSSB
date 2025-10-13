@@ -116,11 +116,11 @@ def runjobs():
                             res_dir = res_dir + 'static_'
                         if map_type != '':
                             c1 = c1 + " -m {:s}".format(map_type)
-                            res_dir = res_dir + 'map={:s}_'.format(map_type)
+                            res_dir = res_dir + '{:s}_'.format(map_type)
                         if phase == 1:
                             c1 = c1 + " -ap 1"
                             res_dir = res_dir + 'phase_'
-                        if os.path.isfile(res_dir+'_seed={:d}.pkl'.format(seed)):
+                        if os.path.isfile(res_dir+'seed={:d}.pkl'.format(seed)):
                             continue
 
                         jobname="{:s}_map={:s}_static={:d}_phase={:d}_seed={:d}".format(

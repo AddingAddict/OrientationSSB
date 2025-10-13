@@ -111,8 +111,8 @@ def runjobs():
                 if static == 1:
                     c1 = c1 + " -st 1"
 
-                jobname="{:s}_map={:s}_static={:d}_seed={:d}".format(
-                    'analyze_L4_sel',map_type,static,seed)
+                jobname="{:s}_map={:s}_static={:d}".format(
+                    'analyze_L4_sel',map_type,static)
                 
                 if not args2.test:
                     jobnameDir=os.path.join(temp_dir, jobname)
