@@ -115,14 +115,15 @@ def calc_pinwheels(A):
     
     return pwcnt,pwpts
 
-def raps_fn(k,alf,a0,a1,a2):
-    return a0*k*np.exp(-0.5*(k-a1)**2/a2**2) * 0.5*(1+erf(alf*(k-a1)/(np.sqrt(2)*a2)))
+def raps_fn(k,alf,a0,a1,a2,a3):
+    return a0*k*np.exp(-0.5*(k-a1)**2/a2**a3) * 0.5*(1+erf(alf*(k-a1)/(np.sqrt(2)*a2)))
 
 def fit_raps_fn(freqs,raps):
     peak_idx = np.argmax(np.concatenate(([0,0],raps[2:])))
     popt,pcov = curve_fit(raps_fn,freqs,raps,
-                        p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx]),
-                        bounds=([-100,0,0,-np.inf],[100,np.inf,np.inf,np.inf]))
+                        p0=(0,raps[peak_idx]/freqs[peak_idx],freqs[peak_idx],0.3*freqs[peak_idx],2),
+                        bounds=([-100,0,0,-np.inf,1],[100,np.inf,np.inf,np.inf,4]),
+                        maxfev=100000)
     raps_itp = lambda k: raps_fn(k/(2*np.pi),*popt)
     
     return raps_itp, popt, pcov
@@ -140,7 +141,7 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
                 raps_itp,popt,_ = fit_raps_fn(freqs,raps)
             except:
                 if return_fit:
-                    return np.nan, [np.nan]*4
+                    return np.nan, [np.nan]*5
                 else:
                     return np.nan
             
@@ -162,7 +163,7 @@ def calc_pinwheel_density_from_raps(freqs,raps,continuous=True,return_fit=False)
                 except:
                     pwd_list.append(np.nan)
                     if return_fit:
-                        popt_list.append([np.nan]*4)
+                        popt_list.append([np.nan]*5)
                     continue
                 
                 pwd_list.append(calc_pinwheel_density_from_raps_func(raps_itp))
