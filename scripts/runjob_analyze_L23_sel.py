@@ -107,8 +107,8 @@ def runjobs():
                     #--------------------------------------------------------------------------
                     # Make SBTACH
                     inpath = currwd + "/analyze_L23_sel.py"
-                    c1 = "{:s} -s {:d} -no {:d} -np {:d} -r 1".format(
-                            inpath,seed,n_ori,n_phs)
+                    c1 = "{:s} -s {:d} -no {:d} -np {:d}".format(
+                            inpath,num_seeds,n_ori,n_phs)
                     if static == 1:
                         c1 = c1 + " -st 1"
                     if map_type != '':
@@ -116,8 +116,8 @@ def runjobs():
                     if phase == 1:
                         c1 = c1 + " -ap 1"
 
-                    jobname="{:s}_map={:s}_static={:d}_phase={:d}_seed={:d}".format(
-                        'analyze_L23_sel',map_type,static,phase,seed)
+                    jobname="{:s}_map={:s}_static={:d}_phase={:d}".format(
+                        'analyze_L23_sel',map_type,static,phase)
                     
                     if not args2.test:
                         jobnameDir=os.path.join(temp_dir, jobname)
