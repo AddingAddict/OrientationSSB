@@ -41,8 +41,8 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 # set prior and grid size for model
 N = 60
 
-full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.7,0.1,0.7,0.6],device=device),
-                        high=torch.tensor([1.3,1.3,1.3,1.3,1.3,1.0,1.3,1.0],device=device),)
+full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7],device=device),
+                        high=torch.tensor([1.3,1.3,1.3,1.3,1.3,1.3,1.3,1.3],device=device),)
 # create prior distribution
 if bayes_iter == 0:
     params = np.load("./../notebooks/l4_params_base.npy")
@@ -106,6 +106,7 @@ dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
 # set base widths
 se0 = np.sqrt(sig2)*params[6]
+si0 = se0 * params[7]
 
 # define simulation functions
 def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern_e,kern_i,N,ne,ni,threshe,threshi,
@@ -271,16 +272,16 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
     resps = np.zeros((theta.shape[0],2,N**2,nori,nphs))
     for prm_idx in range(theta.shape[0]):
         print(prm_idx)
-        Jee = theta[prm_idx,0].item() * Jee0 * params[5]
-        Jei = -theta[prm_idx,1].item() * Jei0 * params[5]
-        Jie = theta[prm_idx,2].item() * Jie0 * params[5]
-        Jii = -theta[prm_idx,3].item() * Jii0 * params[5]
+        Jee = theta[prm_idx,0].item() * Jee0
+        Jei = -theta[prm_idx,1].item() * Jei0
+        Jie = theta[prm_idx,2].item() * Jie0
+        Jii = -theta[prm_idx,3].item() * Jii0
         
         s_e = se0 * theta[prm_idx,6].item()
-        s_i = s_e * theta[prm_idx,7].item()
+        s_i = si0 * theta[prm_idx,7].item()
         
         lat_frac_e = params[4] * theta[prm_idx,4].item()
-        lat_frac_i = params[4] * theta[prm_idx,5].item()
+        lat_frac_i = params[5] * theta[prm_idx,5].item()
         
         kern_e = np.exp(-(dss/(s_e))**params[7])
         norm = kern_e.sum(axis=1).mean(axis=0)
@@ -312,10 +313,11 @@ def sheet_simulator(theta):
     theta[:,1] = (Ω_I - Ω_E)/(|Jei| + |Jie|) = 1 - (|Jee| + |Jii|) / (|Jei| + |Jie|)
     theta[:,2] = (log10[|Jei|] + log10[|Jie|]) / 2
     theta[:,3] = (log10[|Jei|] - log10[|Jie|]) / 2
-    theta[:,4] = J_lat / J_pair
-    theta[:,5] = J_fact
-    theta[:,6] = l_ker
-    theta[:,7] = p_ker
+    theta[:,4] = J_lat_e / J_pair
+    theta[:,5] = J_lat_i / J_pair
+    theta[:,6] = l_ker_e
+    theta[:,7] = l_ker_i / l_ker_e
+    theta[:,8] = p_ker
     
     returns: [q1_os,q2_os,q3_os,mu_os,sig_os,q1_mr,q2_mr,q3_mr,mu_mr,sig_mr]
     os = excitatory orientation selectivity
