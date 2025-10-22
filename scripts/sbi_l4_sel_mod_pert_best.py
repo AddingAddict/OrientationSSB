@@ -41,8 +41,8 @@ res_file = res_dir + 'bayes_iter={:d}_job={:d}.pkl'.format(bayes_iter, job_id)
 # set prior and grid size for model
 N = 60
 
-full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7],device=device),
-                        high=torch.tensor([1.3,1.3,1.3,1.3,1.3,1.3,1.3,1.3],device=device),)
+full_prior = BoxUniform(low =torch.tensor([0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7],device=device),
+                        high=torch.tensor([1.3,1.3,1.3,1.3,1.3,1.3,1.3,1.3,1.3],device=device),)
 # create prior distribution
 if bayes_iter == 0:
     params = np.load("./../notebooks/l4_params_base.npy")
@@ -283,11 +283,11 @@ def get_sheet_resps(theta,N,gam_map,ori_map,rf_sct_map,pol_map):
         lat_frac_e = params[4] * theta[prm_idx,4].item()
         lat_frac_i = params[5] * theta[prm_idx,5].item()
         
-        kern_e = np.exp(-(dss/(s_e))**params[7])
+        kern_e = np.exp(-(dss/(s_e))**params[8] * theta[prm_idx,8].item())
         norm = kern_e.sum(axis=1).mean(axis=0)
         kern_e /= norm
         
-        kern_i = np.exp(-(dss/(s_i))**params[7])
+        kern_i = np.exp(-(dss/(s_i))**params[8] * theta[prm_idx,8].item())
         norm = kern_i.sum(axis=1).mean(axis=0)
         kern_i /= norm
         
