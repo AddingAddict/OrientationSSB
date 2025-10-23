@@ -342,7 +342,7 @@ if saveweights:
     lat_frac_e = params[4]
     lat_frac_i = params[5]
     
-    s_e = np.sqrt(sig2)*params[6]*s_mult
+    s_e = np.sqrt(sig2)*params[6]
     s_i = s_e * params[7]
     
     kern_e = np.exp(-(dss/s_e)**params[8])

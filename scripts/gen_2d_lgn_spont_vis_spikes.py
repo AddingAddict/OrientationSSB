@@ -19,6 +19,7 @@ parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=in
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
+parser.add_argument('--mode', '-m', help='mode',type=str, default='spont_vis')
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 args = vars(parser.parse_args())
 n_wave = int(args['n_wave'])
@@ -26,6 +27,7 @@ n_vis = 4*n_wave
 n_stim = int(args['n_stim'])
 n_shrink = args['n_shrink']
 n_grid = int(args['n_grid'])
+mode = str(args['mode'])
 seed = int(args['seed'])
 
 n_bar = int(np.round(2*n_grid))
@@ -51,6 +53,18 @@ vis_rs = -0.20
 vis_ro = -1.00
 
 corr_len = 0.1
+
+if mode == 'spont':
+    vis_mult = 0
+    spont_mult = 1
+elif mode == 'vis':
+    vis_mult = 1
+    spont_mult = 0
+elif mode == 'spont_vis':
+    vis_mult = 1
+    spont_mult = 1
+else:
+    raise ValueError('Mode not recognized')
 
 rng = np.random.default_rng(seed)
 
@@ -94,9 +108,9 @@ for widx in range(n_wave):
         for cidx in range(n_grid**2):
             if np.isnan(pass_times[cidx]):
                 continue
-            spike_ls[time_idx,cidx] += edge_fact*spnt_rm*\
+            spike_ls[time_idx,cidx] += spont_mult*edge_fact*spnt_rm*\
                 np.exp(-(np.abs(pass_times[cidx])/(spnt_width))**2) * dt
-            spike_ls[time_idx,n_grid**2+cidx] += edge_fact*spnt_rm*\
+            spike_ls[time_idx,n_grid**2+cidx] += spont_mult*edge_fact*spnt_rm*\
                 np.exp(-(np.abs(pass_times[cidx])/(spnt_width))**2) * dt
 
 vis_oris = rng.uniform(0,2*np.pi,n_vis)
@@ -125,17 +139,17 @@ for widx in range(n_vis):
                 spike_ls[time_idx,cidx] += edge_fact*vis_rb*dt
                 if np.isnan(n_pass_times[cidx]):
                     continue
-                spike_ls[time_idx,cidx] += edge_fact*vis_rm*\
+                spike_ls[time_idx,cidx] += vis_mult*edge_fact*vis_rm*\
                     np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
-                spike_ls[time_idx,n_grid**2+cidx] -= 0.8*edge_fact*vis_rm*\
+                spike_ls[time_idx,n_grid**2+cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
                     np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
             for cidx in range(n_grid**2):
                 spike_ls[time_idx,n_grid**2+cidx] += edge_fact*vis_rb*dt
                 if np.isnan(f_pass_times[cidx]):
                     continue
-                spike_ls[time_idx,n_grid**2+cidx] += edge_fact*vis_rm*\
+                spike_ls[time_idx,n_grid**2+cidx] += vis_mult*edge_fact*vis_rm*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
-                spike_ls[time_idx,cidx] -= 0.8*edge_fact*vis_rm*\
+                spike_ls[time_idx,cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
                     np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
 spike_ls = np.fmax(1*dt,spike_ls)
 
@@ -161,7 +175,7 @@ res_dir = './../results/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
-res_dir = res_dir + '2d_lgn_spont_vis_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(n_wave,n_stim,n_shrink,n_grid)
+res_dir = res_dir + '2d_lgn_{:s}_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(mode,n_wave,n_stim,n_shrink,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 

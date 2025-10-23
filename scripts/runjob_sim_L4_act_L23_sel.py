@@ -98,12 +98,12 @@ def runjobs():
         for map_type in maps:
             if map_type == '':
                 statics = [0,1]
-                phases = [0,1]
+                phase_sandps = [(0,0),(1,0),(0,1)]
             else:
                 statics = [0]
-                phases = [0]
+                phase_sandps = [(0,0)]
             for static in statics:
-                for phase in phases:
+                for (phase,sandp) in phase_sandps:
                     for seed in seeds:
                         #--------------------------------------------------------------------------
                         # Make SBTACH
@@ -120,11 +120,14 @@ def runjobs():
                         if phase == 1:
                             c1 = c1 + " -ap 1"
                             res_dir = res_dir + 'phase_'
+                        if sandp == 1:
+                            c1 = c1 + " -asp 1"
+                            res_dir = res_dir + 'sandp_'
                         if os.path.isfile(res_dir+'seed={:d}.pkl'.format(seed)):
                             continue
 
-                        jobname="{:s}_map={:s}_static={:d}_phase={:d}_seed={:d}".format(
-                            'sim_L4_act_L23_sel',map_type,static,phase,seed)
+                        jobname="{:s}_map={:s}_static={:d}_phase={:d}_sandp={:d}_seed={:d}".format(
+                            'sim_L4_act_L23_sel',map_type,static,phase,sandp,seed)
                         
                         if not args2.test:
                             jobnameDir=os.path.join(temp_dir, jobname)
