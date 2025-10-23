@@ -55,7 +55,7 @@ if static:
 if args['map'] is None:
     res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 else:
-    res_file = res_dir + 'map={:s}_seed={:d}.pkl'.format(args['map'],seed)
+    res_file = res_dir + '{:s}_seed={:d}.pkl'.format(args['map'],seed)
 
 res_dict = {}
 
@@ -69,15 +69,12 @@ freqs = np.sqrt(freqs[:,None]**2 + freqs[None,:]**2)
 if args['map'] is None or args['map'] == 'low':
     decay = 5
     opm_fft *= np.exp(-freqs/decay)
-    s_mult = 1
 elif 'band' in args['map']:
     if args['map'] == 'band':
         peak = 6
-        s_mult = 1
     else:
         _,peak = args['map'].split('_')
         peak = float(peak)
-        s_mult = 6 / peak
     opm_fft *= np.exp(-((freqs-peak)/2.5)**2)#np.heaviside(0.5 - np.abs(freqs-peak),0.5)
 
 L4_inp_opm = np.fft.ifft2(opm_fft)
@@ -120,8 +117,7 @@ mag_fact = 0.02
 L_deg = L_mm / np.sqrt(mag_fact)
 grate_freq = 0.06
 
-sctmap,polmap = mf.gen_rf_sct_map(N,sig2,rf_sct_scale,pol_scale)
-abs_phs = mf.gen_abs_phs_map(N,sctmap,polmap,0,grate_freq,L_deg)
+sctmap,polmap = mf.gen_rf_sct_map(N,sig2,rf_sct_scale,pol_scale,seed=seed)
 
 # Compute distance matrix for connectivity kernel
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
@@ -132,8 +128,8 @@ dys[dys > 0.5] = 1 - dys[dys > 0.5]
 dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
 
 # define simulation functions
-def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,ni,threshe,threshi,
-                    t0,dt,Nt,tsamp,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac=1.0):
+def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern_e,kern_i,N,ne,ni,threshe,threshi,
+                    t0,dt,Nt,tsamp,ta=0.01,tn=0.300,tg=0.01,frac_n=0.7,lat_frac_e=1.0,lat_frac_i=1.0):
     '''
     Integrate 2D sheet with AMPA, NMDA, and GABA receptor dynamics.
     xe0, xi0: initial excitatory and inhibitory activity
@@ -161,8 +157,10 @@ def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kern,N,ne,
     Wie = Jie*np.eye(N**2)
     Wii = Jii*np.eye(N**2)
     
-    Wee += lat_frac*Jee*kern.reshape(N**2,N**2)
-    Wie += lat_frac*Jie*kern.reshape(N**2,N**2)
+    Wee += lat_frac_e*Jee*kern_e.reshape(N**2,N**2)
+    Wie += lat_frac_e*Jie*kern_e.reshape(N**2,N**2)
+    Wei += lat_frac_i*Jei*kern_i.reshape(N**2,N**2)
+    Wii += lat_frac_i*Jii*kern_i.reshape(N**2,N**2)
     
     # for t_idx in range(Nt):
     #     ff_inp = inp(t0+t_idx*dt)
@@ -258,18 +256,19 @@ def get_sheet_resps(params,N,gam_map,ori_map,rf_sct_map,pol_map):
     params[1] = log10[|Jei]]
     params[2] = log10[|Jie]]
     params[3] = log10[|Jii]]
-    params[4] = J_lat / J_pair
-    params[5] = J_fact
-    params[6] = l_ker
-    params[7] = p_ker
+    params[4] = J_lat_e
+    params[5] = J_lat_i
+    params[6] = s_e
+    params[7] = s_i / s_e
+    params[8] = p_ker
     
     returns: resps, array of shape (theta.shape[0],2,N**2,n_ori=8,n_phs=8)
     '''
     Jee,Jei,Jie,Jii = 10**params[:4]
-    Jee *=  params[5]
-    Jei *= -params[5]
-    Jie *=  params[5]
-    Jii *= -params[5]
+    Jee *=  1
+    Jei *= -1
+    Jie *=  1
+    Jii *= -1
     
     c = 100
     thresh = c
@@ -277,9 +276,16 @@ def get_sheet_resps(params,N,gam_map,ori_map,rf_sct_map,pol_map):
     dt = 1 / (n_int * n_phs * 3)
     oris = np.linspace(0,np.pi,n_ori,endpoint=False)
     
-    kern = np.exp(-(dss/(np.sqrt(sig2)*params[6]*s_mult))**params[7])
-    norm = kern.sum(axis=1).mean(axis=0)
-    kern /= norm
+    s_e = np.sqrt(sig2)*params[6]
+    s_i = s_e * params[7]
+    
+    kern_e = np.exp(-(dss/s_e)**params[8])
+    norm = kern_e.sum(axis=1).mean(axis=0)
+    kern_e /= norm
+    
+    kern_i = np.exp(-(dss/s_i)**params[8])
+    norm = kern_i.sum(axis=1).mean(axis=0)
+    kern_i /= norm
     
     tsamp = nwrm-1 + np.arange(0,n_phs) * n_int
     resps = np.zeros((2,N**2,n_ori,n_phs))
@@ -293,8 +299,9 @@ def get_sheet_resps(params,N,gam_map,ori_map,rf_sct_map,pol_map):
                     return c*elong_inp(gam_map_flat,ori-ori_map_flat,phs_map_flat+phs)
                 _,_,_,_,_,_,resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                         np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
-                                        ff_inp,Jee,Jei,Jie,Jii,kern,N,2,2,
-                                        thresh,thresh,0,dt,nwrm,tsamp[0:1],lat_frac=params[4])
+                                        ff_inp,Jee,Jei,Jie,Jii,kern_e,kern_i,N,2,2,
+                                        thresh,thresh,0,dt,nwrm,tsamp[0:1],
+                                        lat_frac_e=params[4],lat_frac_i=params[5])
                 resps[:,:,ori_idx,phs_idx] = resp.reshape(2,N**2)
             
         else:
@@ -302,8 +309,9 @@ def get_sheet_resps(params,N,gam_map,ori_map,rf_sct_map,pol_map):
                 return c*elong_inp(gam_map_flat,ori-ori_map_flat,phs_map_flat+2*np.pi*3*t)
             _,_,_,_,_,_,resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
                                     np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
-                                    ff_inp,Jee,Jei,Jie,Jii,kern,N,2,2,
-                                    thresh,thresh,0,dt,nwrm+n_int*n_phs,tsamp,lat_frac=params[4])
+                                    ff_inp,Jee,Jei,Jie,Jii,kern_e,kern_i,N,2,2,
+                                    thresh,thresh,0,dt,nwrm+n_int*n_phs,tsamp,
+                                    lat_frac_e=params[4],lat_frac_i=params[5])
             resps[:,:,ori_idx,:] = resp.reshape(2,N**2,n_phs)
         # xea,xen,xeg,xia,xin,xig,resp = integrate_sheet(np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
         #                          np.zeros(N**2),np.zeros(N**2),np.zeros(N**2),
@@ -331,19 +339,29 @@ if saverates:
     res_dict['L4_rates'] = L4_rates
 if saveweights:
     Jee,Jei,Jie,Jii = 10**params[:4]
-    lat_frac = params[4]
-
-    kern = np.exp(-(dss/(np.sqrt(sig2)*params[6]))**params[7])
-    norm = kern.sum(axis=1).mean(axis=0)
-    kern /= norm
+    lat_frac_e = params[4]
+    lat_frac_i = params[5]
+    
+    s_e = np.sqrt(sig2)*params[6]*s_mult
+    s_i = s_e * params[7]
+    
+    kern_e = np.exp(-(dss/s_e)**params[8])
+    norm = kern_e.sum(axis=1).mean(axis=0)
+    kern_e /= norm
+    
+    kern_i = np.exp(-(dss/s_i)**params[8])
+    norm = kern_i.sum(axis=1).mean(axis=0)
+    kern_i /= norm
 
     Wee = Jee*np.eye(N**2)
     Wei = Jei*np.eye(N**2)
     Wie = Jie*np.eye(N**2)
     Wii = Jii*np.eye(N**2)
 
-    Wee += lat_frac*Jee*kern.reshape(N**2,N**2)
-    Wie += lat_frac*Jie*kern.reshape(N**2,N**2)
+    Wee += lat_frac_e*Jee*kern_e.reshape(N**2,N**2)
+    Wie += lat_frac_e*Jie*kern_e.reshape(N**2,N**2)
+    Wei += lat_frac_i*Jei*kern_i.reshape(N**2,N**2)
+    Wii += lat_frac_i*Jii*kern_i.reshape(N**2,N**2)
     
     res_dict['weights'] = (Wee,Wei,Wie,Wii)
 

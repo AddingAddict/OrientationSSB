@@ -20,7 +20,9 @@ parser.add_argument('--n_ori', '-no', help='number of orientations',type=int, de
 parser.add_argument('--n_phs', '-np', help='number of orientations',type=int, default=16)
 parser.add_argument('--n_int', '-nt', help='number of integration steps between phases',type=int, default=4)
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
-parser.add_argument('--add_phase', '-ap', help='add phase to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--add_phase', '-ap', help='add phase selectivity to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--add_orisel', '-aos', help='add orientation selectivity to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--add_sandp', '-asp', help='make L4 inputs salt and pepper or not',type=bool, default=False)
 parser.add_argument('--map', '-m', help='whether to switch to a different L4 map',type=str, default=None)
 parser.add_argument('--static', '-st', help='static or dynamic input',type=bool, default=False)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=False)
@@ -32,6 +34,8 @@ n_phs = int(args['n_phs'])
 n_int= int(args['n_int'])
 seed = int(args['seed'])
 add_phase = args['add_phase']
+add_orisel = args['add_orisel']
+add_sandp = args['add_sandp']
 static = args['static']
 saverates = args['saverates']
 saveweights = args['saveweights']
@@ -49,23 +53,27 @@ if not os.path.exists(res_dir):
 res_dir = res_dir + 'L23_sel/'
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
-    
+
 if static:
     res_dir = res_dir + 'static_'
 if args['map'] is not None:
     res_dir = res_dir + args['map'] + '_'
 if add_phase:
     res_dir = res_dir + 'phase_'
+if add_orisel:
+    res_dir = res_dir + 'orisel_'
+if add_sandp:
+    res_dir = res_dir + 'sandp_'
 res_file = res_dir + 'seed={:d}.pkl'.format(seed)
 
 res_dict = {}
 
 # load L4 responses
 if args['map'] is None:
-    with open('./../results/L4_sel/seed=0.pkl', 'rb') as handle:
+    with open('./../results/L4_sel/seed={:d}.pkl'.format(seed), 'rb') as handle:
         L4_res_dict = pickle.load(handle)
 else:
-    with open('./../results/L4_sel/map={:s}_seed=0.pkl'.format(args['map']), 'rb') as handle:
+    with open('./../results/L4_sel/{:s}_seed={:d}.pkl'.format(args['map'],seed), 'rb') as handle:
         L4_res_dict = pickle.load(handle)
     
 L4_rates = L4_res_dict['L4_rates'][0]
@@ -77,10 +85,15 @@ if add_phase:
     L4_phase_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,n_phs,endpoint=False)[None,None,:]-phs[:,:,None]))
     L4_phase_rates *= np.nanmean(L4_rates,axis=(-1),keepdims=True) / np.nanmean(L4_phase_rates,axis=(-1),keepdims=True)
     L4_rates = L4_phase_rates
-
-L4_rates_itp = CubicSpline(np.arange(0,n_phs+1) * 1/(3*n_phs),
-                           np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
-                           axis=-1,bc_type='periodic')
+if add_orisel:
+    _,_,doub_po = af.calc_dc_ac_comp(L4_rates.mean(-1))
+    L4_orisel_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,n_ori,endpoint=False)[None,:]-doub_po[:,None]))
+    L4_orisel_rates *= np.nanmean(L4_rates.mean(-1),axis=(-1),keepdims=True) / np.nanmean(L4_orisel_rates,axis=(-1),keepdims=True)
+    L4_norm_phase_tuning = L4_rates / np.nanmean(L4_rates,axis=(-1),keepdims=True)
+    L4_rates = L4_norm_phase_tuning * L4_orisel_rates[:,:,None]
+if add_sandp:
+    rng = np.random.default_rng(seed)
+    L4_rates = rng.permutation(L4_rates)
 
 # Compute distance matrix for connectivity kernel
 xs,ys = np.meshgrid(np.arange(N)/N,np.arange(N)/N)
@@ -89,6 +102,11 @@ dxs[dxs > 0.5] = 1 - dxs[dxs > 0.5]
 dys = np.abs(ys[:,:,None,None] - ys[None,None,:,:])
 dys[dys > 0.5] = 1 - dys[dys > 0.5]
 dss = np.sqrt(dxs**2 + dys**2).reshape(N**2,N**2)
+    
+# define L4 rate interpolation function after L4 to L2/3 scattering
+L4_rates_itp = CubicSpline(np.arange(0,n_phs+1) * 1/(3*n_phs),
+                           np.concatenate((L4_rates,L4_rates[:,:,0:1]),axis=-1),
+                           axis=-1,bc_type='periodic')
 
 # define simulation functions
 def integrate_sheet(xea0,xen0,xeg0,xia0,xin0,xig0,inp,Jee,Jei,Jie,Jii,kerne,kernei,kernii,
@@ -328,21 +346,22 @@ if saveweights:
 # Calculate CV of inputs and responses
 L23_rate_r0 = np.mean(L23_rates,(-2,-1))
 L23_rate_opm,L23_rate_mr = af.calc_OPM_MR(L23_rates)
-# L23_rate_os = np.abs(L23_rate_opm)
-# L23_rate_po = np.angle(L23_rate_opm)*180/(2*np.pi)
 L23_rate_r1 = np.abs(L23_rate_opm)*L23_rate_r0
+L23_inp_opm,L23_inp_mr = af.calc_OPM_MR(L4_rates**2)
 
 res_dict['L23_rate_r0'] = L23_rate_r0
 res_dict['L23_rate_r1'] = L23_rate_r1
 res_dict['L23_rate_opm'] = L23_rate_opm
 res_dict['L23_rate_mr'] = L23_rate_mr
+res_dict['L23_inp_opm'] = L23_inp_opm
+res_dict['L23_inp_mr'] = L23_inp_mr
 
 # Calculate hypercolumn size and number of pinwheels
 _,L23_rate_raps = af.get_fps(L23_rate_opm[0].reshape(N,N))
 L23_rate_hc,_ = af.calc_hypercol_size(L23_rate_raps,N)
 freqs = np.arange(len(L23_rate_raps))/60
 pwd,popt = af.calc_pinwheel_density_from_raps(freqs,L23_rate_raps,return_fit=True)
-    
+
 Lam = L23_rate_hc
 
 res_dict['L23_rate_raps'] = L23_rate_raps
