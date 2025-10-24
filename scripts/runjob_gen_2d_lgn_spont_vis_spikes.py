@@ -102,7 +102,7 @@ def runjobs():
             c1 = "{:s} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -m {:s}".format(
                 inpath,seed,n_wave,n_stim,n_shrink,n_grid,mode)
             
-            jobname="{:s}_m={:s},nw={:d}_ns={:d}_nh={:.2f}_ng={:d}_seed={:d}".format(
+            jobname="{:s}_m={:s}_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}_seed={:d}".format(
                 'gen_2d_lgn_spikes',n_wave,n_stim,n_shrink,n_grid,seed)
             
             if not args2.test:
