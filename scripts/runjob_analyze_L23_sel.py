@@ -98,12 +98,12 @@ def runjobs():
         for map_type in maps:
             if map_type == '':
                 statics = [0,1]
-                phases = [0,1]
+                phase_sandps = [(0,0),(1,0),(0,1)]
             else:
                 statics = [0]
-                phases = [0]
+                phase_sandps = [(0,0)]
             for static in statics:
-                for phase in phases:
+                for (phase,sandp) in phase_sandps:
                     #--------------------------------------------------------------------------
                     # Make SBTACH
                     inpath = currwd + "/analyze_L23_sel.py"
@@ -115,9 +115,11 @@ def runjobs():
                         c1 = c1 + " -m {:s}".format(map_type)
                     if phase == 1:
                         c1 = c1 + " -ap 1"
+                    if sandp == 1:
+                        c1 = c1 + " -asp 1"
 
-                    jobname="{:s}_map={:s}_static={:d}_phase={:d}".format(
-                        'analyze_L23_sel',map_type,static,phase)
+                    jobname="{:s}_map={:s}_static={:d}_phase={:d}_sandp={:d}".format(
+                        'analyze_L23_sel',map_type,static,phase,sandp)
                     
                     if not args2.test:
                         jobnameDir=os.path.join(temp_dir, jobname)
