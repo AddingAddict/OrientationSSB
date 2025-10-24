@@ -23,6 +23,8 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps between 
 parser.add_argument('--map', '-m', help='type of map',type=str, default=None)
 parser.add_argument('--static', '-st', help='static or dynamic input',type=bool, default=False)
 parser.add_argument('--add_phase', '-ap', help='add phase to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--add_orisel', '-aos', help='add orientation selectivity to L4 inputs or not',type=bool, default=False)
+parser.add_argument('--add_sandp', '-asp', help='make L4 inputs salt and pepper or not',type=bool, default=False)
 parser.add_argument('--num_seeds', '-s', help='number of seeds to average over',type=int, default=0)
 parser.add_argument('--num_samps', '-sa', help='number of samples from each seed to save',type=int, default=100)
 args = vars(parser.parse_args())
@@ -32,6 +34,8 @@ n_phs = int(args['n_phs'])
 n_int= int(args['n_int'])
 static = args['static']
 add_phase = args['add_phase']
+add_orisel = args['add_orisel']
+add_sandp = args['add_sandp']
 num_seeds = int(args['num_seeds'])
 num_samps = int(args['num_samps'])
 
@@ -60,8 +64,16 @@ else:
     L4_dir = l4_dir + 'map={:s}_'.format(args['map'])
     
 if add_phase:
-    res_file = res_file + 'phase_analysis.pkl'
+    res_file = res_file + 'phase_'
     file_dir = res_dir + 'phase_'
+    
+if add_orisel:
+    res_file = res_file + 'orisel_'
+    file_dir = res_dir + 'orisel_'
+    
+if add_sandp:
+    res_file = res_file + 'sandp_analysis.pkl'
+    file_dir = res_dir + 'sandp_'
 else:
     res_file = res_file + 'analysis.pkl'
 
