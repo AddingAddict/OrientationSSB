@@ -51,8 +51,8 @@ if args['map'] is None:
     res_file = res_dir + 'analysis.pkl'
     file_dir = res_dir
 else:
-    res_file = res_dir + 'map={:s}_analysis.pkl'.format(args['map'])
-    file_dir = res_dir + 'map={:s}_'.format(args['map'])
+    res_file = res_dir + '{:s}_analysis.pkl'.format(args['map'])
+    file_dir = res_dir + '{:s}_'.format(args['map'])
 
 res_dict = {}
 rng = np.random.default_rng(0)

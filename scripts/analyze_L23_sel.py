@@ -57,7 +57,7 @@ if args['map'] is None:
 else:
     res_file = res_dir + '{:s}_'.format(args['map'])
     file_dir = res_dir + '{:s}_'.format(args['map'])
-    L4_dir = l4_dir + 'map={:s}_'.format(args['map'])
+    L4_dir = l4_dir + '{:s}_'.format(args['map'])
     
 if add_phase:
     res_file = res_file + 'phase_analysis.pkl'
