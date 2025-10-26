@@ -27,7 +27,7 @@ def runjobs():
     parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
     parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
     parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
-    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=100)
+    parser.add_argument('--gb', '-g', help='number of gbs per cpu',type=int, default=1)
     
     args2 = parser.parse_args()
     args = vars(args2)
@@ -91,8 +91,8 @@ def runjobs():
 
     time.sleep(0.2)
     
-    seeds = range(10)
-    modes = ['spont','vis','spont_vis']
+    seeds = range(50)
+    modes = ['spont','vis']#,'spont_vis']
 
     for mode in modes:
         for seed in seeds:
@@ -103,7 +103,7 @@ def runjobs():
                 inpath,seed,n_wave,n_stim,n_shrink,n_grid,mode)
             
             jobname="{:s}_m={:s}_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}_seed={:d}".format(
-                'gen_2d_lgn_spikes',n_wave,n_stim,n_shrink,n_grid,seed)
+                'gen_2d_lgn_spikes',mode,n_wave,n_stim,n_shrink,n_grid,seed)
             
             if not args2.test:
                 jobnameDir=os.path.join(ofilesdir, jobname)
@@ -113,7 +113,7 @@ def runjobs():
                 if cluster=='haba' or cluster=='moto' or cluster=='burg':
                     text_file.write("#SBATCH --account=theory \n")
                 text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                text_file.write("#SBATCH -t 0-11:59  \n")
+                text_file.write("#SBATCH -t 2-23:59  \n")
                 text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
                 # text_file.write("#SBATCH --gres=gpu\n")
                 text_file.write("#SBATCH -c 1 \n")
