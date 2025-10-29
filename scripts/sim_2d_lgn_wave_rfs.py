@@ -34,6 +34,7 @@ parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=in
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
 parser.add_argument('--n_grid', '-ng', help='number of points per grid edge',type=int, default=20)
+parser.add_argument('--mode', '-m', help='mode',type=str, default='spont_vis')
 parser.add_argument('--test', '-t', help='test?',type=int, default=0)
 args = vars(parser.parse_args())
 print(args)
@@ -57,6 +58,7 @@ n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
 n_shrink = args['n_shrink']
 n_grid = int(args['n_grid'])
+mode = str(args['mode'])
 test = int(args['test']) > 0
 
 n_batch = 36#26 # number of batches to collect weight changes before adjusting weights
@@ -70,15 +72,15 @@ if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 if test:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ne={:d}_ni={:d}/'.format(n_e,n_i)
+    res_dir = res_dir + 'sim_2d_lgn_{:s}_rfs_ne={:d}_ni={:d}/'.format(mode,n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_wave_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}_d={:.1f}/'.format(
-        n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd)
+    res_dir = res_dir + 'sim_2d_lgn_{:s}_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}_d={:.1f}/'.format(
+        mode,n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
 # Define where geniculate wave spikes are saved
-lgn_dir = './../results/' + '2d_lgn_spont_vis_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(n_wave,n_stim,n_shrink,n_grid)
+lgn_dir = './../results/' + '2d_lgn_{:s}_spikes_nw={:d}_ns={:d}_nh={:.2f}_ng={:d}/'.format(mode,n_wave,n_stim,n_shrink,n_grid)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
     
@@ -210,7 +212,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d} -d {:.1f}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d} -d {:.1f} -m {:s}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
             seed,n_wave,n_stim,n_shrink,n_grid,
-            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd))
+            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd,mode))
