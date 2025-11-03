@@ -89,7 +89,7 @@ if add_orisel:
     _,_,doub_po = af.calc_dc_ac_comp(L4_rates.mean(-1))
     L4_orisel_rates = np.fmax(0,np.cos(np.linspace(0,2*np.pi,n_ori,endpoint=False)[None,:]-doub_po[:,None]))
     L4_orisel_rates *= np.nanmean(L4_rates.mean(-1),axis=(-1),keepdims=True) / np.nanmean(L4_orisel_rates,axis=(-1),keepdims=True)
-    L4_norm_phase_tuning = L4_rates / np.nanmean(L4_rates,axis=(-1),keepdims=True)
+    L4_norm_phase_tuning = np.fmax(1e-12,L4_rates / np.nanmean(L4_rates,axis=(-1),keepdims=True))
     L4_rates = L4_norm_phase_tuning * L4_orisel_rates[:,:,None]
 if add_sandp:
     rng = np.random.default_rng(seed)
