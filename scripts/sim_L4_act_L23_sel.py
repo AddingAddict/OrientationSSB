@@ -263,7 +263,7 @@ def get_sheet_resps(params,N):
     nori = n_ori
     nphs = n_phs
     nint = 5
-    nwrm = 8 * nint * nphs
+    nwrm = 4 * nint * nphs
     dt = 1 / (nint * nphs * 3)
     
     s_e = params[4]
