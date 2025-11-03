@@ -84,8 +84,11 @@ dist_corrs = np.exp(-0.5*(dists/corr_len)**2)
 
 spike_ls = np.zeros((int(np.round(spnt_ibi*n_wave/dt)),2*n_grid**2))
 times = np.arange(len(spike_ls)) * dt
-sweeping = (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) >= np.round(vis_dur/dt)) \
-    & (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) <= 2*np.round(vis_dur/dt))
+if 'vis' in mode:
+    sweeping = (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) >= np.round(vis_dur/dt)) \
+        & (np.mod(np.round(times/dt),np.round(vis_ibi/dt)) <= 2*np.round(vis_dur/dt))
+else:
+    sweeping = np.zeros(len(spike_ls),dtype=bool)
 
 spike_ls += spnt_rb * dt
 
@@ -113,45 +116,46 @@ for widx in range(n_wave):
             spike_ls[time_idx,n_grid**2+cidx] += spont_mult*edge_fact*spnt_rm*\
                 np.exp(-(np.abs(pass_times[cidx])/(spnt_width))**2) * dt
 
-vis_oris = rng.uniform(0,2*np.pi,n_vis)
-vis_start_poss = rng.uniform(0,1,(n_vis,n_stim,2))
-vis_leading_on = rng.choice([1,-1],(n_vis,n_stim))
+if 'vis' in mode:
+    vis_oris = rng.uniform(0,2*np.pi,n_vis)
+    vis_start_poss = rng.uniform(0,1,(n_vis,n_stim,2))
+    vis_leading_on = rng.choice([1,-1],(n_vis,n_stim))
 
-vis_offset = 0.125/n_shrink
-vis_width = 0.3/n_shrink
+    vis_offset = 0.125/n_shrink
+    vis_width = 0.3/n_shrink
 
-for widx in range(n_vis):
-    for sidx in range(n_stim):
-        for tidx in range(int(np.round(vis_stim_dur/dt))+1):
-            time_idx = int(np.round(vis_ibi/dt))*widx + int(np.round((vis_ibi-1)/2/dt)) \
-                + int(np.round(vis_stim_dur/dt))*sidx + tidx - 1
-            edge_fact = 0.5 if tidx==0 or tidx==int(np.round(vis_stim_dur/dt)) else 1
-            vel = bar_len * np.array([np.cos(vis_oris[widx]),np.sin(vis_oris[widx])])
-            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)+vis_offset*vis_leading_on[widx,sidx])*vel,
-                vis_oris[widx],bar_len,bar_len)
-            bar_pos = bar_to_box(ss,ts)
-            n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-            bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)-vis_offset*vis_leading_on[widx,sidx])*vel,
-                vis_oris[widx],bar_len,bar_len)
-            bar_pos = bar_to_box(ss,ts)
-            f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
-            for cidx in range(n_grid**2):
-                spike_ls[time_idx,cidx] += edge_fact*vis_rb*dt
-                if np.isnan(n_pass_times[cidx]):
-                    continue
-                spike_ls[time_idx,cidx] += vis_mult*edge_fact*vis_rm*\
-                    np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
-                spike_ls[time_idx,n_grid**2+cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
-                    np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
-            for cidx in range(n_grid**2):
-                spike_ls[time_idx,n_grid**2+cidx] += edge_fact*vis_rb*dt
-                if np.isnan(f_pass_times[cidx]):
-                    continue
-                spike_ls[time_idx,n_grid**2+cidx] += vis_mult*edge_fact*vis_rm*\
-                    np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
-                spike_ls[time_idx,cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
-                    np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
-spike_ls = np.fmax(1*dt,spike_ls)
+    for widx in range(n_vis):
+        for sidx in range(n_stim):
+            for tidx in range(int(np.round(vis_stim_dur/dt))+1):
+                time_idx = int(np.round(vis_ibi/dt))*widx + int(np.round((vis_ibi-1)/2/dt)) \
+                    + int(np.round(vis_stim_dur/dt))*sidx + tidx - 1
+                edge_fact = 0.5 if tidx==0 or tidx==int(np.round(vis_stim_dur/dt)) else 1
+                vel = bar_len * np.array([np.cos(vis_oris[widx]),np.sin(vis_oris[widx])])
+                bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)+vis_offset*vis_leading_on[widx,sidx])*vel,
+                    vis_oris[widx],bar_len,bar_len)
+                bar_pos = bar_to_box(ss,ts)
+                n_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
+                bar_to_box = bf.gen_mov_bar(vis_start_poss[widx,sidx]+(tidx/int(vis_stim_dur/dt)-vis_offset*vis_leading_on[widx,sidx])*vel,
+                    vis_oris[widx],bar_len,bar_len)
+                bar_pos = bar_to_box(ss,ts)
+                f_pass_times = np.abs(bf.bar_pass_time(bar_pos,np.array([xs,ys]).T,ts,res) - 0.5)
+                for cidx in range(n_grid**2):
+                    spike_ls[time_idx,cidx] += edge_fact*vis_rb*dt
+                    if np.isnan(n_pass_times[cidx]):
+                        continue
+                    spike_ls[time_idx,cidx] += vis_mult*edge_fact*vis_rm*\
+                        np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
+                    spike_ls[time_idx,n_grid**2+cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
+                        np.exp(-(np.abs(n_pass_times[cidx])/(vis_width))**3) * dt
+                for cidx in range(n_grid**2):
+                    spike_ls[time_idx,n_grid**2+cidx] += edge_fact*vis_rb*dt
+                    if np.isnan(f_pass_times[cidx]):
+                        continue
+                    spike_ls[time_idx,n_grid**2+cidx] += vis_mult*edge_fact*vis_rm*\
+                        np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
+                    spike_ls[time_idx,cidx] -= vis_mult*0.8*edge_fact*vis_rm*\
+                        np.exp(-(np.abs(f_pass_times[cidx])/(vis_width))**3) * dt
+    spike_ls = np.fmax(1*dt,spike_ls)
 
 print('Generating spike statistics took',time.process_time() - start,'s\n')
 

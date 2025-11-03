@@ -25,6 +25,7 @@ class Model:
         rec_e_plast: bool=True, # whether recurrent weights are plastic
         rec_i_plast: bool=True, # whether recurrent weights are plastic
         rec_i_ltd: float=1.0, # factor for LTD of inhibitory weights
+        autapse_mult: float=4.0, # factor to multiply same-pixel unit connections by
         init_dict: dict=None,
         seed: int=None,
         rx_wave_start: np.ndarray=None,
@@ -151,14 +152,18 @@ class Model:
             self.wei = rng.uniform(0.2,0.8,size=(self.n_e,self.n_i)) * self.ai
             self.wie = rng.uniform(0.2,0.8,size=(self.n_i,self.n_e)) * self.ae
             self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i)) * self.ai
+            np.fill_diagonal(self.wee,autapse_mult)
+            np.fill_diagonal(self.wie,autapse_mult)
+            np.fill_diagonal(self.wei,autapse_mult)
+            np.fill_diagonal(self.wii,autapse_mult)
             
             # randomly choose some L4 cells to be more on/off dominated
-            on_dom = rng.choice([1,-1],size=(self.n_e,))
-            self.wex[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
-            self.wex[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
-            on_dom = rng.choice([1,-1],size=(self.n_i,))
-            self.wix[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
-            self.wix[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
+            # on_dom = rng.choice([1,-1],size=(self.n_e,))
+            # self.wex[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
+            # self.wex[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
+            # on_dom = rng.choice([1,-1],size=(self.n_i,))
+            # self.wix[:,:self.n_lgn//2] *= 1+0.3*on_dom[:,None]
+            # self.wix[:,self.n_lgn//2:] *= 1-0.3*on_dom[:,None]
             
             self.wex *= self.wff_sum / np.sum(self.wex,axis=1,keepdims=True)
             self.wix *= self.wff_sum / np.sum(self.wix,axis=1,keepdims=True)

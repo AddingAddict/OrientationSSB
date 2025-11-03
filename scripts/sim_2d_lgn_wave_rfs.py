@@ -30,6 +30,7 @@ parser.add_argument('--gain_i', '-gi', help='gain of inhibitory cells',type=floa
 parser.add_argument('--prune', '-p', help='whether to prune feedforward weights',type=int, default=0)
 parser.add_argument('--rec_plast', '-r', help='whether recurrent weights are plastic',type=int, default=0)
 parser.add_argument('--rec_i_ltd', '-d', help='factor for inhibitory LTD term',type=float, default=1.0)
+parser.add_argument('--autapse_mult', '-am', help='factor for same-pixel unit connectivity',type=float, default=1.0)
 parser.add_argument('--n_wave', '-nw', help='number of geniculate waves',type=int, default=15)
 parser.add_argument('--n_stim', '-ns', help='number of light/dark sweeping bars',type=int, default=2)
 parser.add_argument('--n_shrink', '-nh', help='factor by which to shrink stimuli',type=float, default=1.0)
@@ -54,6 +55,7 @@ gain_i = args['gain_i']
 prune = int(args['prune']) > 0
 rec_plast = int(args['rec_plast']) > 0
 rec_i_ltd = args['rec_i_ltd']
+autapse_mult = args['autapse_mult']
 n_wave = int(args['n_wave'])
 n_stim = int(args['n_stim'])
 n_shrink = args['n_shrink']
@@ -74,8 +76,8 @@ if not os.path.exists(res_dir):
 if test:
     res_dir = res_dir + 'sim_2d_lgn_{:s}_rfs_ne={:d}_ni={:d}/'.format(mode,n_e,n_i)
 else:
-    res_dir = res_dir + 'sim_2d_lgn_{:s}_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}_d={:.1f}/'.format(
-        mode,n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd)
+    res_dir = res_dir + 'sim_2d_lgn_{:s}_rfs_ng={:d}_ne={:d}_ni={:d}_sx={:.2f}_se={:.2f}_si={:.2f}_ss={:.2f}_gi={:.1f}_p={:d}_r={:d}_d={:.1f}_am={:.1f}/'.format(
+        mode,n_grid,n_e,n_i,s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd,autapse_mult)
 if not os.path.exists(res_dir):
     os.makedirs(res_dir)
 
@@ -101,7 +103,7 @@ def init_net(
     if n_iter==0: # starting a new simulation, must initialize the system
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,seed=seed,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,
+                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,autapse_mult=autapse_mult,
                     rx_wave_start=lgn_spikes[13])#lgn_spikes[26])
     else:
         # load weights, inputs, rates, averages, and learning rates from previous iteration
@@ -110,7 +112,7 @@ def init_net(
             
         net = Model(n_grid=n_grid,n_e=n_e,n_i=n_i,n_x=n_x,
                     s_x=s_x,s_e=s_e,s_i=s_i,s_s=s_s,gain_i=gain_i,
-                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,
+                    prune=prune,rec_e_plast=rec_plast,rec_i_ltd=rec_i_ltd,autapse_mult=autapse_mult,
                     init_dict=res_dict)
         
     return net
@@ -212,7 +214,7 @@ for n_iter in range(init_iter,init_iter+batch_iter):
 
 if init_iter+batch_iter < max_iter:
     os.system("python runjob_sim_2d_lgn_wave_rfs.py " + \
-            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d} -d {:.1f} -m {:s}".format(
+            "-ne {:d} -ni {:d} -iit {:d} -bit {:d} -mit {:d} -s {:d} -nw {:d} -ns {:d} -nh {:.2f} -ng {:d} -sx {:.2f} -se {:.2f} -si {:.2f} -ss {:.2f} -gi {:.1f} -p {:d} -r {:d} -d {:.1f} -am {:.1f} -m {:s}".format(
             n_e,n_i,init_iter+batch_iter,batch_iter,max_iter,
             seed,n_wave,n_stim,n_shrink,n_grid,
-            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd,mode))
+            s_x,s_e,s_i,s_s,gain_i,prune,rec_plast,rec_i_ltd,autapse_mult,mode))
