@@ -6,6 +6,7 @@ import time
 from sys import platform
 import uuid
 import random
+from tempfile import TemporaryDirectory
 
 from importlib import reload
 
@@ -91,46 +92,46 @@ def runjobs():
     time.sleep(0.2)
     
     seeds = range(1)
-    monos = np.linspace(0,0.4,9)
-    sames = np.ones(len(monos),dtype=int)
-    sames[0] = 0  # only for mono=0, use different map for two eyes
+    monoidxs = np.linspace(0,0.4,7)
+    mismatchs = np.linspace(0,45,7)
+          
+    with TemporaryDirectory() as temp_dir:
+        for monoidx,mismatch in zip(monoidxs,mismatchs):
+            for seed in seeds:
+                #--------------------------------------------------------------------------
+                # Make SBTACH
+                inpath = currwd + "/sim_L23_sel_binoc.py"
+                c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.2f} -mm {:.0f}".format(
+                    inpath,seed,n_ori,n_rpt,n_int,monoidx,mismatch)
+                
+                jobname="{:s}_mi={:.2f}_mm={:d}_seed={:d}".format(
+                    'sim_L23_sel_binoc',monoidx,mismatch,seed)
+                
+                if not args2.test:
+                    jobnameDir=os.path.join(temp_dir, jobname)
+                    text_file=open(jobnameDir, "w");
+                    os. system("chmod u+x "+ jobnameDir)
+                    text_file.write("#!/bin/sh \n")
+                    if cluster=='haba' or cluster=='moto' or cluster=='burg':
+                        text_file.write("#SBATCH --account=theory \n")
+                    text_file.write("#SBATCH --job-name="+jobname+ "\n")
+                    text_file.write("#SBATCH -t 0-0:59  \n")
+                    text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
+                    # text_file.write("#SBATCH --gres=gpu\n")
+                    text_file.write("#SBATCH -c 1 \n")
+                    text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
+                    text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
+                    text_file.write("python  -W ignore " + c1+" \n")
+                    text_file.write("echo $PATH  \n")
+                    text_file.write("exit 0  \n")
+                    text_file.close()
 
-    for mono,same in zip(monos,sames):
-        for seed in seeds:
-            #--------------------------------------------------------------------------
-            # Make SBTACH
-            inpath = currwd + "/sim_L23_sel_binoc.py"
-            c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.1f} -same {:d}".format(
-                inpath,seed,n_ori,n_rpt,n_int,mono,same)
-            
-            jobname="{:s}_mono={:.1f}_same={:d}_seed={:d}".format(
-                'sim_L23_sel_binoc',mono,same,seed)
-            
-            if not args2.test:
-                jobnameDir=os.path.join(ofilesdir, jobname)
-                text_file=open(jobnameDir, "w");
-                os. system("chmod u+x "+ jobnameDir)
-                text_file.write("#!/bin/sh \n")
-                if cluster=='haba' or cluster=='moto' or cluster=='burg':
-                    text_file.write("#SBATCH --account=theory \n")
-                text_file.write("#SBATCH --job-name="+jobname+ "\n")
-                text_file.write("#SBATCH -t 0-1:59  \n")
-                text_file.write("#SBATCH --mem-per-cpu={:d}gb \n".format(gb))
-                # text_file.write("#SBATCH --gres=gpu\n")
-                text_file.write("#SBATCH -c 1 \n")
-                text_file.write("#SBATCH -o "+ ofilesdir + "/%x.%j.o # STDOUT \n")
-                text_file.write("#SBATCH -e "+ ofilesdir +"/%x.%j.e # STDERR \n")
-                text_file.write("python  -W ignore " + c1+" \n")
-                text_file.write("echo $PATH  \n")
-                text_file.write("exit 0  \n")
-                text_file.close()
-
-                if cluster=='axon':
-                    os.system("sbatch -p burst " +jobnameDir);
+                    if cluster=='axon':
+                        os.system("sbatch -p burst " +jobnameDir);
+                    else:
+                        os.system("sbatch " +jobnameDir);
                 else:
-                    os.system("sbatch " +jobnameDir);
-            else:
-                print (c1)
+                    print (c1)
 
 
 

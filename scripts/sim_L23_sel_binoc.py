@@ -26,9 +26,9 @@ parser.add_argument('--n_int', '-nt', help='number of integration steps',type=in
 parser.add_argument('--seed', '-s', help='seed',type=int, default=0)
 parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',type=float, default=0.01414214)#0.002)
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
-parser.add_argument('--mono', '-mi', help='L4 monocularity index',type=float, default=0.4)#1.02)
+parser.add_argument('--monoidx', '-mi', help='L4 monocularity index',type=float, default=0.4)#1.02)
+parser.add_argument('--mismatch', '-mm', help='L4 monocular orientation preference mismatch',type=int, default=45)
 parser.add_argument('--map', '-m', help='L4 orientation map type',type=str, default='low_8')
-parser.add_argument('--same_map', '-same', help='whether monocular maps are the same',type=int, default=1)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=True)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -37,9 +37,9 @@ n_int= int(args['n_int'])
 seed = int(args['seed'])
 dens = args['dens']
 grec = args['grec']
-mono = args['mono']
+monoidx = args['monoidx']
+mismatch = args['mismatch']
 map_type = args['map']
-same_map = int(args['same_map']) == 1
 saverates = args['saverates']
 
 n_inp = n_ori * n_rpt
@@ -109,17 +109,51 @@ else:
     else:
         raise ValueError('Unknown map type: {}'.format(map_type))
     L4_rate_opm_c = np.fft.ifft2(opm_c_fft)
-    L4_rate_opm_c *= 0.5 / np.max(np.abs(L4_rate_opm_c)) # normalize to 0.5
-    if same_map:
-        L4_rate_opm_i = L4_rate_opm_c
-    else:
-        L4_rate_opm_i = np.fft.ifft2(opm_i_fft)
-        L4_rate_opm_i *= 0.5 / np.max(np.abs(L4_rate_opm_i)) # normalize to 0.5
+    L4_rate_opm_i = np.fft.ifft2(opm_i_fft)
     L4_rate_odm = np.fft.ifft2(odm_fft).real
-    L4_rate_odm *= mono*np.sqrt(np.pi/2) / np.std(L4_rate_odm) # normalize to desired monocularity index
+    L4_rate_odm *= monoidx*np.sqrt(np.pi/2) / np.std(L4_rate_odm) # normalize to desired monocularity index
     L4_rate_odm = np.clip(L4_rate_odm,-1,1)
-    res_dir = res_dir + 'L23_sel_binoc_map={:s}_grec={:.3f}_mi={:.1f}_same={:d}/'.format(
-        map_type,grec,mono,same_map)
+    res_dir = res_dir + 'L23_sel_binoc_map={:s}_grec={:.3f}_mi={:.2f}_mm={:0.f}/'.format(
+        map_type,grec,monoidx,mismatch)
+
+# compute linear factor used to generate mismatched 
+facts = np.linspace(1.5,2.5,41)
+facts[-1] = 3
+mms = np.array([48.00513093, 46.49134933, 44.94546766, 43.39316884, 41.78063692,
+       40.19299208, 38.58675481, 36.9525215 , 35.2849464 , 33.59102846,
+       31.85515455, 30.07952508, 28.27899251, 26.43423047, 24.55585682,
+       22.63722407, 20.71534543, 18.79340412, 16.88161117, 15.02489435,
+       13.2624536 , 11.59037334, 10.00133078,  8.55584981,  7.2808473 ,
+        6.17146172,  5.21738501,  4.40578262,  3.70944757,  3.12600588,
+        2.63669628,  2.21993793,  1.87733097,  1.5859369 ,  1.34156609,
+        1.13839235,  0.97180379,  0.82575931,  0.70772872,  0.60542459,
+        0])
+binoc_div = interp1d(mms,facts,fill_value='extrapolate')()
+    
+# rescale opms, and produce mismatch
+L4_mean_os = 0.162162878466875
+L4_var_os = 0.017278073970038665
+
+def transform_os_from_rank(opm,mean_os,var_os):
+    os = np.abs(opm)
+    a = (mean_os * (1-mean_os) / var_os - 1) * mean_os
+    b = (mean_os * (1-mean_os) / var_os - 1) * (1-mean_os)
+    
+    os = rankdata(os).reshape(opm.shape) / os.size
+    os = beta.ppf(os,a,b)
+    return opm * os / np.abs(opm)
+
+L4_rate_opm_c = transform_os_from_rank(L4_rate_opm_c,L4_mean_os,L4_var_os)
+L4_rate_opm_i = transform_os_from_rank(L4_rate_opm_i,L4_mean_os,L4_var_os)
+L4_rate_opm_b = (L4_rate_opm_c + L4_rate_opm_i) / binoc_div
+
+for _ in range(10):
+    L4_rate_opm_b = transform_os_from_rank(L4_rate_opm_b,L4_mean_os,L4_var_os)
+    
+    L4_rate_opm_c = transform_os_from_rank(binoc_div*L4_rate_opm_b - L4_rate_opm_i,L4_mean_os,L4_var_os)
+    L4_rate_opm_i = transform_os_from_rank(binoc_div*L4_rate_opm_b - L4_rate_opm_c,L4_mean_os,L4_var_os)
+    
+    L4_rate_opm_b = (L4_rate_opm_c + L4_rate_opm_i) / binoc_div
 
 # Define where to save results
 if not os.path.exists(res_dir):
@@ -145,6 +179,7 @@ del ksigs,oss
 
 ksmap_c = ksig_os_itp(np.abs(L4_rate_opm_c))
 ksmap_i = ksig_os_itp(np.abs(L4_rate_opm_i))
+ksmap_b = ksig_os_itp(np.abs(L4_rate_opm_b))
 
 start = time.process_time()
 
@@ -153,19 +188,23 @@ start = time.process_time()
 
 pos_c = np.angle(L4_rate_opm_c)/2
 pos_i = np.angle(L4_rate_opm_i)/2
+pos_b = np.angle(L4_rate_opm_b)/2
 inp_oris = np.arange(n_ori)/n_ori * np.pi
-inps = np.zeros((2,n_ori,n_rpt,N,N))
+inps = np.zeros((3,n_ori,n_rpt,N,N))
 
 rng = np.random.default_rng(seed)
 for ori_idx,ori in enumerate(inp_oris):
     mean_c_inp = rm * elong_inp(ksmap_c,ori-pos_c) * (1+L4_rate_odm)
     mean_i_inp = rm * elong_inp(ksmap_i,ori-pos_i) * (1-L4_rate_odm)
+    mean_b_inp = rm * elong_inp(ksmap_b,ori-pos_b)
     shape = 1/meanCV**2
     scale_c = mean_c_inp/shape
     scale_i = mean_i_inp/shape
+    scale_b = mean_b_inp/shape
     for rpt_idx in range(n_rpt):
         inps[0,ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale_c)
         inps[1,ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale_i)
+        inps[2,ori_idx,rpt_idx,:,:] = rng.gamma(shape=shape,scale=scale_b)
         
 n_spnt = 100
 spnt_inps = np.zeros((n_spnt,N,N))
@@ -199,9 +238,9 @@ def integrate(y0,inp,dt,Nt,Wrec,gamma_rec=1.02):
 start = time.process_time()
 
 # Integrate to get firing rates
-L23_rates = np.zeros((2,n_ori,n_rpt,2,N,N,n_int//100))
+L23_rates = np.zeros((3,n_ori,n_rpt,2,N,N,n_int//100))
 
-for eye_idx in range(2):
+for eye_idx in range(3):
     for ori_idx,ori in enumerate(inp_oris):
         for rpt_idx in range(n_rpt):
             L23_inp = np.concatenate((inps[eye_idx,ori_idx,rpt_idx].flatten(),
