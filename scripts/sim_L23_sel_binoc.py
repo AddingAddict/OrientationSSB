@@ -12,6 +12,7 @@ import time
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.special import ive
+from scipy.stats import beta, rankdata
 
 import util_func as uf
 import analyze_func as af
@@ -113,7 +114,7 @@ else:
     L4_rate_odm = np.fft.ifft2(odm_fft).real
     L4_rate_odm *= monoidx*np.sqrt(np.pi/2) / np.std(L4_rate_odm) # normalize to desired monocularity index
     L4_rate_odm = np.clip(L4_rate_odm,-1,1)
-    res_dir = res_dir + 'L23_sel_binoc_map={:s}_grec={:.3f}_mi={:.2f}_mm={:0.f}/'.format(
+    res_dir = res_dir + 'L23_sel_binoc_map={:s}_grec={:.3f}_mi={:.2f}_mm={:.0f}/'.format(
         map_type,grec,monoidx,mismatch)
 
 # compute linear factor used to generate mismatched 
@@ -128,7 +129,7 @@ mms = np.array([48.00513093, 46.49134933, 44.94546766, 43.39316884, 41.78063692,
         2.63669628,  2.21993793,  1.87733097,  1.5859369 ,  1.34156609,
         1.13839235,  0.97180379,  0.82575931,  0.70772872,  0.60542459,
         0])
-binoc_div = interp1d(mms,facts,fill_value='extrapolate')()
+binoc_div = interp1d(mms,facts,fill_value='extrapolate')(mismatch)
     
 # rescale opms, and produce mismatch
 L4_mean_os = 0.162162878466875

@@ -104,7 +104,7 @@ def runjobs():
                 c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.2f} -mm {:.0f}".format(
                     inpath,seed,n_ori,n_rpt,n_int,monoidx,mismatch)
                 
-                jobname="{:s}_mi={:.2f}_mm={:d}_seed={:d}".format(
+                jobname="{:s}_mi={:.2f}_mm={:.0f}_seed={:d}".format(
                     'sim_L23_sel_binoc',monoidx,mismatch,seed)
                 
                 if not args2.test:
