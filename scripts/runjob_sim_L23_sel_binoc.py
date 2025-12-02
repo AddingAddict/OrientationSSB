@@ -6,6 +6,7 @@ import time
 from sys import platform
 import uuid
 import random
+from itertools import product
 from tempfile import TemporaryDirectory
 
 from importlib import reload
@@ -96,12 +97,12 @@ def runjobs():
     mismatchs = np.linspace(0,45,7)
           
     with TemporaryDirectory() as temp_dir:
-        for monoidx,mismatch in zip(monoidxs,mismatchs):
+        for monoidx,mismatch in product(monoidxs,mismatchs):
             for seed in seeds:
                 #--------------------------------------------------------------------------
                 # Make SBTACH
                 inpath = currwd + "/sim_L23_sel_binoc.py"
-                c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.2f} -mm {:.0f}".format(
+                c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.5f} -mm {:.5f}".format(
                     inpath,seed,n_ori,n_rpt,n_int,monoidx,mismatch)
                 
                 jobname="{:s}_mi={:.2f}_mm={:.0f}_seed={:d}".format(
