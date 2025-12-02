@@ -28,7 +28,7 @@ parser.add_argument('--dens', '-d', help='selective cluster density for L4 map',
 parser.add_argument('--grec', '-g', help='L2/3 recurrent weight strength',type=float, default=1.02)
 parser.add_argument('--mono', '-mi', help='L4 monocularity index',type=float, default=0.4)#1.02)
 parser.add_argument('--map', '-m', help='L4 orientation map type',type=str, default='low_8')
-parser.add_argument('--same_map', '-diff', help='whether monocular maps are the same',type=int, default=1)
+parser.add_argument('--same_map', '-same', help='whether monocular maps are the same',type=int, default=1)
 parser.add_argument('--saverates', '-r', help='save rates or not',type=bool, default=True)
 args = vars(parser.parse_args())
 n_ori = int(args['n_ori'])
@@ -119,7 +119,7 @@ else:
     L4_rate_odm *= mono*np.sqrt(np.pi/2) / np.std(L4_rate_odm) # normalize to desired monocularity index
     L4_rate_odm = np.clip(L4_rate_odm,-1,1)
     res_dir = res_dir + 'L23_sel_binoc_map={:s}_grec={:.3f}_mi={:.1f}_same={:d}/'.format(
-        map_type,grec,same_map)
+        map_type,grec,mono,same_map)
 
 # Define where to save results
 if not os.path.exists(res_dir):

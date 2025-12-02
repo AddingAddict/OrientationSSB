@@ -34,7 +34,6 @@ def runjobs():
     
     cluster = str(args["cluster_"])
     n_ori = int(args['n_ori'])
-    n_phs = int(args['n_phs'])
     n_rpt = int(args['n_rpt'])
     n_int = int(args['n_int'])
     gb = int(args['gb'])
@@ -101,7 +100,7 @@ def runjobs():
             #--------------------------------------------------------------------------
             # Make SBTACH
             inpath = currwd + "/sim_L23_sel_binoc.py"
-            c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.1f} -s {:d}".format(
+            c1 = "{:s} -s {:d} -no {:d} -nr {:d} -nt {:d} -mi {:.1f} -same {:d}".format(
                 inpath,seed,n_ori,n_rpt,n_int,mono,same)
             
             jobname="{:s}_mono={:.1f}_same={:d}_seed={:d}".format(
