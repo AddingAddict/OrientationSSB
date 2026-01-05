@@ -152,10 +152,10 @@ class Model:
             self.wei = rng.uniform(0.2,0.8,size=(self.n_e,self.n_i)) * self.ai
             self.wie = rng.uniform(0.2,0.8,size=(self.n_i,self.n_e)) * self.ae
             self.wii = rng.uniform(0.2,0.8,size=(self.n_i,self.n_i)) * self.ai
-            np.fill_diagonal(self.wee,autapse_mult)
-            np.fill_diagonal(self.wie,autapse_mult)
-            np.fill_diagonal(self.wei,autapse_mult)
-            np.fill_diagonal(self.wii,autapse_mult)
+            np.fill_diagonal(self.wee,autapse_mult*np.diagonal(self.wee))
+            np.fill_diagonal(self.wie,autapse_mult*np.diagonal(self.wie))
+            np.fill_diagonal(self.wei,autapse_mult*np.diagonal(self.wei))
+            np.fill_diagonal(self.wii,autapse_mult*np.diagonal(self.wii))
             
             # randomly choose some L4 cells to be more on/off dominated
             # on_dom = rng.choice([1,-1],size=(self.n_e,))
