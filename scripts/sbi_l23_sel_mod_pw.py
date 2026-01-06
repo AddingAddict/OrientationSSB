@@ -55,6 +55,16 @@ if bayes_iter == 0:
     # load posterior of phase ring connectivity parameters
     with open(f'./../notebooks/l23_sel_mod_posterior_7.pkl', 'rb') as handle:
         full_prior = pickle.load(handle)
+    # with open(f'./../notebooks/l23_patt_posterior_5.pkl', 'rb') as handle:
+    #     posterior = pickle.load(handle)
+        
+    # full_prior = PostTimesBoxUniform(posterior,
+    #     post_low =torch.tensor([ 0.0,-2.0,-4.0,-2.0, 0.01, 0.5, 0.3, 2.0, 0.01],device=device),
+    #     post_high=torch.tensor([ 1.0, 2.0,-0.0, 2.0, 0.06, 1.5, 0.9, 4.0, 0.5],device=device),
+    #     low =torch.tensor([ 0.5, 0.5, 0.5, 0.5],device=device),
+    #     high=torch.tensor([10.0, 3.0, 3.0,20.0],device=device),)
+
+    # full_prior,_,_ = process_prior(full_prior)
 else:
     with open(f'./../notebooks/l23_sel_mod_pw_posterior_{bayes_iter:d}.pkl','rb') as handle:
         full_prior = pickle.load(handle)
